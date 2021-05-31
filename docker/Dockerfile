@@ -13,7 +13,6 @@ RUN chmod +x docker-entrypoint
 RUN mkdir -p /local_files_root
 ADD mproj /src
 
-#RUN /opt/conda/bin/pip install -r /requirements.txt
 RUN pip install -r /requirements.txt
 
 ENTRYPOINT ["/docker-entrypoint"]

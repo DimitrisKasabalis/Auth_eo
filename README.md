@@ -5,10 +5,10 @@
 docker-compose up
 ```
 
-#### make the database
+#### make the database tables
 
 ```powershell
-docker-compose run --rm migrate
+docker-compose run --rm worker migrate
 ```
 
 ### Ops
@@ -16,24 +16,24 @@ docker-compose run --rm migrate
 #### Start a scrape
 
 ```powershell
-docker-compose run --rm scrape  <name-of-spider> # or
-docker-compose run --rm scrape  --as-task <name-of-spider>
+docker-compose run --rm worer scrape  <name-of-spider> # or
+docker-compose run --rm worker scrape  --as-task <name-of-spider>  # to sent it to worker as task
 
 
 # spiders
-# Lai
+###  Lai
 # lai-1km-v2-spider
 # lai-1km-global-v1-spider
 # lai-300m-v1-spider
 
-# NDVI
+###  NDVI
 # ndvi-300m-v1-spider
 # ndvi-300m-v2-spider
 # ndvi-1km-v1-spider
 # ndvi-1km-v2-spider
 # ndvi-1km-v3-spider
 
-# VCI
+#### VCI
 # vci-v1-spider
 # wb-africa-v1-spider
 ```
@@ -47,6 +47,5 @@ docker-compose run --rm download  --as-task <name-or-id-of-resource>
 # eg:
 
 ```
-
 
 ### Bake a product

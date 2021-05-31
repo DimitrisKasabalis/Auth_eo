@@ -10,7 +10,7 @@ services:
     ports:
       - 5432:5432
     volumes:
-      - ./pg_data:/var/lib/postgresql/data
+      - ./local_files/pg_data:/var/lib/postgresql/data
 
   rabbit:
     image: rabbitmq:3.8-management
@@ -31,11 +31,11 @@ services:
       RABBIT_PASSWORD: carrot
       DEBUG: 'False'
       MODE: 'worker'
-      MEDIA_ROOT: "/MEDIA_ROOT"
+#      MEDIA_ROOT: "/MEDIA_ROOT"
     build:
       context: .
       dockerfile: docker/Dockerfile
     volumes:
       - './docker-entrypoint.sh:/docker-entrypoint'
       - "./mproj:/src"
-      - "./FILE_ROOT:/MEDIA_ROOT"
+      - "./local_files/local_files_root:/local_files_root"  # local file repo

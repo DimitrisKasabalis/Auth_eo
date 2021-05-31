@@ -20,4 +20,3 @@ class Command(BaseCommand):
             task.apply_async()
         else:
             task_start_scrape(spider_name=spider_name)
-        raise CommandError()

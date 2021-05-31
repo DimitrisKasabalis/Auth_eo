@@ -4,8 +4,6 @@ from django.db import migrations
 
 
 def forwards_func(apps, schema_editor):
-    # We get the model from the versioned app registry;
-    # if we directly import it, it'll be the wrong version
     Credentials = apps.get_model("eo_engine", "Credentials")
 
     Credentials.objects.bulk_create([
@@ -16,8 +14,6 @@ def forwards_func(apps, schema_editor):
 
 
 def reverse_func(apps, schema_editor):
-    # forwards_func() creates two Country instances,
-    # so reverse_func() should delete them.
     Credentials = apps.get_model("eo_engine", "Credentials")
 
     db_alias = schema_editor.connection.alias

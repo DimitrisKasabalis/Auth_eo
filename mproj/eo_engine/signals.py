@@ -1,12 +1,10 @@
 import inspect
 
 from celery import signals
-# from celery.app.task import Context
+
 from celery.utils.log import get_task_logger
 
-from eo_engine.models import UBDCGroupTask, UBDCTask
-
-from django.utils.datetime_safe import datetime
+from eo_engine.models import GeopGroupTask, GeopTask
 
 logger = get_task_logger(__name__)
 
@@ -25,7 +23,7 @@ def handles_task_publish(sender: str = None, headers=None, body=None, **kwargs):
     group_task_id = info.get('group', None)
     root_id = None if task_id == info.get('root_id') else info.get('root_id', task_id)
     if group_task_id:
-        group_task_obj, created = UBDCGroupTask.objects.get_or_create(group_task_id=group_task_id, root_id=root_id)
+        group_task_obj, created = GeopGroupTask.objects.get_or_create(group_task_id=group_task_id, root_id=root_id)
 
     else:
         group_task_obj = None
@@ -33,7 +31,7 @@ def handles_task_publish(sender: str = None, headers=None, body=None, **kwargs):
     # republish the task with the same task_id
     # _kwargs_repr = json.dumps(body[1])
 
-    task_obj, created = UBDCTask.objects.get_or_create(task_id=task_id)
+    task_obj, created = GeopTask.objects.get_or_create(task_id=task_id)
 
     if created:
         _data = dict()

@@ -4,14 +4,14 @@ from django.contrib.postgres.indexes import GinIndex
 from django.db import models
 
 
-class UBDCGroupTask(models.Model):
+class GeopGroupTask(models.Model):
     # Convenience model to retrieve tasks
 
     group_task_id = models.UUIDField(editable=False, db_index=True, unique=True)
     root_id = models.UUIDField(editable=False, db_index=True, null=True)
     timestamp = models.DateTimeField(auto_now_add=True)
     datetime_started = models.DateTimeField(null=True)
-    datetime_finished = models.DateTimeField(null=True)  # TODO: find a good way to find when a group-task finishes
+    datetime_finished = models.DateTimeField(null=True)  # TODO: find a good to mark when a groupTask has finished.
 
     op_name = models.TextField(blank=True, null=True)
     op_args = ArrayField(base_field=models.CharField(max_length=255), blank=True, null=True)
@@ -23,7 +23,7 @@ class UBDCGroupTask(models.Model):
         unique_together = ['group_task_id', 'root_id']
 
 
-class UBDCTask(models.Model):
+class GeopTask(models.Model):
     class TaskTypeChoices(models.TextChoices):
         SUBMITTED = 'SUBMITTED'
         STARTED = c_states.STARTED
@@ -47,8 +47,8 @@ class UBDCTask(models.Model):
     retries = models.IntegerField(default=0)
     task_kwargs = models.JSONField(default=dict)
 
-    group_task = models.ForeignKey('eo_engine.UBDCGroupTask', on_delete=models.DO_NOTHING, null=True,
-                                   related_query_name='ubdc_task', related_name='ubdc_tasks',
+    group_task = models.ForeignKey(GeopGroupTask, on_delete=models.DO_NOTHING, null=True,
+                                   related_query_name='geop_task', related_name='geop_tasks',
                                    to_field='group_task_id')
 
     root_id = models.UUIDField(editable=False, db_index=True, null=True)
@@ -61,6 +61,6 @@ class UBDCTask(models.Model):
 
 
 __all__ = [
-    "UBDCGroupTask",
-    "UBDCTask"
+    "GeopGroupTask",
+    "GeopTask"
 ]

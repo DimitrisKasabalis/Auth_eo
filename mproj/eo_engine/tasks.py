@@ -7,7 +7,6 @@ from zipfile import ZipFile
 from celery import group, Task
 from celery.app import shared_task
 from celery.utils.log import get_task_logger
-from django.conf import settings
 from django.core.files import File
 from django.utils import timezone
 from osgeo import gdal
@@ -17,8 +16,6 @@ from eo_engine.models import EOProduct
 from eo_engine.models import EOSource, EOSourceStatusChoices, EOSourceProductChoices, EOProductStatusChoices
 
 logger = get_task_logger(__name__)
-
-FILE_ROOT = settings.FILE_ROOT
 
 
 def random_name_gen(length=10) -> str:

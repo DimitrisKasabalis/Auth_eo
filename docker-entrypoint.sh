@@ -2,11 +2,11 @@
 set -Eeo pipefail
 CONCURRENCY=${WORKERS_PER_INSTANCE:-1}
 
-. /opt/conda/etc/profile.d/conda.sh
-conda activate base
+#. /opt/conda/etc/profile.d/conda.sh
+#conda activate base
 
 if [[ -n "$1" ]]; then
-  echo "dsf"
+  #  echo "dsf"
   # if we start with a params assume we want to run that
   if [ "$1" = "migrate" ]; then
     echo "migrate"
@@ -20,35 +20,20 @@ if [[ -n "$1" ]]; then
     python ./src/manage.py scrape "${@:2}"
     exit
   elif [ "$1" = 'download' ]; then
-    python ./src/download_remote.py $1
+    python ./src/manage.py download_remote "${@:2}"
     exit
   elif [ "$1" = 'worker' ]; then
     echo "!!!Starting Worker!!!"
     cd /src
     celery -A mproj.celery:app worker -l info --concurrency="${CONCURRENCY}"
     exit
-
+  elif [ "$MODE" = "beat" ]; then
+    echo "Starting Beat"
+    cd /src
+    celery -A mproj.celery:app beat -l info -s /celerybeat-schedule.d --pidfile="$(mktemp)".pid
+    exit
   fi
-  #  exec "$@"
-  exit
+
 fi
 
-#fi
-#
-#if
-#  [ "$MODE" = "worker" ]
-#then
-#  echo "!!!Starting Worker!!!"
-#  celery -A mproj.celery:app worker -l info --concurrency="${CONCURRENCY}"
-#  exit
-#elif
-#  [ "$MODE" = "beat" ]
-#then
-#  echo "Starting Beat"
-#  celery -A mproj.celery:app beat -l info -s /celerybeat-schedule.d --pidfile="$(mktemp)".pid
-#  exit
-#fi
-#
-#exec "$@"
-#
-#exit $?
+exit

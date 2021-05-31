@@ -1,8 +1,9 @@
-import os
 from pathlib import Path
 from urllib.parse import urlsplit
-from django.db.models.signals import post_save
+
+from django.core.files import File
 from django.db import models
+from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 
@@ -26,8 +27,7 @@ class EOSourceProductGroupChoices(models.TextChoices):
     FAPAR = "fapar", "FAPAR"
     DMP = "dmp", "DMP"
     GDMP = "gdmp", "GDMP"
-
-
+    OTHER = 'other', "Other"
 
 
 class EOSourceProductChoices(models.TextChoices):
@@ -71,12 +71,6 @@ class EOSource(models.Model):
     def delete_local_file(self) -> bool:
         """ Delete local file """
         raise NotImplemented("yet?")
-        # if self.exist:
-        #     os.remove(self.local_path)
-        #     self.status = self.EOSourceStatusChoices.availableRemotely
-        #     self.save()
-        #     return True
-        # return False
 
     @property
     def exist(self) -> bool:
@@ -89,8 +83,35 @@ class EOSource(models.Model):
         return self.credentials.username, self.credentials.password
 
     def download(self):
-        from ..common import download_asset
-        download_asset(self)
+        import requests
+        from tempfile import TemporaryFile
+
+        remote_url = self.url
+        credentials = self.get_credentials
+
+        response = requests.get(
+            url=remote_url,
+            auth=credentials,
+            stream=True
+        )
+        response.raise_for_status()
+
+        self.status = EOSourceStatusChoices.beingDownloaded
+        self.save()
+
+        with TemporaryFile(mode='w+b') as file_handle:
+            for chunk in response.iter_content(chunk_size=2 * 1024):
+                file_handle.write(chunk)
+                file_handle.flush()
+
+            content = File(file_handle)
+            print(self.filename)
+            self.file.save(name=self.filename, content=content, save=False)
+            self.filesize = self.file.size
+            self.status = EOSourceStatusChoices.availableLocally
+
+        self.save()
+
 
 
 @receiver(post_save, sender=EOSource, weak=False, dispatch_uid='eosource_post_save_handler')

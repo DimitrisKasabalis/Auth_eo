@@ -26,7 +26,6 @@ DEBUG = False if os.getenv('DEBUG','').lower() in ['false', 'f'] else True
 
 ALLOWED_HOSTS = ['*']
 
-FILE_ROOT = os.getenv("FILE_ROOT", BASE_DIR.parent / 'cache')
 
 # Application definition
 
@@ -128,7 +127,7 @@ STATIC_URL = '/static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # MEDIA
-MEDIA_ROOT = os.getenv("MEDIA_ROOT", r"D:\src\geoAuthPipe\FILE_ROOT")
+MEDIA_ROOT = os.getenv("MEDIA_ROOT", r"/local_files_root")
 
 # celery
 CELERY_RESULT_BACKEND = 'django-db'

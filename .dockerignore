@@ -1,4 +1,5 @@
-pg_data
-referece_code
+/local_files
+/referece_code
 test*
 .pytest*
+__pycache__/
