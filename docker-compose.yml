@@ -1,0 +1,41 @@
+version: "3"
+
+services:
+
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+    ports:
+      - 5432:5432
+    volumes:
+      - ./pg_data:/var/lib/postgresql/data
+
+  rabbit:
+    image: rabbitmq:3.8-management
+    ports:
+      - 5672:5672
+      - 8080:15672
+    environment:
+      RABBITMQ_DEFAULT_USER: rabbit
+      RABBITMQ_DEFAULT_PASS: carrot
+
+  worker:
+    environment:
+      DATABASE_PASSWORD: postgres
+      DATABASE_NAME: postgres
+      DATABASE_USERNAME: postgres
+      DATABASE_HOST: "host.docker.internal"
+      RABBIT_HOST: rabbit
+      RABBIT_PASSWORD: carrot
+      DEBUG: 'False'
+      MODE: 'worker'
+      MEDIA_ROOT: "/MEDIA_ROOT"
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    volumes:
+      - './docker-entrypoint.sh:/docker-entrypoint'
+      - "./mproj:/src"
+      - "./FILE_ROOT:/MEDIA_ROOT"

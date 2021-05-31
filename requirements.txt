@@ -1,0 +1,12 @@
+django~=3.2.0
+celery
+django-celery-results
+more-itertools~=8.7.0
+python-dateutil
+scrapy~=2.5.0
+psycopg2-binary
+pandas
+xarray~=0.17.0
+scipy~=1.6.0
+netcdf4
+requests
