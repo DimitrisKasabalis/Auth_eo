@@ -41,8 +41,8 @@ docker-compose run --rm worker scrape  --as-task <name-of-spider>  # to sent it 
 #### Download a data source
 
 ```powershell
-docker-compose run --rm download  <name-or-id-of-resource> # or
-docker-compose run --rm download  --as-task <name-or-id-of-resource>
+docker-compose run --rm worker download  <name-or-id-of-resource> # or
+docker-compose run --rm worker download  --as-task <name-or-id-of-resource>
 
 # eg:
 
