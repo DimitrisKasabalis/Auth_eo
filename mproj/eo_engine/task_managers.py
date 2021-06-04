@@ -1,7 +1,7 @@
 from celery import Task
 from django.utils import timezone
 
-from eo_engine.models import UBDCTask
+from eo_engine.models import GeopTask
 
 
 class BaseTaskWithRetry(Task):
@@ -17,7 +17,7 @@ class BaseTaskWithRetry(Task):
             return self.run(*args, **kwargs)
 
         if self.name.startswith('eo_engine') or self.name.startswith('mproj'):
-            task_entry: UBDCTask = UBDCTask.objects.get(task_id=task_id)
+            task_entry: GeopTask = GeopTask.objects.get(task_id=task_id)
             now = timezone.now()
             task_entry.datetime_started = now
             task_entry.status = task_entry.TaskTypeChoices.STARTED
@@ -34,8 +34,8 @@ class BaseTaskWithRetry(Task):
 
     def on_success(self, retval, task_id, args, kwargs):
         try:
-            task = UBDCTask.objects.get(task_id=task_id)
-        except UBDCTask.DoesNotExist:
+            task = GeopTask.objects.get(task_id=task_id)
+        except GeopTask.DoesNotExist:
             return
         task.datetime_finished = timezone.now()
         try:
@@ -49,8 +49,8 @@ class BaseTaskWithRetry(Task):
     def on_retry(self, exc, task_id, args, kwargs, einfo):
         """This is run by the worker when the task is to be retried."""
         try:
-            task = UBDCTask.objects.get(task_id=task_id)
-        except UBDCTask.DoesNotExist:
+            task = GeopTask.objects.get(task_id=task_id)
+        except GeopTask.DoesNotExist:
             return
         task.status = task.TaskTypeChoices.RETRY
         task.retries += 1
@@ -59,8 +59,8 @@ class BaseTaskWithRetry(Task):
     def on_failure(self, exc, task_id, args, kwargs, einfo):
         """ This is run by the worker when the task fails."""
         try:
-            ubdc_taskentry = UBDCTask.objects.get(task_id=task_id)
-        except UBDCTask.DoesNotExist:
+            ubdc_taskentry = GeopTask.objects.get(task_id=task_id)
+        except GeopTask.DoesNotExist:
             return
         ubdc_taskentry.datetime_finished = timezone.now()
         ubdc_taskentry.status = ubdc_taskentry.TaskTypeChoices.FAILURE

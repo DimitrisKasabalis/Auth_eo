@@ -30,8 +30,6 @@ services:
       RABBIT_HOST: rabbit
       RABBIT_PASSWORD: carrot
       DEBUG: 'False'
-      MODE: 'worker'
-#      MEDIA_ROOT: "/MEDIA_ROOT"
     build:
       context: .
       dockerfile: docker/Dockerfile

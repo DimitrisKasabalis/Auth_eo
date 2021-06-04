@@ -10,3 +10,5 @@ xarray~=0.17.0
 scipy~=1.6.0
 netcdf4
 requests
+# for testing
+responses

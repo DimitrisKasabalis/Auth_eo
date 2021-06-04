@@ -18,5 +18,5 @@ class TestTasks(BaseTestWorker):
         )
         job = task.apply_async()
         job.get()
-
+        print(job)
         assert 1 + 1 == 2

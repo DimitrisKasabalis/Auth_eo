@@ -436,10 +436,11 @@ def task_add(x: int, y: int) -> int:
 
 @shared_task
 def task_append_char(token: str) -> str:
-    sleep(10)
     import string
     import random
-    return token + random.choice(string.ascii_letters)
+    new_char = random.choice(string.ascii_letters)
+    print(f'Appending {new_char} to {token}.')
+    return token + new_char
 
 
 __all__ = [
