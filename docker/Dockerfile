@@ -1,19 +1,57 @@
-FROM osgeo/gdal:ubuntu-small-3.2.3
+FROM ubuntu:20.04
 
-ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
+MAINTAINER Terradue S.r.l
+USER root
 
-RUN apt-get update -y; \
-    apt-get install -y --no-install-recommends \
-    python3-pip
+ENV LC_ALL=en_US.UTF-8 \
+    LANG=en_US.UTF-8 \
+    LANGUAGE=en_US.UTF-8 \
+    SHELL=/bin/bash \
+    PATH=/srv/conda/bin:$PATH \
+    DEBIAN_FRONTEND=noninteractive \
+    NB_USER=jovyan \
+    NB_UID=${UID:-1002} \
+    NB_GID=${GID:-1002} \
+    APP_BASE=/srv
 
+ENV USER=${NB_USER} \
+    HOME=/home/${NB_USER} \
+    CONDA_DIR=${APP_BASE}/conda
 
-ADD docker-entrypoint.sh docker-entrypoint
-ADD requirements.txt /requirements.txt
-RUN chmod +x docker-entrypoint
-RUN mkdir -p /local_files_root
-ADD mproj /src
+RUN groupadd --gid ${NB_GID} ${NB_USER}                                                                                             && \
+    useradd --comment "Default user" --create-home --gid ${NB_GID} --no-log-init --shell /bin/bash --uid ${NB_UID} ${NB_USER}       && \
+    apt-get -qq update                                                                                                              && \
+    apt-get -qq install --yes apt-utils                                                                                             && \
+    apt-get -qq install --yes --no-install-recommends ttf-dejavu wget make g++ sudo vim less unzip tree file  locales > /dev/null   && \
+    apt-get -qq purge                                                                                                               && \
+    apt-get -qq clean                                                                                                               && \
+    rm -rf /var/lib/apt/lists/*                                                                                                     && \
+    echo "LC_ALL=en_US.UTF-8" >> /etc/environment                                                                                   && \
+    echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen                                                                                     && \
+    echo "LANG=en_US.UTF-8" > /etc/locale.conf                                                                                      && \
+    locale-gen en_US.UTF-8
 
-RUN pip install -r /requirements.txt
+# conda installation via miniforge
+ADD docker/install-miniforge.bash /install-miniforge.bash
 
-ENTRYPOINT ["/docker-entrypoint"]
-CMD ["worker"]
+RUN chmod 755 /install-miniforge.bash
+RUN bash install-miniforge.bash
+RUN rm -f /install-*.bash
+RUN chown -R $NB_USER:$NB_GID ${HOME}
+
+USER ${NB_USER}
+
+ENV PATH=${CONDA_DIR}/envs/env_snap/snap/bin:${CONDA_DIR}/envs/env_snap/bin:${CONDA_DIR}/bin:$PATH \
+    KERNEL_PYTHON_PREFIX=${CONDA_DIR}/envs/env_snap  \
+    PREFIX=${CONDA_DIR}/envs/env_snap
+
+ADD environment.yml /tmp/environment.yml
+
+RUN mamba env create -f /tmp/environment.yml                                                                 && \
+    mamba clean --all -f -y
+
+WORKDIR ${HOME}
+
+#####
+ADD requirements.txt requirements.txt
+RUN pip install -r requirements.txt

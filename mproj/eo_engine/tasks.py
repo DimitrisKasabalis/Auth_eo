@@ -1,6 +1,5 @@
 import tempfile
 from pathlib import Path
-from time import sleep
 from typing import Union, Optional
 from zipfile import ZipFile
 
@@ -437,8 +436,8 @@ def task_add(x: int, y: int) -> int:
 @shared_task
 def task_append_char(token: str) -> str:
     import string
-    import random
-    new_char = random.choice(string.ascii_letters)
+    from random import choice
+    new_char = choice(string.ascii_letters)
     print(f'Appending {new_char} to {token}.')
     return token + new_char
 

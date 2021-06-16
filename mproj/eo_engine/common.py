@@ -1,10 +1,4 @@
-from pathlib import Path
-from tempfile import mkstemp, TemporaryFile
-
-import requests
-from django.core.files.base import ContentFile, File
-
-from eo_engine.models import EOSource, EOSourceStatusChoices
+from eo_engine.models import EOSource
 
 
 def generate_prod_filename(eo_source: EOSource) -> str:

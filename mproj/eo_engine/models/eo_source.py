@@ -95,23 +95,31 @@ class EOSource(models.Model):
             stream=True
         )
         response.raise_for_status()
+        headers = response.headers
+        FILE_LENGTH = headers.get('Content-Length', None)
 
         self.status = EOSourceStatusChoices.beingDownloaded
         self.save()
 
         with TemporaryFile(mode='w+b') as file_handle:
+
+            print(headers.keys())
             for chunk in response.iter_content(chunk_size=2 * 1024):
                 file_handle.write(chunk)
                 file_handle.flush()
 
             content = File(file_handle)
             print(self.filename)
+            from django.db import connections
+            for conn in connections.all():
+                conn.close_if_unusable_or_obsolete()
+            self.refresh_from_db()
             self.file.save(name=self.filename, content=content, save=False)
-            self.filesize = self.file.size
-            self.status = EOSourceStatusChoices.availableLocally
+
+        self.filesize = self.file.size
+        self.status = EOSourceStatusChoices.availableLocally
 
         self.save()
-
 
 
 @receiver(post_save, sender=EOSource, weak=False, dispatch_uid='eosource_post_save_handler')
@@ -124,7 +132,7 @@ def eosource_post_save_handler(instance: EOSource, **kwargs):
         from eo_engine.models import EOProduct, EOProductsChoices
         from eo_engine.common import generate_prod_filename
         # if asset is ndvi-300m-v2
-        if eo_source.product == EOSourceProductChoices.ndvi_300m_v2 and eo_source.product == EOSourceProductChoices.ndvi_300m_v1:
+        if eo_source.product == EOSourceProductChoices.ndvi_300m_v2:
             prod = EOProduct.objects.create(
                 product=EOProductsChoices.agro_ndvi_1km_v3,
                 filename=generate_prod_filename(eo_source),

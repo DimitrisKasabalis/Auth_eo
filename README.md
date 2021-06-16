@@ -16,7 +16,7 @@ docker-compose run --rm worker migrate
 #### Start a scrape
 
 ```powershell
-docker-compose run --rm worer scrape  <name-of-spider> # or
+docker-compose run --rm worker scrape  <name-of-spider> # or
 docker-compose run --rm worker scrape  --as-task <name-of-spider>  # to sent it to worker as task
 
 

@@ -10,17 +10,17 @@ if [[ -n "$1" ]]; then
   # if we start with a params assume we want to run that
   if [ "$1" = "migrate" ]; then
     echo "migrate"
-    python ./src/manage.py migrate
+    python /src/manage.py migrate
     exit
   elif [ "$1" = 'shell' ]; then
-    python ./src/manage.py shell
+    python /src/manage.py shell
     exit
   elif [ "$1" = 'scrape' ]; then
     # scrap -as-task <name-of-spider>
-    python ./src/manage.py scrape "${@:2}"
+    python /src/manage.py scrape "${@:2}"
     exit
   elif [ "$1" = 'download' ]; then
-    python ./src/manage.py download_remote "${@:2}"
+    python /src/manage.py download_remote "${@:2}"
     exit
   elif [ "$1" = 'worker' ]; then
     echo "!!!Starting Worker!!!"
@@ -36,4 +36,5 @@ if [[ -n "$1" ]]; then
 
 fi
 
-$@
+echo "Running command"
+exec "$@"
