@@ -43,5 +43,4 @@ db.sqlite3-journal
 test_*
 .pytest*
 pg_data
-/reference_code
 requirements.in
