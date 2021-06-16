@@ -47,8 +47,9 @@ ENV PATH=${CONDA_DIR}/envs/env_snap/snap/bin:${CONDA_DIR}/envs/env_snap/bin:${CO
 
 ADD environment.yml /tmp/environment.yml
 
-RUN mamba env create -f /tmp/environment.yml                                                                 && \
-    mamba clean --all -f -y
+RUN mamba env create -f /tmp/environment.yml
+RUN mamba install -y libspatialite -n env_snap
+RUN mamba clean --all -f -y
 
 WORKDIR ${HOME}
 
