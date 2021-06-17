@@ -33,7 +33,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
-    image: auth-geop/eo_engine
+    image: vesnikos/eo_engine
     entrypoint: '/docker-entrypoint'
     command: ['worker']
     volumes:
