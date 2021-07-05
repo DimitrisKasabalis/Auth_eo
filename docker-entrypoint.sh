@@ -19,8 +19,8 @@ if [[ -n "$1" ]]; then
     # scrap -as-task <name-of-spider>
     python /src/manage.py scrape "${@:2}"
     exit
-  elif [ "$1" = 'download' ]; then
-    python /src/manage.py download_remote "${@:2}"
+  elif [ "$1" = 'download-file' ]; then
+    python /src/manage.py download_file "${@:2}"
     exit
   elif [ "$1" = 'worker' ]; then
     echo "!!!Starting Worker!!!"

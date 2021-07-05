@@ -1,6 +1,6 @@
 from .c import *
 from .eo_product import EOProductsChoices, EOProductStatusChoices, EOProduct
-from .eo_source import EOSourceStatusChoices, EOSource, EOSourceProductChoices, EOSourceProductGroupChoices
+from .eo_source import EOSourceStatusChoices, EOSource, EOSourceProductChoices
 from .other import Credentials
 
 
@@ -10,7 +10,6 @@ __all__ = [
     "EOSource",
     "EOSourceStatusChoices",
     "EOSourceProductChoices",
-    "EOSourceProductGroupChoices",
     "EOProductsChoices",
     "GeopGroupTask",
     "GeopTask"

@@ -1,7 +1,8 @@
 import tempfile
+from datetime import datetime
 from pathlib import Path
-from typing import Union, Optional
-from zipfile import ZipFile
+from tempfile import TemporaryFile
+from typing import Optional, Tuple, List
 
 from celery import group, Task
 from celery.app import shared_task
@@ -9,10 +10,10 @@ from celery.utils.log import get_task_logger
 from django.core.files import File
 from django.utils import timezone
 from osgeo import gdal
-from osgeo.gdal import GDALTranslateOptions
+from pytz import utc
 
-from eo_engine.models import EOProduct
-from eo_engine.models import EOSource, EOSourceStatusChoices, EOSourceProductChoices, EOProductStatusChoices
+from eo_engine.models import EOProduct, EOProductStatusChoices
+from eo_engine.models import (EOSource, EOSourceStatusChoices)
 
 logger = get_task_logger(__name__)
 
@@ -21,6 +22,21 @@ def random_name_gen(length=10) -> str:
     import random
     import string
     return ''.join(random.choice(string.ascii_uppercase) for i in range(10))
+
+
+@shared_task(bind=True)
+def task_schedule_download(self, params: Tuple[Tuple[str, str]]):
+    qs = EOSource.objects.none()
+    for prod, start_date in params:
+        start_date = datetime.strptime(start_date, '%d/%m/%Y').replace(tzinfo=utc)
+        qs |= EOSource.objects.filter(status=EOSourceStatusChoices.availableRemotely,
+                                      product=prod,
+                                      datetime_reference__gte=start_date)
+
+    if qs.exists():
+        job = group(task_download_file.s(filename=eo_source.filename) for eo_source in qs)
+        qs.update(status=EOSourceStatusChoices.scheduledForDownload)
+        return job.apply_async()
 
 
 @shared_task(bind=True)
@@ -35,11 +51,14 @@ def task_download_file(self, filename: str, force_dl=False):
     if force_dl and eo_source.local_file_exists:
         print(f"File {eo_source.filename} file found at directory {eo_source.local_path}. Skipping")
         return eo_source.filename
+    try:
+        eo_source.download()
 
-    eo_source.download()
-
-    if eo_source.file.size == 0:
-        logger.warn(f"warning: file {eo_source.filename} has really filesize of 0.")
+        if eo_source.file.size == 0:
+            logger.warn(f"warning: file {eo_source.filename} has really filesize of 0.")
+    except Exception as e:
+        eo_source.status = EOSourceStatusChoices.availableRemotely
+        raise e
 
     return eo_source.filename  # return the name of the file, ckts as PK
 
@@ -79,38 +98,126 @@ def task_fetch_n_files(self: Task, n: int = 1, product: str = None) -> Optional[
     return result.id
 
 
-@shared_task()
-def task_translate_h5_to_geotiff(src: Union[str, Path]) -> str:
-    src_path = Path(src)
-    if src_path.suffix == '.zip':  # if it's zip'ed, use the zipdriver to access the data directly
-        zipfile = ZipFile(src_path)
-        zip_path = list(filter(lambda x: str(x).endswith('.h5'), zipfile.namelist()))[
-            0]  # path of h5 inside the zip file
-        uri = f"/vsizip/{src_path.as_posix()}/{zip_path}"  # construct a uri path
-    elif src_path.suffix == '.h5':
-        uri = f"{src_path.as_posix()}"
-    else:
-        raise ValueError('Unrecognised Error')
+@shared_task(bind=True)
+def task_s02p02_ndvi_vci_clip_ndvi(self, output_pk: int, aoi: List[int], **kwargs):
+    import xarray as xr
+    import numpy as np
 
-    optionsTiffParams = {
-        "format": "GTiff",
-        "outputBounds": [-30, 40, 60, -40],
-        "outputSRS": "EPSG: 4326",
-        "metadataOptions": "all"
-    }
+    def find_nearest(array, value):
+        array = np.asarray(array)
+        idx = (np.abs(array - value)).argmin()
+        return array[idx]
 
-    optionsTiff: GDALTranslateOptions = gdal.TranslateOptions(**optionsTiffParams)
+    def bnd_box_adj(my_ext: [int, int, int, int]):
 
-    dst_path = src_path.with_suffix('.tif')
+        lat_1k = np.round(np.arange(80., -60., -1. / 112), 8)
+        lon_1k = np.round(np.arange(-180., 180., 1. / 112), 8)
 
-    srcDS = gdal.Open(uri)
-    if srcDS is None:
-        raise Exception
+        lat_300 = ds.lat.values
+        lon_300 = ds.lon.values
+        ext_1k = np.zeros(4)
 
-    result: gdal.Dataset = gdal.Translate(srcDS=srcDS, destName=dst_path.as_posix(), options=optionsTiff)
-    filepath = result.GetFileList()[0]
+        # UPL Long 1K
+        ext_1k[0] = find_nearest(lon_1k, my_ext[0]) - 1. / 336
+        # UPL Lat 1K
+        ext_1k[1] = find_nearest(lat_1k, my_ext[1]) + 1. / 336
 
-    return Path(filepath).as_posix()
+        # LOWR Long 1K
+        ext_1k[2] = find_nearest(lon_1k, my_ext[2]) + 1. / 336
+        # LOWR Lat 1K
+        ext_1k[3] = find_nearest(lat_1k, my_ext[3]) - 1. / 336
+
+        # UPL
+        my_ext[0] = find_nearest(lon_300, ext_1k[0])
+        my_ext[1] = find_nearest(lat_300, ext_1k[1])
+
+        # LOWR
+        my_ext[2] = find_nearest(lon_300, ext_1k[2])
+        my_ext[3] = find_nearest(lat_300, ext_1k[3])
+        return my_ext
+
+    def _date_extr(name: str):
+
+        pos = [pos for pos, char in enumerate(name) if char == '_'][2]
+        date_str = name[pos + 1: pos + 9]
+        return date_str
+
+    param = {'product': 'NDVI',
+             'short_name': 'Normalized_difference_vegetation_index',
+             'long_name': 'Normalized Difference Vegetation Index Resampled 1 Km',
+             'grid_mapping': 'crs',
+             'flag_meanings': 'Missing cloud snow sea background',
+             'flag_values': '[251 252 253 254 255]',
+             'units': '',
+             'PHYSICAL_MIN': -0.08,
+             'PHYSICAL_MAX': 0.92,
+             'DIGITAL_MAX': 250,
+             'SCALING': 1. / 250,
+             'OFFSET': -0.08}
+    output: EOProduct = EOProduct.objects.get(pk=output_pk)
+    input: EOSource = output.inputs.first()
+    ds = xr.open_dataset(input.file.path, mask_and_scale=False)
+    da = ds.NDVI
+    adj_ext = bnd_box_adj(aoi)
+    da = da.sel(lon=slice(adj_ext[0], adj_ext[2]), lat=slice(adj_ext[1], adj_ext[3]))
+    try:
+        prmts = {param['product']: {'dtype': 'int32', 'zlib': 'True', 'complevel': 4}}
+        name = param['product']  # 'NDVI'
+        date_str = _date_extr(input.filename)
+        # file_name = f'CGLS_{name}_{date}_300m_Africa.nc'
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            file = Path(tmp_dir) / f'tmp.nc'
+
+            da.to_netcdf(file, encoding=prmts)  # hmm... maybe it will take too much time, and our conn will die?
+            content = File(file.open('rb'))
+            output.file.save(name=output.filename, content=content, save=False)
+            output.filesize = output.file.size
+            output.status = EOProductStatusChoices.Ready
+        print(f'removing temp file {file.name}')
+        file.unlink(missing_ok=True)
+    except Exception as ex:
+        template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+        message = template.format(type(ex).__name__, ex.args)
+        print(message)
+        raise ex
+
+    output.status = EOProductStatusChoices.Ready
+    output.save()
+    return output.filename
+
+
+# @shared_task()
+# def task_translate_h5_to_geotiff(src: Union[str, Path]) -> str:
+#     src_path = Path(src)
+#     if src_path.suffix == '.zip':  # if it's zip'ed, use the zipdriver to access the data directly
+#         zipfile = ZipFile(src_path)
+#         zip_path = list(filter(lambda x: str(x).endswith('.h5'), zipfile.namelist()))[
+#             0]  # path of h5 inside the zip file
+#         uri = f"/vsizip/{src_path.as_posix()}/{zip_path}"  # construct a uri path
+#     elif src_path.suffix == '.h5':
+#         uri = f"{src_path.as_posix()}"
+#     else:
+#         raise ValueError('Unrecognised Error')
+#
+#     optionsTiffParams = {
+#         "format": "GTiff",
+#         "outputBounds": [-30, 40, 60, -40],
+#         "outputSRS": "EPSG: 4326",
+#         "metadataOptions": "all"
+#     }
+#
+#     optionsTiff: GDALTranslateOptions = gdal.TranslateOptions(**optionsTiffParams)
+#
+#     dst_path = src_path.with_suffix('.tif')
+#
+#     srcDS = gdal.Open(uri)
+#     if srcDS is None:
+#         raise Exception
+#
+#     result: gdal.Dataset = gdal.Translate(srcDS=srcDS, destName=dst_path.as_posix(), options=optionsTiff)
+#     filepath = result.GetFileList()[0]
+#
+#     return Path(filepath).as_posix()
 
 
 # @shared_task(bind=True)
@@ -122,11 +229,16 @@ def task_translate_h5_to_geotiff(src: Union[str, Path]) -> str:
 
 
 @shared_task(bind=True)
-def task_make_agro_ndvi_1km_v3(self, product_pk, aoi=[-30, 40, 60, -40]):
+def task_c_gls_nvdi_resample_from_300m_to_1km(self, product_pk, aoi):
+    """" Resamples to 1km and cuts to AOI bbox"""
+
     import xarray as xr
     import os
     import numpy as np
     import pandas as pd
+
+    if aoi is None:
+        aoi = [-30, 40, 60, -40]
 
     def _param(ds):
         if 'LAI' in ds.data_vars:
@@ -292,7 +404,7 @@ def task_make_agro_ndvi_1km_v3(self, product_pk, aoi=[-30, 40, 60, -40]):
     eo_product = EOProduct.objects.get(id=product_pk)
 
     # Mark it as 'in process'
-    eo_product.status = EOProductStatusChoices.PROCESSING
+    eo_product.status = EOProductStatusChoices.InProcess
     eo_product.save()
 
     # input file.
@@ -364,7 +476,7 @@ def task_make_agro_ndvi_1km_v3(self, product_pk, aoi=[-30, 40, 60, -40]):
 
         eo_product.process = process
         eo_product.datetime_creation = datetime_now
-        with  tempfile.TemporaryDirectory() as tmp_dir:
+        with tempfile.TemporaryDirectory() as tmp_dir:
             file = Path(tmp_dir) / f'tmp_{eo_product.filename}'
             da_r.to_netcdf(file, encoding=prmts)
             with file.open('rb') as fh:
@@ -443,5 +555,5 @@ def task_append_char(token: str) -> str:
 
 
 __all__ = [
-    "task_make_agro_ndvi_1km_v3",
+
 ]

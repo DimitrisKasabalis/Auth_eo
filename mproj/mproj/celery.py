@@ -13,11 +13,20 @@ app.config_from_object('django.conf:settings')
 app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
 
 app.conf.beat_schedule = {
-    'op_discover_ndvi-300-21_dataset': {
-        'task': 'eo_engine.tasks.task_start_scrape',
-        'schedule': crontab(minute=0, hour=1, day_of_month='*/3'),
-        'kwargs': {
-            'spider_name': 'ndvi-300m-v2-spider'
-        },
-    },
+    # 'op_discover_ndvi-300-21_dataset': {
+    #     'task': 'eo_engine.tasks.task_start_scrape',
+    #     'schedule': crontab(minute=0, hour=1, day_of_month='*/3'),
+    #     'kwargs': {
+    #         'spider_name': 'ndvi-300m-v2-spider'
+    #     },
+    # },
+    'op_schedule_download': {
+        'task': 'eo_engine.tasks.task_schedule_download',
+        'schedule': crontab(minute=5),
+        'kwargs': {'params': (
+            ('NDVI-300m-v2-GLOB', '1/6/2020'),
+            ('WB-100m-v1-GLOB', '1/11/2020'),
+        )
+        }
+    }
 }

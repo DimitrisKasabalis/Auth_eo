@@ -44,3 +44,4 @@ test_*
 .pytest*
 pg_data
 requirements.in
+docker-compose.override.yml

@@ -33,9 +33,9 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
-    image: vesnikos/eo_engine
+    image: vesnikos/eo_engine:0.2.0
     entrypoint: '/docker-entrypoint'
-    command: ['worker']
+    command: [ 'worker' ]
     volumes:
       - './docker-entrypoint.sh:/docker-entrypoint'
       - "./mproj:/src"

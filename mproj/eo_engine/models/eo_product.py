@@ -3,57 +3,62 @@ from django.db import models
 
 
 class EOProductsChoices(models.TextChoices):
-    agro_ndvi_1km_v3 = "agro-ndvi-1km-v3", "ndvi 1km v3 (lab-made)"
+    a_agro_ndvi_1km_v3 = "agro-ndvi-1km-v3"
+    a_agro_wb_100m_tun = 'WB-100m-TUN'
+    a_agro_wb_100m_rwa = 'WB-100m-RWA'
+    a_agro_wb_100m_eth = 'WB-100m-ETH'
+    a_agro_wb_100m_moz = 'WB-100m-MOZ'
+    a_agro_wb_100m_zaf = 'WB-100m-ZAF'
+    a_geop_wb_100m_gha = 'WB-100m-GHA'
+    a_geop_wb_100m_ner = 'WB-100m-NER'
 
 
 class EOProductStatusChoices(models.TextChoices):
-    AVAILABLE = 'AVAILABLE', "Available for production"
-    PROCESSING = 'PROCESSING', "Processing..."
-    READY = 'READY', "Ready"
+    Available = 'Available', "Available for generation."
+    Scheduled = "Scheduled", "Scheduled For generation."
+    Failed = 'Failed', 'Generation was attempted but failed'
+    Generating = 'Generating', "Product is being generated."
+    Ready = 'Ready', "Product is Ready."
 
 
 def _upload_to(instance: 'EOProduct', filename):
-    root_folder = 'agro_products'
-    group = str(instance.product)
+    root_folder = 'products'
 
-    return f"{root_folder}/{group}"
+    return f"{root_folder}/{instance.output_folder}/{filename}"
 
 
 class EOProduct(models.Model):
     filename = models.TextField(unique=True)
-    status = models.CharField(max_length=255, choices=EOProductStatusChoices.choices,
-                              default=EOProductStatusChoices.AVAILABLE)
+    output_folder = models.TextField()
     product = models.CharField(max_length=255, choices=EOProductsChoices.choices)
     datetime_creation = models.DateTimeField(null=True)
     file = models.FileField(upload_to=_upload_to, null=True, max_length=2048)
-    timestamp = models.DateTimeField(auto_now_add=True)
-    process = models.JSONField(default=dict, encoder=DjangoJSONEncoder)
     inputs = models.ManyToManyField("eo_engine.EOSource")
 
-    def make_product(self, as_task: bool = False, force=False):
-        if self.status in [EOProductStatusChoices.READY, EOProductStatusChoices.PROCESSING]:
-            # its done or being made
-            # log ...
-            return
+    timestamp = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=255, choices=EOProductStatusChoices.choices,
+                              default=EOProductStatusChoices.Available)
 
-        func = None
-        kwargs = {}
-        args = []
-        if self.product == EOProductsChoices.agro_ndvi_1km_v3:
-            from eo_engine.tasks import task_make_agro_ndvi_1km_v3
-            func = task_make_agro_ndvi_1km_v3
-            kwargs.update({
-                "product_pk": self.id
-            })
+    task_name = models.CharField(max_length=255)
+    task_kwargs = models.JSONField()
+
+    # link to task
+
+    def make_product(self, as_task: bool = False):
+        from eo_engine import tasks
+        func = getattr(tasks, self.task_name)  # get ref to task function using its name
 
         if func is None:
             raise NotImplementedError('No generation method has been defined for this product.')
 
         if as_task:
-            task = func.s(*args, **kwargs)
-            job = task.apply_async()
+            task = func.s(output_pk=self.pk, **self.task_kwargs)
+            task_id = task.apply_async()
+            # link to task
+            return task_id
         else:
-            func(*args, **kwargs)
+            func(output_pk=self.pk, **self.task_kwargs)
+            return 'Done!'
 
 
 __all__ = [

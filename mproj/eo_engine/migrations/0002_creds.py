@@ -9,7 +9,6 @@ def forwards_func(apps, schema_editor):
     Credentials.objects.bulk_create([
         Credentials(domain="vito-eodata.be", username="vesnikos", password="J7Ri5x78WjWHhEZ"),
         Credentials(domain="land.copernicus.vgt.vito.be", username="vesnikos", password="vYxDWrstV265PDF"),
-
     ])
 
 

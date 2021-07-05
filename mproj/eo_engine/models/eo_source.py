@@ -2,6 +2,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from django.core.files import File
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -14,51 +15,66 @@ def _file_storage_path(instance: 'EOSource', filename: str):
 
 
 class EOSourceStatusChoices(models.TextChoices):
-    availableRemotely = "availableRemotely"
-    availableLocally = "availableLocally"
-    beingDownloaded = 'beingDownloaded'
-    ignore = "ignore"
-
-
-class EOSourceProductGroupChoices(models.TextChoices):
-    NDVI = "ndvi", "NDVI"
-    LAI = "lai", "LAI"
-    FCOVER = "fcover", "FCOVER"
-    FAPAR = "fapar", "FAPAR"
-    DMP = "dmp", "DMP"
-    GDMP = "gdmp", "GDMP"
-    OTHER = 'other', "Other"
+    availableRemotely = "availableRemotely", 'NO_LABEL'
+    scheduledForDownload = "scheduledForDownload", "Scheduled For Download"
+    availableLocally = "availableLocally", 'NO_LABEL'
+    beingDownloaded = 'beingDownloaded', 'NO_LABEL'
+    ignore = "Ignore", 'NO_LABEL'
 
 
 class EOSourceProductChoices(models.TextChoices):
     # add mode products here
-    ndvi_300m_v1 = "ndvi-300m-v1", "ndvi 300m v1"
-    ndvi_300m_v2 = "ndvi-300m-v2", "ndvi 300m v2"
-    ndvi_1km_v3 = "ndvi-1km-v3", "ndvi 1km v3"
-    ndvi_1km_v2 = "ndvi-1km-v2", "ndvi 1km v2"
-    ndvi_1km_v1 = "ndvi-1km-v1", "ndvi 1km v1"
-    lai_300m_v1 = "lai-300m-v1", "lai 300m v1"
-    lai_1km_v1 = "lai-1km-v1", "lai 1km v1"
-    lai_1km_v2 = "lai-1km-v2", "lai 1km v2"
-    vc1_v1 = "vc1-v1", "vc1 v1"
-    wb_africa_v1 = "wb-africa-v1", "wb africa V1"
+    c_gsl_ndvi300_v2_glob = 'c_gsl_NDVI300-V2-GLOB', "Copernicus Global Land Service NDVI 300m v2"
+    c_gsl_ndvi1km_v3_glob = 'c_gsl_NDVI1km-V3-GLOB', "Copernicus Global Land Service NDVI 1km v3"
+    a_agro_ndvi300_v3_glob = 'a_agro_NDVI300-V3-AFR', "AuthAgro Service NDVI 1km v3"
+    c_gsl_lai300_v1_glob = 'c_gsl_LAI300-V1-GLOB', "Copernicus Global Land Service LAI 300m v1"
+
+    # https://land.copernicus.eu/global/sites/cgls.vito.be/files/products/CGLOPS2_PUM_WB100m_V1_I1.10.pdf
+    c_gls_WB100_v1_glob = 'c_gls_WB100-V1-GLOB', "Copernicus Global Land Service Water Bodies Collection 100m Version 1"
+
+    # ndvi_300m_v1 = "ndvi-300m-v1", "ndvi 300m v1"
+    # ndvi_300m_v2 = "ndvi-300m-v2", "ndvi 300m v2"
+    # ndvi_1km_v3 = "ndvi-1km-v3", "ndvi 1km v3"
+    # ndvi_1km_v2 = "ndvi-1km-v2", "ndvi 1km v2"
+    # ndvi_1km_v1 = "ndvi-1km-v1", "ndvi 1km v1"
+    # lai_300m_v1 = "lai-300m-v1", "lai 300m v1"
+    # lai_1km_v1 = "lai-1km-v1", "lai 1km v1"
+    # lai_1km_v2 = "lai-1km-v2", "lai 1km v2"
+    # vc1_v1 = "vc1-v1", "vc1 v1"
+    # wb_africa_v1 = "wb-africa-v1", "wb africa V1"
+    # sirs_nrt_300 = "sirs-nrt-300", "SIRS WB NRT 300m"
+    # sirs_nrt_100 = "sirs-nrt-100", "SIRS WB NRT 100m"
 
 
 class EOSource(models.Model):
     # EO-Inputs
     """ A ledger for known files """
 
+    # status of file.
     status = models.CharField(max_length=255,
                               choices=EOSourceStatusChoices.choices,
                               default=EOSourceStatusChoices.availableRemotely)
-    product_group = models.CharField(max_length=10, editable=True, choices=EOSourceProductGroupChoices.choices)
+
+    # what product is it?
     product = models.CharField(max_length=255, choices=EOSourceProductChoices.choices)
-    file = models.FileField(upload_to=_file_storage_path, editable=False, null=True, max_length=2_048)
+    # physical file. Read about DJANGO media files
+    file = models.FileField(upload_to=_file_storage_path,
+                            editable=False,
+                            null=True,
+                            max_length=2_048)
+    # filename, including extension. Must be unique
     filename = models.CharField(max_length=255, unique=True)
+    # net location of resource
     domain = models.CharField(max_length=200)
-    datetime_uploaded = models.DateTimeField()
-    datetime_seen = models.DateTimeField(auto_created=True)
-    url = models.URLField()
+    # reported filesize, bytes?
+    filesize_reported = models.BigIntegerField(validators=(MinValueValidator(0),))
+    # product reference datetime
+    datetime_reference = models.DateTimeField(null=True, help_text="product reference datetime ")
+    # when did we see it?
+    datetime_seen = models.DateTimeField(auto_created=True, help_text="datetime of when it was seen")
+    # full url to resource.
+    url = models.URLField(help_text="Resource URL")
+    # username/password of resource
     credentials = models.ForeignKey("Credentials", on_delete=models.SET_NULL, null=True)
 
     def __str__(self):
@@ -102,9 +118,10 @@ class EOSource(models.Model):
         self.save()
 
         with TemporaryFile(mode='w+b') as file_handle:
+            # TemporaryFile has noname, and will cease to exist when it is closed.
 
-            print(headers.keys())
             for chunk in response.iter_content(chunk_size=2 * 1024):
+                self.refresh_from_db()  # ping to keep db connection alive
                 file_handle.write(chunk)
                 file_handle.flush()
 
@@ -124,18 +141,22 @@ class EOSource(models.Model):
 
 @receiver(post_save, sender=EOSource, weak=False, dispatch_uid='eosource_post_save_handler')
 def eosource_post_save_handler(instance: EOSource, **kwargs):
-    " Post save logic goes here. ie an asset is now available locally, are there products that can be made?"
-
+    """ Post save logic goes here. ie an asset is now available locally, are there products that can be made?"""
+    from eo_engine.common import generate_products
     eo_source = instance
     # if asset is local
     if eo_source.status == EOSourceStatusChoices.availableLocally:
-        from eo_engine.models import EOProduct, EOProductsChoices
-        from eo_engine.common import generate_prod_filename
-        # if asset is ndvi-300m-v2
-        if eo_source.product == EOSourceProductChoices.ndvi_300m_v2:
+        # pass
+        products = generate_products(eo_source)
+
+        for product in products:
+            from eo_engine.models import EOProduct, EOProductsChoices
             prod = EOProduct.objects.create(
-                product=EOProductsChoices.agro_ndvi_1km_v3,
-                filename=generate_prod_filename(eo_source),
+                product=product.group,
+                output_folder=product.output_folder,
+                filename=product.filename,
+                task_name=product.task_name,
+                task_kwargs=product.task_kwargs
             )
             prod.inputs.set([eo_source, ])
             prod.save()
@@ -144,7 +165,6 @@ def eosource_post_save_handler(instance: EOSource, **kwargs):
 __all__ = [
     "EOSource",
     "EOSourceProductChoices",
-    "EOSourceProductGroupChoices",
     "EOSourceStatusChoices"
 
 ]

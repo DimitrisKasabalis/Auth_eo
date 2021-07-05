@@ -1,26 +1,55 @@
+import json
+import os
 import re
 from datetime import datetime
-from typing import Dict, List, Pattern
-from urllib.parse import urlsplit
+from typing import List, Pattern
+from urllib.parse import urlsplit, urlparse
 
+from pytz import utc
 from scrapy import Request, FormRequest
+from scrapy.linkextractors import LinkExtractor
 from scrapy.loader import ItemLoader
-from scrapy.spiders import CrawlSpider
+from scrapy.spiders import CrawlSpider, Spider
 from scrapy.spiders import Rule
 from scrapy.spiders.init import InitSpider
 
-from eo_scraper.items import VitoEODataItem
-from eo_scraper.utils import get_auth
-from scrapy.linkextractors import LinkExtractor
+from eo_engine.models import EOSourceProductChoices
+from eo_scraper.items import RemoteSourceItem
+from eo_scraper.utils import get_credentials, credentials
 
+'''
+https://docs.scrapy.org/en/latest/topics/spiders.html
 
-# class BaseSpider(CrawlSpider):
-#
-#     def __init__(self, *args, **kwargs):
-#         super(CrawlSpider, self).__init__(*args, **kwargs)
-#
-#     def parse(self, response, **kwargs):
-#         pass
+For spiders, the scraping cycle goes through something like this:
+
+1.  You start by generating the initial Requests to crawl the first URLs, 
+    and specify a callback function to be called with the response downloaded 
+    from those requests.
+
+1.  The first requests to perform are obtained by calling the start_requests() 
+    method which (by default) generates Request for the URLs specified in the 
+    start_urls and the parse method as callback function for the Requests.
+
+1.  In the callback function, you parse the response (web page) and return 
+    item objects, Request objects, or an iterable of these objects. Those Requests 
+    will also contain a callback (maybe the same) and will then be downloaded by Scrapy 
+    and then their response handled by the specified callback.
+
+1.  In callback functions, you parse the page contents, typically using Selectors 
+    (but you can also use BeautifulSoup, lxml or whatever mechanism you prefer) 
+    and generate items with the parsed data.
+
+1.  Finally, the items returned from the spider will be typically persisted to a 
+        database (in some Item Pipeline) or written to a file using Feed exports.
+        
+        
+There are multiple variation of Spiders, The simplest one is the scrapy.Spider. 
+    Then we have 
+        - CrawlSpider
+        - InitSpider
+        
+        
+'''
 
 
 class CopernicusVgtDatapool(InitSpider, CrawlSpider):
@@ -45,7 +74,7 @@ class CopernicusVgtDatapool(InitSpider, CrawlSpider):
         print("init_request")
         url_split = urlsplit(self.login_page)
         domain = url_split.netloc
-        self.credentials = get_auth(domain)
+        self.credentials = get_credentials(domain)
         return Request(url=self.login_page, callback=self.login)
 
     def login(self, response):
@@ -63,23 +92,97 @@ class CopernicusVgtDatapool(InitSpider, CrawlSpider):
         return self.initialized()
 
     def parse(self, response, **kwargs):
+        # https://docs.scrapy.org/en/latest/topics/spiders.html#scrapy.spiders.Spider.parse
+
+        # This is the default callback used by Scrapy to process
+        # downloaded responses, when their requests don’t specify a callback.
+
         # self.logger.info('A response from %s just arrived!' % response.url)
         pass
 
     def parse_catalog(self, response):
         self.logger.info('A response from %s just arrived!' % response.url)
         for idx, tableRow in enumerate(response.xpath('//tr[count(td)=4]')):
-            loader = ItemLoader(item=VitoEODataItem(),
+            loader = ItemLoader(item=RemoteSourceItem(),
                                 selector=tableRow)
 
-            loader.add_value('product_name', self.product_name)
+            # loader.add_value('product_name', self.product_name)
             loader.add_xpath('filename', 'td[position()=1]/text()', pos=1)
-            loader.add_xpath('extension', 'td[position()=1]/text()', pos=1)
+            # loader.add_xpath('extension', 'td[position()=1]/text()', pos=1)
             loader.add_xpath('size', 'td[position()=2]/text()', pos=2)
-            loader.add_xpath('datetime_uploaded', 'td[position()=3]/text()', pos=3)
-            loader.add_value('datetime_scrapped', datetime.utcnow())
+            # loader.add_xpath('datetime_uploaded', 'td[position()=3]/text()', pos=3)
+            loader.add_value('datetime_seen', datetime.utcnow())
             loader.add_value('domain', response.url)
             loader.add_value('url', response.url)
             loader.add_xpath('url', 'td/a/@href')
 
             yield loader.load_item()
+
+
+class AnonFtpRequest(Request):
+
+    def __init__(self, url, credentials: credentials, *args, **kwargs):
+        super(AnonFtpRequest, self).__init__(url, *args, **kwargs)
+        username = credentials.username
+        password = credentials.password
+        meta = {'ftp_user': username,
+                'ftp_password': password}
+
+        self.meta.update(meta)
+
+
+# https://github.com/laserson/ftptree/blob/master/ftptree_crawler/spiders.py
+class FtpGlobalLand(Spider):
+    # there's no robots.txt
+    custom_settings = {
+        'ROBOTSTXT_OBEY': False
+    }
+    name = 'ftp-spider-wb100'
+    product_name = EOSourceProductChoices.c_gls_WB100_v1_glob
+    allowed_domains = ['ftp.globalland.cls.fr', ]
+    credentials: credentials  # username, password
+    'ftp://ftp.globalland.cls.fr/Core/SIRS/dataset-sirs-wb-nrt-100m/'
+    ftp_url: str = 'ftp://ftp.globalland.cls.fr/home/glbland_ftp/Core/SIRS/dataset-sirs-wb-nrt-100m'
+
+    def __init__(self, *args, **kwargs):
+        super(FtpGlobalLand, self).__init__(*args, **kwargs)
+        if self.ftp_url is None:
+            raise NotImplementedError('ftp_url is unset')
+
+        url_split = urlsplit(self.ftp_url)
+        domain = url_split.netloc
+        self.credentials = get_credentials(domain)
+
+    def start_requests(self):
+        yield AnonFtpRequest(self.ftp_url, credentials=self.credentials)
+
+    def parse(self, response, **kwargs):
+        url = urlparse(response.url)
+        basepath = url.path
+        files = json.loads(response.body)
+        for f in files:
+            if f['filetype'] == 'd':  # if filettype is 'd', route for seed
+                path = os.path.join(response.url, f['filename'])
+                yield AnonFtpRequest(path, self.credentials)
+
+            if f['filetype'] == '-':
+                path = os.path.join(basepath, f['filename'])
+                # result = FtpTreeLeaf(
+                #     filename=f['filename'],
+                #     path=path,
+                #     size=f['size'],
+                #     domain=url.netloc,
+                #     datetime_seen=datetime.utcnow().replace(tzinfo=utc)
+                #     datetime
+                # )
+                result = RemoteSourceItem(
+                    # product_name='asf',
+                    filename=f.get('filename', None),
+                    # extension=f.get('filename', None),
+                    size=f.get('size', None),
+                    domain=url.netloc,
+                    # datetime_uploaded=0,  # we cannot tell from ftp
+                    datetime_seen=datetime.utcnow().replace(tzinfo=utc),
+                    url=response.url
+                )
+                yield result

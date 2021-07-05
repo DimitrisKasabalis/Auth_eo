@@ -2,13 +2,48 @@
 #
 # See documentation in:
 # https://docs.scrapy.org/en/latest/topics/items.html
+import re
 from urllib.parse import urlsplit
 
 import scrapy
 from itemloaders.processors import Join, MapCompose, TakeFirst
 
+units = {"B": 1, "KB": 2 ** 10, "MB": 2 ** 20, "GB": 2 ** 30, "TB": 2 ** 40}
 
-# from w3lib.html import remo
+
+def parse_size(size):
+    """
+
+    ('1024b', 1024)
+    ('10.43 KB', 10680)
+    ('11 GB', 11811160064)
+    ('343.1 MB', 359766425)
+    ('10.43KB', 10680)
+    ('11GB', 11811160064)
+    ('343.1MB', 359766425)
+    ('10.43 kb', 10680)
+    ('11 gb', 11811160064)
+    ('343.1 mb', 359766425)
+    ('10.43kb', 10680)
+    ('11gb', 11811160064)
+    ('343.1mb', 359766425)
+    """
+    try:
+        return int(size)
+    except ValueError:
+        pass
+    try:
+        return float(size)
+    except ValueError:
+        pass
+
+    size = size.upper()
+    # print("parsing size ", size)
+    if not re.match(r' ', size):
+        size = re.sub(r'([KMGT]?B)', r' \1', size)
+    number, unit = [string.strip() for string in size.split()]
+    return int(float(number) * units[unit])
+
 
 def get_extension(value: str):
     return value.split('.')[-1]
@@ -29,26 +64,18 @@ def parse_datetime_str(value: str):
     return parse(value)
 
 
-class VitoEODataItem(scrapy.Item):
-    product_name = scrapy.Field(
-        output_processor=TakeFirst())
-    filename = scrapy.Field(
+class RemoteSourceItem(scrapy.Item):
+    filename: str = scrapy.Field(
         input_processor=MapCompose(str.strip),
         output_processor=TakeFirst())
-    extension = scrapy.Field(
-        input_processor=MapCompose(str.strip, get_extension),
+    size: str = scrapy.Field(
+        input_processor=MapCompose(str.strip, parse_size),
         output_processor=TakeFirst())
-    size = scrapy.Field(
-        input_processor=MapCompose(str.strip),
-        output_processor=TakeFirst())
-    domain = scrapy.Field(
+    domain: str = scrapy.Field(
         input_processor=MapCompose(get_domain_of_url),
         output_processor=TakeFirst())
-    datetime_uploaded = scrapy.Field(
-        input_processor=MapCompose(str.strip, parse_datetime_str),
-        output_processor=TakeFirst())
-    datetime_scrapped = scrapy.Field(output_processor=TakeFirst())
-    url = scrapy.Field(
+    datetime_seen: str = scrapy.Field(output_processor=TakeFirst())
+    url: str = scrapy.Field(
         input_processor=MapCompose(drop_query_from_url),
         output_processor=Join(separator='')
     )
