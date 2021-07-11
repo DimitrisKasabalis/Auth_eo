@@ -12,6 +12,7 @@ from scrapy.loader import ItemLoader
 from scrapy.spiders import CrawlSpider, Spider
 from scrapy.spiders import Rule
 from scrapy.spiders.init import InitSpider
+from scrapy.utils.project import get_project_settings
 
 from eo_engine.models import EOSourceProductChoices
 from eo_scraper.items import RemoteSourceItem
@@ -70,6 +71,7 @@ class CopernicusVgtDatapool(InitSpider, CrawlSpider):
     def __init__(self, *args, **kwargs):
         super(CopernicusVgtDatapool, self).__init__(*args, **kwargs)  # default init binds kwargs to self
 
+
     def init_request(self):
         print("init_request")
         url_split = urlsplit(self.login_page)
@@ -101,7 +103,7 @@ class CopernicusVgtDatapool(InitSpider, CrawlSpider):
         pass
 
     def parse_catalog(self, response):
-        self.logger.info('A response from %s just arrived!' % response.url)
+        self.logger.info('PARSE_CATALOG: A response from %s just arrived!' % response.url)
         for idx, tableRow in enumerate(response.xpath('//tr[count(td)=4]')):
             loader = ItemLoader(item=RemoteSourceItem(),
                                 selector=tableRow)
@@ -166,15 +168,6 @@ class FtpGlobalLand(Spider):
                 yield AnonFtpRequest(path, self.credentials)
 
             if f['filetype'] == '-':
-                path = os.path.join(basepath, f['filename'])
-                # result = FtpTreeLeaf(
-                #     filename=f['filename'],
-                #     path=path,
-                #     size=f['size'],
-                #     domain=url.netloc,
-                #     datetime_seen=datetime.utcnow().replace(tzinfo=utc)
-                #     datetime
-                # )
                 result = RemoteSourceItem(
                     # product_name='asf',
                     filename=f.get('filename', None),

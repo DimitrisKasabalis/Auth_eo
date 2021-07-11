@@ -22,10 +22,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-e59o@v+u5_qld#ljvihf=gohm!dv!^3dyrvc12o+ww$z**zu!c'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False if os.getenv('DEBUG','').lower() in ['false', 'f'] else True
+DEBUG = False if os.getenv('DEBUG', '').lower() in ['false', 'f'] else True
 
 ALLOWED_HOSTS = ['*']
-
 
 # Application definition
 
@@ -136,3 +135,5 @@ BROKER_URL = f"amqp://rabbit:carrot@{os.getenv('RABBIT_HOST', 'localhost')}//"
 CELERYD_MAX_TASKS_PER_CHILD = 1
 CELERY_ACKS_LATE = True
 CELERYD_PREFETCH_MULTIPLIER = 1
+# milliseconds, 5 hours, https://www.rabbitmq.com/consumers.html#acknowledgement-timeout
+BROKER_TRANSPORT_OPTIONS = {'consumer_timeout': 5 * 1 * 60 * 60 * 1000}

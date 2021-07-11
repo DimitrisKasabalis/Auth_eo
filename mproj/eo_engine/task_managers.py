@@ -1,7 +1,12 @@
+from fnmatch import fnmatch
+
 from celery import Task
+from celery.utils.log import get_task_logger
 from django.utils import timezone
 
-from eo_engine.models import GeopTask
+from eo_engine.models import GeopTask, EOProduct, EOProductStatusChoices
+
+logger = get_task_logger(__name__)
 
 
 class BaseTaskWithRetry(Task):
@@ -16,6 +21,7 @@ class BaseTaskWithRetry(Task):
         if self.request.is_eager:
             return self.run(*args, **kwargs)
 
+        # The task namespace is eo_engine or mproj
         if self.name.startswith('eo_engine') or self.name.startswith('mproj'):
             task_entry: GeopTask = GeopTask.objects.get(task_id=task_id)
             now = timezone.now()
@@ -27,6 +33,14 @@ class BaseTaskWithRetry(Task):
                 group_task.datetime_started = now
                 group_task.save()
             task_entry.save()
+        if fnmatch(self.name, 'eo_engine.tasks.task_s??p??*'):  # ie eo_engine.tasks.task_s02p02_c_gls_ndvi_300_clip
+            # mark generating product as 'GENERATING'
+            eo_product_pk = kwargs['eo_product_pk']
+            eo_product = EOProduct.objects.get(pk=eo_product_pk)
+            logger.info(f"Marking product {eo_product} as 'GENERATING'")
+            eo_product.status = EOProductStatusChoices.Generating
+            eo_product.save()
+
         return self.run(*args, **kwargs)
 
     def after_return(self, status, retval, task_id, args, kwargs, einfo):
@@ -44,6 +58,15 @@ class BaseTaskWithRetry(Task):
         except:
             task.time_to_complete = None
         task.status = task.TaskTypeChoices.SUCCESS
+
+        # mark product available on success
+        if fnmatch(self.name, 'eo_engine.tasks.task_s??p??*'):
+            # mark generating product as 'GENERATING'
+            eo_product_pk = kwargs['eo_product_pk']
+            eo_product = EOProduct.objects.get(pk=eo_product_pk)
+            eo_product.status = EOProductStatusChoices.Ready
+            eo_product.save()
+
         task.save()
 
     def on_retry(self, exc, task_id, args, kwargs, einfo):
@@ -65,3 +88,10 @@ class BaseTaskWithRetry(Task):
         ubdc_taskentry.datetime_finished = timezone.now()
         ubdc_taskentry.status = ubdc_taskentry.TaskTypeChoices.FAILURE
         ubdc_taskentry.save()
+
+        if fnmatch(self.name, 'eo_engine.tasks.task_s??p??*'):
+            # mark generating product as 'GENERATING'
+            eo_product_pk = kwargs['eo_product_pk']
+            eo_product = EOProduct.objects.get(pk=eo_product_pk)
+            eo_product.status = EOProductStatusChoices.Failed
+            eo_product.save()

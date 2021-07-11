@@ -24,13 +24,13 @@ class EOSourceStatusChoices(models.TextChoices):
 
 class EOSourceProductChoices(models.TextChoices):
     # add mode products here
-    c_gsl_ndvi300_v2_glob = 'c_gsl_NDVI300-V2-GLOB', "Copernicus Global Land Service NDVI 300m v2"
-    c_gsl_ndvi1km_v3_glob = 'c_gsl_NDVI1km-V3-GLOB', "Copernicus Global Land Service NDVI 1km v3"
-    a_agro_ndvi300_v3_glob = 'a_agro_NDVI300-V3-AFR', "AuthAgro Service NDVI 1km v3"
-    c_gsl_lai300_v1_glob = 'c_gsl_LAI300-V1-GLOB', "Copernicus Global Land Service LAI 300m v1"
+    c_gsl_ndvi300_v2_glob = 'c_gsl_ndvi300-v2-glob', "Copernicus Global Land Service NDVI 300m v2"
+    c_gsl_ndvi1km_v3_glob = 'c_gsl_ndvi1km-v3-glob', "Copernicus Global Land Service NDVI 1km v3"
+    a_agro_ndvi300_v3_glob = 'a_agro_ndvi300-v3-afr', "AuthAgro Service NDVI 1km v3"
+    c_gsl_lai300_v1_glob = 'c_gsl_lai300-v1-glob', "Copernicus Global Land Service LAI 300m v1"
 
     # https://land.copernicus.eu/global/sites/cgls.vito.be/files/products/CGLOPS2_PUM_WB100m_V1_I1.10.pdf
-    c_gls_WB100_v1_glob = 'c_gls_WB100-V1-GLOB', "Copernicus Global Land Service Water Bodies Collection 100m Version 1"
+    c_gls_WB100_v1_glob = 'c_gls_wb100-v1-glob', "Copernicus Global Land Service Water Bodies Collection 100m Version 1"
 
     # ndvi_300m_v1 = "ndvi-300m-v1", "ndvi 300m v1"
     # ndvi_300m_v2 = "ndvi-300m-v2", "ndvi 300m v2"
@@ -142,22 +142,28 @@ class EOSource(models.Model):
 @receiver(post_save, sender=EOSource, weak=False, dispatch_uid='eosource_post_save_handler')
 def eosource_post_save_handler(instance: EOSource, **kwargs):
     """ Post save logic goes here. ie an asset is now available locally, are there products that can be made?"""
-    from eo_engine.common import generate_products
+    from eo_engine.common import generate_products_from_source
+    from eo_engine.models import EOProduct, EOProductStatusChoices
     eo_source = instance
     # if asset is local
     if eo_source.status == EOSourceStatusChoices.availableLocally:
         # pass
-        products = generate_products(eo_source)
+        products = generate_products_from_source(eo_source)
 
         for product in products:
-            from eo_engine.models import EOProduct, EOProductsChoices
-            prod = EOProduct.objects.create(
-                product=product.group,
-                output_folder=product.output_folder,
+
+            prod, created = EOProduct.objects.get_or_create(
                 filename=product.filename,
+                output_folder=product.output_folder,
+                product_group=product.group,
                 task_name=product.task_name,
                 task_kwargs=product.task_kwargs
             )
+            # mark if the scheduler should ignore it
+            if prod.is_ignored():
+                prod.status = EOProductStatusChoices.Ignore
+
+            # mark it's inputs
             prod.inputs.set([eo_source, ])
             prod.save()
 

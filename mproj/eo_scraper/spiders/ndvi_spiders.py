@@ -18,7 +18,7 @@ class NDVISpider(CopernicusVgtDatapool):
 
 
 class NDVI300mV2Spider(NDVISpider):
-    name = "ndvi-300m-v2-spider"
+    name = "c_gsl_ndvi300-v2-glob-spider"
     product_name = EOSourceProductChoices.c_gsl_ndvi300_v2_glob
     start_urls = [
         f"https://land.copernicus.vgt.vito.be/PDF/datapool/Vegetation/Indicators/NDVI_300m_V2/"

@@ -25,12 +25,12 @@ if [[ -n "$1" ]]; then
   elif [ "$1" = 'worker' ]; then
     echo "!!!Starting Worker!!!"
     cd /src
-    celery -A mproj.celery:app worker -l info --concurrency="${CONCURRENCY}"
+    celery -A mproj.celery:app worker -l INFO --concurrency="${CONCURRENCY}"
     exit
-  elif [ "$MODE" = "beat" ]; then
+  elif [ "$1" = "beat" ]; then
     echo "Starting Beat"
     cd /src
-    celery -A mproj.celery:app beat -l info -s /celerybeat-schedule.d --pidfile="$(mktemp)".pid
+    celery -A mproj.celery:app beat -l DEBUG --pidfile="$(mktemp)".pid
     exit
   fi
 

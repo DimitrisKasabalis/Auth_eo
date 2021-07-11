@@ -1,18 +1,24 @@
 import inspect
 
-from celery import signals
+from celery.signals import before_task_publish
 
 from celery.utils.log import get_task_logger
-
-from eo_engine.models import GeopGroupTask, GeopTask
 
 logger = get_task_logger(__name__)
 
 
-@signals.before_task_publish.connect
+# @after_task_publish.connect
+# def handles_task_after_publish(headers=None, body=None, sender: str = None, **kwargs):
+#     pass
+
+
+@before_task_publish.connect
 def handles_task_publish(sender: str = None, headers=None, body=None, **kwargs):
     """ Essential procedures after a task was published on the broker.
     This function is connected to the  after_task_publish signal """
+    # set the default Django settings module for the 'celery' program.
+    # print('Before connect signal firing up')
+    from eo_engine.models import GeopGroupTask, GeopTask
 
     if not (sender.startswith('eo_engine') or
             sender.startswith('app')):
@@ -49,8 +55,3 @@ def handles_task_publish(sender: str = None, headers=None, body=None, **kwargs):
     else:
         logger.info(f'{inspect.stack()[0][3]}: Task {info["id"]} found.')
     return
-
-
-@signals.after_task_publish.connect
-def handles_task_after_publish(headers=None, body=None, sender: str = None, **kwargs):
-    pass

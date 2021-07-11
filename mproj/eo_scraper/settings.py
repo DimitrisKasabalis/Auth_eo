@@ -38,7 +38,7 @@ ROBOTSTXT_OBEY = True
 # Disable Telnet Console (enabled by default)
 TELNETCONSOLE_ENABLED = False
 
-DOWNLOAD_HANDLERS = {'ftp': 'handlers.FtpListingHandler'}
+DOWNLOAD_HANDLERS = {'ftp': 'eo_scraper.handlers.FtpListingHandler'}
 
 # Override the default request headers:
 # DEFAULT_REQUEST_HEADERS = {
@@ -91,4 +91,12 @@ ITEM_PIPELINES = {
 # HTTPCACHE_IGNORE_HTTP_CODES = []
 # HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
 
+
+LOG_FILE = None
+LOG_ENABLED = True
+LOG_ENCODING = 'utf-8'
 LOG_LEVEL = "ERROR"
+LOG_FORMAT = '%(asctime)s [%(name)s] %(levelname)s: %(message)s'
+LOG_DATEFORMAT = '%Y-%m-%d %H:%M:%S'
+LOG_STDOUT = False
+LOG_SHORT_NAMES = False

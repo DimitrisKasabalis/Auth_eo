@@ -1,10 +1,10 @@
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from tempfile import TemporaryFile
-from typing import Optional, Tuple, List
+from typing import List, Union
 
-from celery import group, Task
+import more_itertools
+from celery import group
 from celery.app import shared_task
 from celery.utils.log import get_task_logger
 from django.core.files import File
@@ -12,10 +12,13 @@ from django.utils import timezone
 from osgeo import gdal
 from pytz import utc
 
-from eo_engine.models import EOProduct, EOProductStatusChoices
+from eo_engine.common import get_task_ref_from_name
+from eo_engine.models import EOProduct, EOProductStatusChoices, FunctionalRules
 from eo_engine.models import (EOSource, EOSourceStatusChoices)
 
 logger = get_task_logger(__name__)
+
+now = timezone.now()
 
 
 def random_name_gen(length=10) -> str:
@@ -24,19 +27,67 @@ def random_name_gen(length=10) -> str:
     return ''.join(random.choice(string.ascii_uppercase) for i in range(10))
 
 
+@shared_task
+def task_init_spider(spider_name):
+    from scrapy.spiderloader import SpiderLoader
+    from scrapy.crawler import CrawlerProcess
+    from scrapy.utils.project import get_project_settings
+
+    # requires SCRAPY_SETTINGS_MODULE env variable
+    # currently it's set in DJ's manage.py
+    scrapy_settings = get_project_settings()
+    spider_loader = SpiderLoader.from_settings(scrapy_settings)
+    spider = spider_loader.load(spider_name)
+    print(scrapy_settings)
+    process = CrawlerProcess(scrapy_settings)
+    process.crawl(spider)
+
+    # # block until the crawling is finished
+    process.start()
+
+    return "Spider {} finished crawling".format(spider_name)
+
+
 @shared_task(bind=True)
-def task_schedule_download(self, params: Tuple[Tuple[str, str]]):
+def task_schedule_download_eosource(self):
+    # Entry point for downloading products.
+    #
+    # check the rules entry on FunctionalRules Table
+
     qs = EOSource.objects.none()
-    for prod, start_date in params:
-        start_date = datetime.strptime(start_date, '%d/%m/%Y').replace(tzinfo=utc)
-        qs |= EOSource.objects.filter(status=EOSourceStatusChoices.availableRemotely,
-                                      product=prod,
-                                      datetime_reference__gte=start_date)
+
+    # rules: eg, start_date for this prod group
+    download_rules = FunctionalRules.objects.get(domain='download_rules').rules
+
+    for rule in download_rules['rules']:
+        for prod, start_date in more_itertools.chunked(rule.values(), 2):  # two elements in every rule entry
+            qs |= EOSource.objects.filter(status=EOSourceStatusChoices.availableRemotely,
+                                          product=prod,
+                                          datetime_reference__gte=datetime.strptime(start_date, '%d/%m/%Y').replace(
+                                              tzinfo=utc))
 
     if qs.exists():
         job = group(task_download_file.s(filename=eo_source.filename) for eo_source in qs)
         qs.update(status=EOSourceStatusChoices.scheduledForDownload)
         return job.apply_async()
+
+
+# noinspection SpellCheckingInspection
+@shared_task
+def task_schedule_create_eoproduct():
+    from mproj import celery_app as capp
+    qs = EOProduct.objects.none()
+
+    qs |= EOProduct.objects.filter(status=EOProductStatusChoices.Available)
+    if qs.exists():
+        logger.info(f'Found {qs.count()} EOProducts that are ready')
+
+        job = group(
+            get_task_ref_from_name(eo_product.task_name).s(eo_product_pk=eo_product.pk, **eo_product.task_kwargs) for
+            eo_product in qs)
+        return job.apply_async()
+
+    return
 
 
 @shared_task(bind=True)
@@ -46,6 +97,7 @@ def task_download_file(self, filename: str, force_dl=False):
     if it's already available locally, set force_dl=True to download again.
 
     """
+    logger.info(f'downloading file {filename}')
     eo_source = EOSource.objects.get(filename=filename)
 
     if force_dl and eo_source.local_file_exists:
@@ -63,43 +115,23 @@ def task_download_file(self, filename: str, force_dl=False):
     return eo_source.filename  # return the name of the file, ckts as PK
 
 
-@shared_task(bind=True)
-def task_fetch_n_files(self: Task, n: int = 1, product: str = None) -> Optional[str]:
-    """
-    Download n number of known files.
+#############################
+# TASKS
 
-    :param self: Bound tasks
-    :param n: number of files
-    :param product: Type of product
-    :return:
-    """
-
-    product = product.lower()
-
-    eo_source_qs = EOSource.objects.filter(status=EOSourceStatusChoices.availableRemotely)
-    if product:
-        if product not in EOSourceProductChoices:
-            raise ValueError(f"unknown product: {product}")
-
-        eo_source_qs = eo_source_qs.filter(product=product)
-
-    # Queryset can only be sliced at the end
-    eo_source_qs = eo_source_qs[:n]
-
-    if not eo_source_qs.exists():  # empty qs
-        logger.info(f"No files to fetch: n: {n}, product: {product}")
-        return
-
-    filenames = eo_source_qs.values_list('filename', flat=True)
-
-    task = group(task_download_file.s(filename=filename) for filename in filenames)
-    result = task.apply_async()
-
-    return result.id
+# rules
+# tasks that make products must start with 'task_s??p??*
 
 
-@shared_task(bind=True)
-def task_s02p02_ndvi_vci_clip_ndvi(self, output_pk: int, aoi: List[int], **kwargs):
+@shared_task
+def task_s02p02_c_gls_ndvi_300_clip(eo_product_pk: Union[int, EOProduct], aoi: List[int]):
+
+    # Preamble
+    if isinstance(eo_product_pk, EOProduct):
+        eo_product = eo_product_pk
+    else:
+        eo_product: EOProduct = EOProduct.objects.get(pk=eo_product_pk)
+    input: EOSource = eo_product.inputs.first()
+
     import xarray as xr
     import numpy as np
 
@@ -154,83 +186,40 @@ def task_s02p02_ndvi_vci_clip_ndvi(self, output_pk: int, aoi: List[int], **kwarg
              'DIGITAL_MAX': 250,
              'SCALING': 1. / 250,
              'OFFSET': -0.08}
-    output: EOProduct = EOProduct.objects.get(pk=output_pk)
-    input: EOSource = output.inputs.first()
+
     ds = xr.open_dataset(input.file.path, mask_and_scale=False)
     da = ds.NDVI
     adj_ext = bnd_box_adj(aoi)
     da = da.sel(lon=slice(adj_ext[0], adj_ext[2]), lat=slice(adj_ext[1], adj_ext[3]))
     try:
-        prmts = {param['product']: {'dtype': 'int32', 'zlib': 'True', 'complevel': 4}}
+        prmts = {param['product']: {'dtype': 'i4', 'zlib': 'True', 'complevel': 4}}
         name = param['product']  # 'NDVI'
         date_str = _date_extr(input.filename)
         # file_name = f'CGLS_{name}_{date}_300m_Africa.nc'
         with tempfile.TemporaryDirectory() as tmp_dir:
             file = Path(tmp_dir) / f'tmp.nc'
-
             da.to_netcdf(file, encoding=prmts)  # hmm... maybe it will take too much time, and our conn will die?
             content = File(file.open('rb'))
-            output.file.save(name=output.filename, content=content, save=False)
-            output.filesize = output.file.size
-            output.status = EOProductStatusChoices.Ready
-        print(f'removing temp file {file.name}')
-        file.unlink(missing_ok=True)
+            eo_product.file.save(name=eo_product.filename, content=content, save=False)
+            eo_product.filesize = eo_product.file.size
+            eo_product.status = EOProductStatusChoices.Ready
+            logger.debug(f'removing temp file {file.name}')
+            file.unlink(missing_ok=True)
     except Exception as ex:
         template = "An exception of type {0} occurred. Arguments:\n{1!r}"
         message = template.format(type(ex).__name__, ex.args)
         print(message)
         raise ex
 
-    output.status = EOProductStatusChoices.Ready
-    output.save()
-    return output.filename
+    eo_product.status = EOProductStatusChoices.Ready
+    eo_product.datetime_creation = now
+    eo_product.save()
+    return eo_product.file.path
 
 
-# @shared_task()
-# def task_translate_h5_to_geotiff(src: Union[str, Path]) -> str:
-#     src_path = Path(src)
-#     if src_path.suffix == '.zip':  # if it's zip'ed, use the zipdriver to access the data directly
-#         zipfile = ZipFile(src_path)
-#         zip_path = list(filter(lambda x: str(x).endswith('.h5'), zipfile.namelist()))[
-#             0]  # path of h5 inside the zip file
-#         uri = f"/vsizip/{src_path.as_posix()}/{zip_path}"  # construct a uri path
-#     elif src_path.suffix == '.h5':
-#         uri = f"{src_path.as_posix()}"
-#     else:
-#         raise ValueError('Unrecognised Error')
-#
-#     optionsTiffParams = {
-#         "format": "GTiff",
-#         "outputBounds": [-30, 40, 60, -40],
-#         "outputSRS": "EPSG: 4326",
-#         "metadataOptions": "all"
-#     }
-#
-#     optionsTiff: GDALTranslateOptions = gdal.TranslateOptions(**optionsTiffParams)
-#
-#     dst_path = src_path.with_suffix('.tif')
-#
-#     srcDS = gdal.Open(uri)
-#     if srcDS is None:
-#         raise Exception
-#
-#     result: gdal.Dataset = gdal.Translate(srcDS=srcDS, destName=dst_path.as_posix(), options=optionsTiff)
-#     filepath = result.GetFileList()[0]
-#
-#     return Path(filepath).as_posix()
-
-
-# @shared_task(bind=True)
-# def task_warp_geotiff_to_nc(self, src: str) -> str:
-#     DEFAULT_WARP_PARAMS = {
-#         "format": "netCDF",
-#         "copyMetadata": "all"
-#     }
-
-
-@shared_task(bind=True)
-def task_c_gls_nvdi_resample_from_300m_to_1km(self, product_pk, aoi):
-    """" Resamples to 1km and cuts to AOI bbox"""
+@shared_task
+def task_s02p02_agro_nvdi_300_resample_to_1km(self, product_pk, aoi):
+    """" Resamples to 1km and cuts to AOI bbox """
 
     import xarray as xr
     import os
@@ -495,65 +484,18 @@ def task_c_gls_nvdi_resample_from_300m_to_1km(self, product_pk, aoi):
     return {"rtype": 'algo', 'product_pk': product_pk}
 
 
-@shared_task(bind=True)
-def task_nc_to_geotiff(self, src: str):
-    src_path = Path(src)
-    src_name = src_path.name
-    dst_filename = src_name.split(".")[0] + ".tif"
-    dst_path = Path(src) / "processed" / f"{self.name}" / dst_filename
-    optionsTiff = gdal.TranslateOptions(format="GTiff", outputBounds=[-30, 40, 60, -40], outputSRS="EPSG: 4326",
-                                        metadataOptions="all")
-    ds = gdal.Open(src_path.as_posix())
-    if ds is None:
-        raise ValueError(f'Could not open file: {src_path.as_posix()}')
-
-    res_ds = gdal.Translate(destName=dst_path.as_posix(), srcDS=ds, options=optionsTiff)
-    res_filepath = res_ds.GetFileList()[0]
-    return Path(res_filepath).as_posix()
-
-
-@shared_task(bind=True)
-def task_start_scrape(self, spider_name):
-    from scrapy.spiderloader import SpiderLoader
-    from scrapy.crawler import CrawlerProcess
-    from scrapy.utils.project import get_project_settings
-
-    scrapy_settings = get_project_settings()  # requires SCRAPY_SETTINGS_MODULE env variable
-
-    spider_loader = SpiderLoader.from_settings(scrapy_settings)
-    spider = spider_loader.load(spider_name)
-    print(spider)
-
-    process = CrawlerProcess(scrapy_settings)
-    process.crawl(spider)
-    #
-    # # block until the crawling is finished
-    process.start()
-
-    return
-
+######
+# DEBUG TASKS
 
 @shared_task
-def task_generate_daily_report():
-    # generate report
-    # email report
-    return 'Done!'
-
-
-@shared_task
-def task_add(x: int, y: int) -> int:
+def task_debug_add(x: int, y: int) -> int:
     return x + y
 
 
 @shared_task
-def task_append_char(token: str) -> str:
+def task_debug_append_char(token: str) -> str:
     import string
     from random import choice
     new_char = choice(string.ascii_letters)
     print(f'Appending {new_char} to {token}.')
     return token + new_char
-
-
-__all__ = [
-
-]

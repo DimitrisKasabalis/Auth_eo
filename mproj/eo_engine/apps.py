@@ -8,5 +8,5 @@ class EoEngineConfig(AppConfig):
     # noinspection PyUnresolvedReferences
     def ready(self):
         from mproj import celery_app
-        from eo_engine import signals
+        from eo_engine.signals import before_task_publish
         # dir(celery_app)

@@ -20,8 +20,30 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: rabbit
       RABBITMQ_DEFAULT_PASS: carrot
+    volumes:
+      - "./docker/rabbit/:/etc/rabbitmq/"
 
   worker:
+    environment:
+      DATABASE_PASSWORD: postgres
+      DATABASE_NAME: postgres
+      DATABASE_USERNAME: postgres
+      DATABASE_HOST: "host.docker.internal"
+      RABBIT_HOST: rabbit
+      RABBIT_PASSWORD: carrot
+      DEBUG: 'False'
+    build:
+      context: .
+      dockerfile: docker/worker/Dockerfile
+    image: vesnikos/eo_engine:0.2.0
+    entrypoint: '/docker-entrypoint'
+    command: [ 'worker' ]
+    volumes:
+      - './docker-entrypoint.sh:/docker-entrypoint'
+      - "./mproj:/src"
+      - "./local_files/local_files_root:/local_files_root"  # local file repo
+
+  beat:
     environment:
       DATABASE_PASSWORD: postgres
       DATABASE_NAME: postgres
@@ -35,7 +57,7 @@ services:
       dockerfile: docker/Dockerfile
     image: vesnikos/eo_engine:0.2.0
     entrypoint: '/docker-entrypoint'
-    command: [ 'worker' ]
+    command: [ 'beat' ]
     volumes:
       - './docker-entrypoint.sh:/docker-entrypoint'
       - "./mproj:/src"
