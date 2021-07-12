@@ -27,7 +27,7 @@ def forwards_func(apps, schema_editor):
 
     FR.objects.bulk_create([
         FR(domain="download_rules", rules=init_rules_download),
-        FR(domain='ignore_products', rules={"ignore_products": []})
+        FR(domain='ignore_rules', rules={"ignore_products": []})
 
     ])
 
