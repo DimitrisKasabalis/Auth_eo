@@ -85,6 +85,7 @@ def task_schedule_create_eoproduct():
         job = group(
             get_task_ref_from_name(eo_product.task_name).s(eo_product_pk=eo_product.pk, **eo_product.task_kwargs) for
             eo_product in qs)
+        qs.update(status=EOProductStatusChoices.Generating)
         return job.apply_async()
 
     return
@@ -124,7 +125,6 @@ def task_download_file(self, filename: str, force_dl=False):
 
 @shared_task
 def task_s02p02_c_gls_ndvi_300_clip(eo_product_pk: Union[int, EOProduct], aoi: List[int]):
-
     # Preamble
     if isinstance(eo_product_pk, EOProduct):
         eo_product = eo_product_pk
