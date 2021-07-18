@@ -32,7 +32,12 @@ if [[ -n "$1" ]]; then
     cd /src
     celery -A mproj.celery:app beat -l DEBUG --pidfile="$(mktemp)".pid
     exit
+  elif [ "$1" = 'web' ]; then
+      echo "Starting Web"
+      python /src/manage.py runserver 0.0.0.0:8000
+
   fi
+
 
 fi
 

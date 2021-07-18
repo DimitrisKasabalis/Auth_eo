@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block body %}
+    <ul>
+        {% for spider in spiders %}
+            <li>{{ spider }} - <a href="{% url 'eo_engine:trigger-spider' spider %}">trigger</a></li>
+        {% endfor %}
+    </ul>
+{% endblock %}

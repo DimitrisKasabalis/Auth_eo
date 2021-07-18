@@ -15,11 +15,11 @@ def _file_storage_path(instance: 'EOSource', filename: str):
 
 
 class EOSourceStatusChoices(models.TextChoices):
-    availableRemotely = "availableRemotely", 'NO_LABEL'
+    availableRemotely = "availableRemotely", 'Available on the Remote Server'
     scheduledForDownload = "scheduledForDownload", "Scheduled For Download"
-    availableLocally = "availableLocally", 'NO_LABEL'
-    beingDownloaded = 'beingDownloaded', 'NO_LABEL'
-    ignore = "Ignore", 'NO_LABEL'
+    availableLocally = "availableLocally", 'File available locally'
+    beingDownloaded = 'beingDownloaded', 'File is Being downloaded'
+    ignore = "Ignore", 'IgnoreFile'
 
 
 class EOSourceProductChoices(models.TextChoices):
@@ -76,6 +76,9 @@ class EOSource(models.Model):
     url = models.URLField(help_text="Resource URL")
     # username/password of resource
     credentials = models.ForeignKey("Credentials", on_delete=models.SET_NULL, null=True)
+
+    class Meta:
+        ordering = ["product", "-datetime_reference"]
 
     def __str__(self):
         return f"{self.__class__.__name__}/{self.filename}/{self.status}"
@@ -172,5 +175,4 @@ __all__ = [
     "EOSource",
     "EOSourceProductChoices",
     "EOSourceStatusChoices"
-
 ]

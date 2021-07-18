@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block Title %}
+Earth Observation Sources
+{% endblock %}
+{%  block header %}
+    Earth Observation Sources
+{% endblock %}
+{% block body %}
+    <table style="width: 100%">
+        <tr>
+            <th>Filename</th>
+            <th>Reference Date</th>
+            <th>Group</th>
+            <th>Status</th>
+            <th>Download</th>
+            <th>Delete</th>
+        </tr>
+        {% for eo_source in eo_sources %}
+            <tr>
+                <td>{{ eo_source.filename }}</td>
+                <td>{{ eo_source.datetime_reference |date:"D d M Y" }}</td>
+                <td>{{ eo_source.get_product_display }}</td>
+                <td>{{ eo_source.get_status_display }}</td>
+                <td><a href={% url "eo_engine:trigger-dl-eosource" eo_source.filename %}>Fetch from remote server</a>
+                </td>
+                {% if eo_source.file %}
+                    <td><a href="{{ eo_source.file.url }}" download>Download</a></td>
+                    <td>
+                        <a
+                            href="{% url "eo_engine:delete-file" file_type="eo_source" filename=eo_source.filename %}">Delete</a>
+                    </td>
+                {% else %}
+                    <td>-</td>
+                    <td>-</td>
+                {% endif %}
+            </tr>
+        {% endfor %}
+
+    </table>
+
+{% endblock %}

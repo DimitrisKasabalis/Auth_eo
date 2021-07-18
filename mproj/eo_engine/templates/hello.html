@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block body %}
+    <ul>
+        <li><a href="{% url "eo_engine:list-spiders" %}">Spiders</a></li>
+        <li><a href="{% url "eo_engine:list-eosources" %}">EO Sources</a></li>
+        <li><a href="{% url "eo_engine:list-eoproducts" %}">EO Products</a></li>
+    </ul>
+{% endblock %}

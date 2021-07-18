@@ -6,12 +6,12 @@ from django.db import models
 
 class EOProductGroupChoices(models.TextChoices):
     # NDVI Products
-    a_agro_ndvi_1km_v3 = "agro_ndvi-1km-v3-afr"
-    a_agro_ndvi_300m_v2 = "agro_ndvi-300m-v3-afr"
+    a_agro_ndvi_1km_v3 = "agro_ndvi-1km-v3-afr", 'AUTH/AGRO/NDVI 1km, V3 Africa'
+    a_agro_ndvi_300m_v2 = "agro_ndvi-300m-v3-afr", 'AUTH/AGRO/NDVI NDVI 300, V3 Africa'
 
     # LAI
-    a_agro_lai_300m_v1_afr = "agro_lai-300m-v1-afr",
-    a_agro_lai_1km_v2_afr = "agro_lai_1km-v2-afr",
+    a_agro_lai_300m_v1_afr = "agro_lai-300m-v1-afr", 'AUTH/AGRO/LAI 300m, V1 Africa'
+    a_agro_lai_1km_v2_afr = "agro_lai_1km-v2-afr", 'AUTH/AGRO/LAI 1km, V2 Africa'
 
     # WB Products
     a_agro_wb_100m_tun = 'agro_wb-100m-tun'
@@ -24,12 +24,12 @@ class EOProductGroupChoices(models.TextChoices):
 
 
 class EOProductStatusChoices(models.TextChoices):
-    Available = 'Available', "Available for generation."
-    Scheduled = "Scheduled", "Scheduled For generation."
-    Failed = 'Failed', 'Generation was attempted but failed'
-    Generating = 'Generating', "Product is being generated."
+    Available = 'Available', "AVAILABLE for generation."
+    Scheduled = "Scheduled", "SCHEDULED For generation."
+    Failed = 'Failed', 'Generation was attempted but FAILED'
+    Generating = 'Generating', "GENERATING..."
     Ignore = 'Ignore', "Ignore."
-    Ready = 'Ready', "Product is Ready."
+    Ready = 'Ready', "Product is READY."
 
 
 def _upload_to(instance: 'EOProduct', filename):
@@ -57,6 +57,9 @@ class EOProduct(models.Model):
                               default=EOProductStatusChoices.Available)
     task_name = models.CharField(max_length=255)
     task_kwargs = models.JSONField()
+
+    class Meta:
+        ordering = ["product_group","filename"]
 
     def is_ignored(self) -> bool:
         # According to rules, is this products ignored?

@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block body %}
+    <ul>
+        {% for label,text in card_info.items %}
+            <li>
+                {{ label }}: {{ text }}
+            </li>
+        {% endfor %}
+    </ul>
+
+    <a href={{ previous_page.url }}>{{ previous_page.label }}</a>
+    <a href={{ main_page.url }}>{{ main_page.label }}</a>
+{% endblock %}
