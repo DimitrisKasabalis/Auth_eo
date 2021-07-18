@@ -17,11 +17,9 @@ services:
     ports:
       - 5672:5672
       - 8080:15672
-    environment:
-      RABBITMQ_DEFAULT_USER: rabbit
-      RABBITMQ_DEFAULT_PASS: carrot
     volumes:
-      - "./docker/rabbit/:/etc/rabbitmq/"
+      # default username/password on the configuratio file
+      - "./docker/rabbit/etc/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro"
 
   worker:
     environment:
