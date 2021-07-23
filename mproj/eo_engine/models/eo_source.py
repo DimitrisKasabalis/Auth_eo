@@ -101,45 +101,22 @@ class EOSource(models.Model):
         """ Returns credentials to download this file."""
         return self.credentials.username, self.credentials.password
 
+    def set_status(self, status: str):
+        self.status = status
+        self.save()
+
     def download(self):
-        import requests
-        from tempfile import TemporaryFile
+        from urllib.parse import urlparse
+        url_parse = urlparse(self.url)
+        scheme = url_parse.scheme
+        if scheme == 'ftp':
+            from eo_engine.common import download_ftp_eosource
+            return download_ftp_eosource(self)
+        if scheme == 'http':
+            from eo_engine.common import download_http_eosource
+            return download_http_eosource(self)
 
-        remote_url = self.url
-        credentials = self.get_credentials
-
-        response = requests.get(
-            url=remote_url,
-            auth=credentials,
-            stream=True
-        )
-        response.raise_for_status()
-        headers = response.headers
-        FILE_LENGTH = headers.get('Content-Length', None)
-
-        self.status = EOSourceStatusChoices.beingDownloaded
-        self.save()
-
-        with TemporaryFile(mode='w+b') as file_handle:
-            # TemporaryFile has noname, and will cease to exist when it is closed.
-
-            for chunk in response.iter_content(chunk_size=2 * 1024):
-                self.refresh_from_db()  # ping to keep db connection alive
-                file_handle.write(chunk)
-                file_handle.flush()
-
-            content = File(file_handle)
-            print(self.filename)
-            from django.db import connections
-            for conn in connections.all():
-                conn.close_if_unusable_or_obsolete()
-            self.refresh_from_db()
-            self.file.save(name=self.filename, content=content, save=False)
-
-        self.filesize = self.file.size
-        self.status = EOSourceStatusChoices.availableLocally
-
-        self.save()
+        raise
 
 
 @receiver(post_save, sender=EOSource, weak=False, dispatch_uid='eosource_post_save_handler')
@@ -167,7 +144,7 @@ def eosource_post_save_handler(instance: EOSource, **kwargs):
                 prod.status = EOProductStatusChoices.Ignore
 
             # mark it's inputs
-            prod.inputs.set([eo_source, ])
+            prod.eo_sources_inputs.set([eo_source, ])
             prod.save()
 
 

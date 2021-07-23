@@ -2,12 +2,14 @@ import os
 
 from django.conf import settings
 from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 
 class EOProductGroupChoices(models.TextChoices):
     # NDVI Products
     a_agro_ndvi_1km_v3 = "agro_ndvi-1km-v3-afr", 'AUTH/AGRO/NDVI 1km, V3 Africa'
-    a_agro_ndvi_300m_v2 = "agro_ndvi-300m-v3-afr", 'AUTH/AGRO/NDVI NDVI 300, V3 Africa'
+    a_agro_ndvi_300m_v3 = "agro_ndvi-300m-v3-afr", 'AUTH/AGRO/NDVI NDVI 300, V3 Africa'
 
     # LAI
     a_agro_lai_300m_v1_afr = "agro_lai-300m-v1-afr", 'AUTH/AGRO/LAI 300m, V1 Africa'
@@ -50,7 +52,9 @@ class EOProduct(models.Model):
     product_group = models.CharField(max_length=255, choices=EOProductGroupChoices.choices)
     datetime_creation = models.DateTimeField(null=True)
     file = models.FileField(upload_to=_upload_to, null=True, max_length=2048)
-    inputs = models.ManyToManyField("eo_engine.EOSource")
+
+    eo_sources_inputs = models.ManyToManyField("eo_engine.EOSource")
+    eo_products_inputs = models.ManyToManyField('self', symmetrical=False)
 
     timestamp = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=255, choices=EOProductStatusChoices.choices,
@@ -59,7 +63,7 @@ class EOProduct(models.Model):
     task_kwargs = models.JSONField()
 
     class Meta:
-        ordering = ["product_group","filename"]
+        ordering = ["product_group", "filename"]
 
     def is_ignored(self) -> bool:
         # According to rules, is this products ignored?
@@ -93,6 +97,27 @@ class EOProduct(models.Model):
                 raise e
 
             return 'Done!'
+
+
+@receiver(post_save, sender=EOProduct, weak=False, dispatch_uid='eoproduct_post_save_handler')
+def eoproduct_post_save_handler(instance: EOProduct, **kwargs):
+    if instance.status == EOProductStatusChoices.Ready:
+        if instance.product_group == EOProductGroupChoices.a_agro_ndvi_300m_v3:
+            from eo_engine.common import generate_products_from_source
+            for product in generate_products_from_source(instance.filename):
+                print(product)
+                obj, created = EOProduct.objects.get_or_create(
+                    filename=product.filename,
+                    output_folder=product.output_folder,
+                    task_name=product.task_name,
+                    task_kwargs=product.task_kwargs,
+                    status=EOProductStatusChoices.Available,
+                    product_group=EOProductGroupChoices.a_agro_ndvi_1km_v3
+
+                )
+
+                obj.eo_products_inputs.set([instance, ])
+                obj.save()
 
 
 __all__ = [

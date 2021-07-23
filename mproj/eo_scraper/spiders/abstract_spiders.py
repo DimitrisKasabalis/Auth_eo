@@ -176,6 +176,6 @@ class FtpGlobalLand(Spider):
                     domain=url.netloc,
                     # datetime_uploaded=0,  # we cannot tell from ftp
                     datetime_seen=datetime.utcnow().replace(tzinfo=utc),
-                    url=response.url
+                    url=os.path.join(response.url,f['filename'])
                 )
                 yield result
