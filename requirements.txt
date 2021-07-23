@@ -10,5 +10,6 @@ xarray~=0.18.0
 scipy~=1.6.0
 netcdf4
 requests
+ftputil
 # for testing
 responses

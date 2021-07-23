@@ -32,7 +32,7 @@ RUN groupadd --gid ${NB_GID} ${NB_USER}                                         
     locale-gen en_US.UTF-8
 
 # conda installation via miniforge
-ADD docker/install-miniforge.bash /install-miniforge.bash
+ADD docker/worker/install-miniforge.bash /install-miniforge.bash
 
 RUN chmod 755 /install-miniforge.bash
 RUN bash install-miniforge.bash

@@ -7,3 +7,17 @@ dependencies:
   - snap=8.0.0
   - lxml
   - gdal
+  - pip:
+      - django~=3.2.0
+      - celery~=5.1.0
+      - django-celery-results
+      - more-itertools~=8.8.0
+      - python-dateutil
+      - scrapy~=2.5.0
+      - psycopg2-binary
+      - pandas
+      - xarray~=0.18.0
+      - scipy~=1.6.0
+      - netcdf4
+      - requests
+      - ftputil

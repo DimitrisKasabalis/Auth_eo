@@ -40,22 +40,26 @@ services:
   worker:
     <<: *default-env
     <<: *default-volumes
-    image: vesnikos/eo_engine:0.2.0
+    image: vesnikos/eo_engine:latest
+    build:
+      context: .
+      dockerfile: docker/worker/Dockerfile
     entrypoint: '/docker-entrypoint'
     command: [ 'worker' ]
 
   beat:
     <<: *default-env
     <<: *default-volumes
-    image: vesnikos/eo_engine:0.2.0
+    image: vesnikos/eo_engine:latest
     entrypoint: '/docker-entrypoint'
     command: [ 'beat' ]
 
   web:
     <<: *default-env
     <<: *default-volumes
-    image: vesnikos/eo_engine:0.2.0
+    image: vesnikos/eo_engine:latest
     entrypoint: '/docker-entrypoint'
+    restart: "always"
     command: [ 'web' ]
     ports:
       - 8000:8000
