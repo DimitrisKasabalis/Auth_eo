@@ -56,10 +56,9 @@ def parse_copernicus_name(filename: str) -> copernicus_name_elements:
     return copernicus_name_elements(product=product, datetime=dt, area=area, sensor=sensor, version=version)
 
 
-def generate_products_from_source(eo_source: EOSource) -> List[product_output]:
+def generate_products_from_source(filename: str) -> List[product_output]:
     """ MOAR """
     # check https://docs.google.com/spreadsheets/d/1C59BF349gMW-HxnEoWT1Pnxj0tuHOwX7/edit#gid=1748752542
-    filename = eo_source.filename
 
     # is a source filename starts with the following, these two products can be made.
     if fnmatch(filename.lower(), 'c_gls_ndvi300*.nc'):
