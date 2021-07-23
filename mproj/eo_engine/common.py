@@ -1,8 +1,12 @@
+from tempfile import NamedTemporaryFile, TemporaryFile
 from datetime import datetime
 from fnmatch import fnmatch
 from typing import Literal, List, Dict, Any, Optional
 from typing import NamedTuple
 from pathlib import Path
+
+from django.core.files import File
+
 from eo_engine.models.eo_product import EOProductGroupChoices
 
 from pytz import utc
