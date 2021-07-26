@@ -24,6 +24,11 @@ services:
     environment:
       POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     ports:
       - 5432:5432
     volumes:
@@ -34,6 +39,11 @@ services:
     ports:
       - 5672:5672
       - 8080:15672
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 15s
+      timeout: 5s
+      retries: 3
     volumes:
       - "./docker/rabbit/etc/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro"
 
@@ -61,5 +71,8 @@ services:
     entrypoint: '/docker-entrypoint'
     restart: "always"
     command: [ 'web' ]
+    depends_on:
+      - rabbit
+      - db
     ports:
       - 8000:8000
