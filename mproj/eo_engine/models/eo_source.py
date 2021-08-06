@@ -109,14 +109,14 @@ class EOSource(models.Model):
         from urllib.parse import urlparse
         url_parse = urlparse(self.url)
         scheme = url_parse.scheme
-        if scheme == 'ftp':
+        if scheme.startswith('ftp'):
             from eo_engine.common import download_ftp_eosource
             return download_ftp_eosource(self)
-        if scheme == 'http':
+        if scheme.startswith('http'):
             from eo_engine.common import download_http_eosource
             return download_http_eosource(self)
 
-        raise
+        raise Exception(f'There was no defined method for scheme: {scheme}')
 
 
 @receiver(post_save, sender=EOSource, weak=False, dispatch_uid='eosource_post_save_handler')
