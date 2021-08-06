@@ -9,7 +9,6 @@ from celery.app import shared_task
 from celery.utils.log import get_task_logger
 from django.core.files import File
 from django.utils import timezone
-from osgeo import gdal
 from pytz import utc
 
 from eo_engine.common import get_task_ref_from_name
@@ -75,7 +74,6 @@ def task_schedule_download_eosource(self):
 # noinspection SpellCheckingInspection
 @shared_task
 def task_schedule_create_eoproduct():
-    from mproj import celery_app as capp
     qs = EOProduct.objects.none()
 
     qs |= EOProduct.objects.filter(status=EOProductStatusChoices.Available)
@@ -218,12 +216,15 @@ def task_s02p02_c_gls_ndvi_300_clip(eo_product_pk: Union[int, EOProduct], aoi: L
 
 
 @shared_task
-def task_s02p02_agro_nvdi_300_resample_to_1km(eo_product_pk, aoi=None):
+def task_s02p02_agro_nvdi_300_resample_to_1km(eo_product_pk):
     """" Resamples to 1km and cuts to AOI bbox """
 
     import subprocess
     import os
     eo_product = EOProduct.objects.get(id=eo_product_pk)
+
+    target_resolution = 0.0089285714286
+    xmin, ymin, xmax, ymax = -30.0044643, -40.0044643, 60.0066643, 40.0044643
 
     # Mark it as 'in process'
     eo_product.status = EOProductStatusChoices.Generating
@@ -232,23 +233,23 @@ def task_s02p02_agro_nvdi_300_resample_to_1km(eo_product_pk, aoi=None):
     input_obj: EOProduct = eo_product.eo_products_inputs.first()
 
     with tempfile.TemporaryDirectory() as tmp_dir:
-        output_file = f"{tmp_dir}/tmp_file.nc"
+        output_temp_file = f"{tmp_dir}/tmp_file.nc"
         cp = subprocess.run([
-            'gdal_translate',
-            '-b', '1',
+            'gdalwarp',
             '-r', 'average',
-            '-tr', '0.029', '0.029',
-            f'{input_obj.file.path}', output_file
+            '-tr', f'{target_resolution}', f'{target_resolution}',
+            '-te', f'{xmin}', f'{ymin}', f'{xmax}', f'{ymax}',
+            f'{input_obj.file.path}', output_temp_file
         ])
 
         if cp.returncode != 0:
             raise Exception(f'EXIT CODE: {cp.returncode}, ERROR: {cp.stderr} ')
-        with open(output_file, 'rb') as fh:
+        with open(output_temp_file, 'rb') as fh:
             content = File(fh)
             eo_product.file.save(name=eo_product.filename, content=content)
             eo_product.status = EOProductStatusChoices.Ready
             eo_product.save()
-        os.unlink(output_file)
+        os.unlink(output_temp_file)
 
     return
 
