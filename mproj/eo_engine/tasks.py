@@ -244,6 +244,28 @@ def task_s02p02_agro_nvdi_300_resample_to_1km(eo_product_pk):
 
         if cp.returncode != 0:
             raise Exception(f'EXIT CODE: {cp.returncode}, ERROR: {cp.stderr} ')
+        # metadata fine tuning using NCO tools
+        # for usuage details see:
+        # http://nco.sourceforge.net/nco.html#ncatted-netCDF-Attribute-Editor
+
+        # Rename default Band1 to NDVI
+        print('Rename Variable')
+        cp = subprocess.run(['ncrename',
+                             '-v', 'Band1,NDVI',
+                             output_temp_file])
+        if cp.returncode != 0:
+            raise Exception(f'EXIT CODE: {cp.returncode}, ERROR: {cp.stderr} ')
+
+        # ncatted is for nc attribute editor
+        print('Editing metadata')
+        cp = subprocess.run(['ncatted',
+                             '-a', 'short_name,NDVI,o,c,normalized_difference_vegetation_index',
+                             '-a', "long_name,NDVI,o,c,Normalized Difference Vegetation Index Resampled 1 Km",
+
+                             output_temp_file])
+        if cp.returncode != 0:
+            raise Exception(f'EXIT CODE: {cp.returncode}, ERROR: {cp.stderr} ')
+
         with open(output_temp_file, 'rb') as fh:
             content = File(fh)
             eo_product.file.save(name=eo_product.filename, content=content)
