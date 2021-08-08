@@ -56,3 +56,9 @@ WORKDIR ${HOME}
 #####
 ADD requirements.txt requirements.txt
 RUN pip install -r requirements.txt
+
+##### 08/08/2021 add nc tools
+USER root
+RUN apt-get -qq update && \
+    apt-get -qq install --yes --no-install-recommends nco
+USER ${NB_USER}
