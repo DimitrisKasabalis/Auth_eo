@@ -128,7 +128,7 @@ def eosource_post_save_handler(instance: EOSource, **kwargs):
     # if asset is local
     if eo_source.status == EOSourceStatusChoices.availableLocally:
         # pass
-        products = generate_products_from_source(eo_source)
+        products = generate_products_from_source(eo_source.filename)
 
         for product in products:
 
