@@ -89,8 +89,8 @@ class BaseTaskWithRetry(Task):
         ubdc_taskentry.status = ubdc_taskentry.TaskTypeChoices.FAILURE
         ubdc_taskentry.save()
 
+        # mark generating product as failed
         if fnmatch(self.name, 'eo_engine.tasks.task_s??p??*'):
-            # mark generating product as 'GENERATING'
             eo_product_pk = kwargs['eo_product_pk']
             eo_product = EOProduct.objects.get(pk=eo_product_pk)
             eo_product.status = EOProductStatusChoices.Failed

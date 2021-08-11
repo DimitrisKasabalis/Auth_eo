@@ -81,7 +81,7 @@ class EOSource(models.Model):
         ordering = ["product", "-datetime_reference"]
 
     def __str__(self):
-        return f"{self.__class__.__name__}/{self.filename}/{self.status}"
+        return f"{self.__class__.__name__}/{self.filename}/{self.status}/{self.id}"
 
     @property
     def local_path(self) -> Path:

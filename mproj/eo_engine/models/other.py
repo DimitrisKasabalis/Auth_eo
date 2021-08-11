@@ -8,6 +8,5 @@ class Credentials(models.Model):
 
 
 class FunctionalRules(models.Model):
-
     domain = models.CharField(max_length=100)
     rules = models.JSONField(default=dict)

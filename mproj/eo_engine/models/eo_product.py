@@ -1,4 +1,5 @@
 import os
+from typing import Any, TypedDict
 
 from django.conf import settings
 from django.db import models
@@ -9,7 +10,10 @@ from django.dispatch import receiver
 class EOProductGroupChoices(models.TextChoices):
     # NDVI Products
     a_agro_ndvi_1km_v3 = "agro_ndvi-1km-v3-afr", 'AUTH/AGRO/NDVI 1km, V3 Africa'
-    a_agro_ndvi_300m_v3 = "agro_ndvi-300m-v3-afr", 'AUTH/AGRO/NDVI NDVI 300, V3 Africa'
+    a_agro_ndvi_300m_v3 = "agro_ndvi-300m-v3-afr", 'AUTH/AGRO/NDVI 300m, V3 Africa'
+
+    # VCI
+    a_agro_vci_1km_v2_afr = 'agro_vci-10km-v2-afr', 'AUTH/AGRO/VCI 1km, V2 Africa'
 
     # LAI
     a_agro_lai_300m_v1_afr = "agro_lai-300m-v1-afr", 'AUTH/AGRO/LAI 300m, V1 Africa'
@@ -60,10 +64,20 @@ class EOProduct(models.Model):
     status = models.CharField(max_length=255, choices=EOProductStatusChoices.choices,
                               default=EOProductStatusChoices.Available)
     task_name = models.CharField(max_length=255)
-    task_kwargs = models.JSONField()
+    task_kwargs = models.JSONField(default=dict)
 
     class Meta:
         ordering = ["product_group", "filename"]
+
+    def __str__(self):
+        return f"{self.__class__.__name__}/{self.filename}/{self.status}/{self.id}"
+
+    def inputs(self) -> TypedDict('EO_SOURCE', {'eo_sources': Any, 'eo_product': Any}):
+        """Return a dictionary of this products inputs. """
+        return {
+            'eo_sources': self.eo_sources_inputs.all(),
+            'eo_product': self.eo_products_inputs.all()
+        }
 
     def is_ignored(self) -> bool:
         # According to rules, is this products ignored?
@@ -102,20 +116,22 @@ class EOProduct(models.Model):
 @receiver(post_save, sender=EOProduct, weak=False, dispatch_uid='eoproduct_post_save_handler')
 def eoproduct_post_save_handler(instance: EOProduct, **kwargs):
     if instance.status == EOProductStatusChoices.Ready:
-        if instance.product_group == EOProductGroupChoices.a_agro_ndvi_300m_v3:
+        if (
+                instance.product_group == EOProductGroupChoices.a_agro_ndvi_300m_v3 or
+                instance.product_group == EOProductGroupChoices.a_agro_ndvi_1km_v3
+        ):
             from eo_engine.common import generate_products_from_source
             for product in generate_products_from_source(instance.filename):
-                print(product)
                 obj, created = EOProduct.objects.get_or_create(
                     filename=product.filename,
                     output_folder=product.output_folder,
                     task_name=product.task_name,
                     task_kwargs=product.task_kwargs,
                     status=EOProductStatusChoices.Available,
-                    product_group=EOProductGroupChoices.a_agro_ndvi_1km_v3
+                    product_group=product.group
 
                 )
-
+                # mark inputs
                 obj.eo_products_inputs.set([instance, ])
                 obj.save()
 

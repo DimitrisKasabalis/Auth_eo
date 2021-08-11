@@ -30,7 +30,7 @@ if [[ -n "$1" ]]; then
   elif [ "$1" = "beat" ]; then
     echo "Starting Beat"
     cd /src
-    celery -A mproj.celery:app beat -l DEBUG --pidfile="$(mktemp)".pid
+    celery -A mproj.celery:app beat -l DEBUG --pidfile="$(mktemp)".pid -s "$(mktemp).db"
     exit
   elif [ "$1" = 'web' ]; then
       echo "Starting Web"

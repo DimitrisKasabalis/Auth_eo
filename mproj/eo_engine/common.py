@@ -26,7 +26,7 @@ product_output = NamedTuple('product_output',
                              ('filename', str),
                              ('group', str),
                              ('task_name', str),
-                             ('task_kwargs', Optional[Dict[str, Any]])
+                             ('task_kwargs', Dict[str, Any])
                              ])
 
 
@@ -56,12 +56,14 @@ def parse_copernicus_name(filename: str) -> copernicus_name_elements:
     return copernicus_name_elements(product=product, datetime=dt, area=area, sensor=sensor, version=version)
 
 
+# TODO: HIGH PRIORITY: To move this logic in database
+# TODO: Add more logic as it arrives
 def generate_products_from_source(filename: str) -> List[product_output]:
-    """ MOAR """
+    """  """
     # check https://docs.google.com/spreadsheets/d/1C59BF349gMW-HxnEoWT1Pnxj0tuHOwX7/edit#gid=1748752542
 
     # is a source filename starts with the following, these two products can be made.
-    if fnmatch(filename.lower(), 'c_gls_ndvi300*.nc'):
+    if fnmatch(filename.lower(), 'c_gls_ndvi300*.nc'.lower()):
         name_elements = parse_copernicus_name(filename)
         date_str_YYYYMMDD = name_elements.datetime.date().strftime('%Y%m%d')
         return [
@@ -74,10 +76,20 @@ def generate_products_from_source(filename: str) -> List[product_output]:
                            })
         ]
 
-    # 2md derivative product
+    # g2_BIOPAR_VCI_??????_AFRI_OLCI_V2.0.nc
+    if fnmatch(filename.lower(), '????????_SE3_AFR_1000m_0010_NDVI.nc'.lower()):
+        date_str_YYYYMMDD = filename.split('_')[0]
+        return [
+            product_output('S2_P02/VCI/v2',
+                           f"g2_BIOPAR_VCI_{date_str_YYYYMMDD}_AFRI_OLCI_V2.0.nc",
+                           EOProductGroupChoices.a_agro_vci_1km_v2_afr,
+                           'task_s02p02_compute_vci', {}
+                           )
+        ]
+
+    # {date_str_YYYYMMDD}_SE3_AFR_1000m_0010_NDVI.nc
     if fnmatch(filename.lower(), '????????_SE3_AFR_0300m_0010_NDVI.nc'.lower()):
         date_str_YYYYMMDD = filename.split('_')[0]
-        print(filename)
         return [
             product_output('S2_P02/NDVI_1km',
                            f"{date_str_YYYYMMDD}_SE3_AFR_1000m_0010_NDVI.nc",
@@ -86,7 +98,7 @@ def generate_products_from_source(filename: str) -> List[product_output]:
                            task_kwargs={})
         ]
 
-    if fnmatch(filename.lower(), 'c_gls_LAI300-RT1*.nc'):
+    if fnmatch(filename.lower(), 'c_gls_LAI300-RT1*.nc'.lower()):
         name_elements = parse_copernicus_name(filename)
         date_str_YYYYMMDD = name_elements.datetime.date().strftime('%Y%m%d')
         return [
