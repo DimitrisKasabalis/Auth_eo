@@ -276,6 +276,131 @@ def task_s02p02_agro_nvdi_300_resample_to_1km(eo_product_pk):
     return
 
 
+@shared_task
+def task_s02p02_compute_vci(eo_product_pk):
+    import os
+    import snappy
+    from snappy import ProductIO, GPF, HashMap
+    import subprocess
+
+    HashMap = snappy.jpy.get_type('java.util.HashMap')
+    GPF.getDefaultInstance().getOperatorSpiRegistry().loadOperatorSpis()
+
+    def write_product(data, file_path, format=None):
+        ProductIO.writeProduct(data, file_path, format if format else 'NetCDF4-CF')
+
+    def merge(data, data1, data2):
+        params = HashMap()
+        merged = GPF.createProduct('BandMerge', params, (data, data1, data2))
+        band_names = merged.getBandNames()
+        print("Merged Bands:   %s" % (list(band_names)))
+        return merged
+
+    def get_VCI(data, file, dir):
+        GPF.getDefaultInstance().getOperatorSpiRegistry().loadOperatorSpis()
+        BandDescriptor = snappy.jpy.get_type('org.esa.snap.core.gpf.common.BandMathsOp$BandDescriptor')
+        targetBand = BandDescriptor()
+        targetBand.name = 'VCI'
+        targetBand.type = 'float32'
+        targetBand.noDataValue = 255.0
+        targetBand.expression = 'if ( (NDVI > 0.92) or (max > 0.92) or (min >0.92)) then 255.0 else ((NDVI - min)/ (max - min))'
+
+        targetBands = snappy.jpy.array('org.esa.snap.core.gpf.common.BandMathsOp$BandDescriptor', 1)
+        targetBands[0] = targetBand
+        params = HashMap()
+        params.put('targetBands', targetBands)
+        vci_float = GPF.createProduct('BandMaths', params, data)
+        # write intermediate file (unscaled)
+        # write_product(vci_float, os.path.join(dir, file))
+        return vci_float
+
+    def VCI_to_int(data, file, dir):
+        # band_names = data.getBandNames()
+        # print("Bands:   %s" % (list(band_names)))
+
+        GPF.getDefaultInstance().getOperatorSpiRegistry().loadOperatorSpis()
+        BandDescriptor = snappy.jpy.get_type('org.esa.snap.core.gpf.common.BandMathsOp$BandDescriptor')
+        targetBand = BandDescriptor()
+        targetBand.name = 'VCI'
+        targetBand.type = 'int32'
+        targetBand.noDataValue = 255
+        targetBand.expression = 'if (VCI == 255) then 255 else ( ' \
+                                'if (VCI > 1.125) then 250 else ( ' \
+                                'if (VCI<-0.125) then 0  else rint((VCI + 0.125)/0.005)))'  # 250 is the max value, 0 is the min value
+        targetBands = snappy.jpy.array('org.esa.snap.core.gpf.common.BandMathsOp$BandDescriptor', 1)
+        targetBands[0] = targetBand
+        params = HashMap()
+        params.put('targetBands', targetBands)
+        vci = GPF.createProduct('BandMaths', params, data)
+        write_product(vci, os.path.join(dir, file))
+        return vci
+
+    def process(f_ndvi, lts_dir, dir_out):
+        # Get the dekad number
+
+        dekad = os.path.basename(f_ndvi).split('_')[0][4:]
+        f_lts = lts_dir + '/cgls_NDVI-LTS_' + dekad + '_V3.nc'
+
+        f_lts_min = f_lts[:-3] + '_min.nc'
+        f_lts_max = f_lts[:-3] + '_min.nc'
+        print('\n== Processing ==')
+        print('NDVI file: ', f_ndvi)
+        print('with LTS min: ', f_lts_min)
+        print('with LTS max: ', f_lts_max)
+
+        print(Path(f_lts_max).is_file())
+
+        data = ProductIO.readProduct(f_ndvi)
+        data1 = ProductIO.readProduct(f_lts[:-3] + '_min.nc')
+        data2 = ProductIO.readProduct(f_lts[:-3] + '_max.nc')
+        try:
+            merged = merge(data, data1, data2)
+        except Exception as e:
+
+            print('Problem merging the bands')
+            raise e
+        try:
+            vci_float = get_VCI(merged, f_ndvi[:-3] + '_VCI_temp.nc', dir_out)
+        except:
+            print('Problem computing VCI')
+        try:
+            date = os.path.basename(f_ndvi).split('_')[0]
+            filename = 'g2_BIOPAR_VCI_' + date + '_AFRI_OLCI_V2.0.nc'
+            vci = VCI_to_int(vci_float, filename, dir_out)
+        except Exception as e:
+            print('Problem transforming VCI')
+            raise e
+        return os.path.join(dir_out, filename)
+
+    output_obj = EOProduct.objects.get(pk=eo_product_pk)
+    ndvi_1k_obj = output_obj.eo_products_inputs.first()
+
+    lts_dir = Path('/local_files_root/aux_files/NDVI_LTS')
+    ndvi_path = ndvi_1k_obj.file.path
+
+    with tempfile.TemporaryDirectory() as tempdir:
+        outfile = process(ndvi_path, lts_dir.as_posix(), tempdir)
+        # set outfile (VCI) metadata
+        # ncatted is for nc attribute editor
+        print('Adding VCI Metadata')
+        cp = subprocess.run(['ncatted',
+                             '-a', 'short_name,VCI,o,c,vegetation_condition_index',
+                             '-a', "long_name,VCI,o,c,Vegetation Condition Index 1 Km",
+                             '-a', "units,VCI,o,c,-",
+                             '-a', "SCALING,VCI,o,d,0.005",
+                             '-a', "OFFSET,VCI,o,d,-0.125",
+                             outfile])
+        if cp.returncode != 0:
+            raise Exception(f'EXIT CODE: {cp.returncode}, ERROR: {cp.stderr} ')
+
+        content = File(open(outfile, 'rb'))
+
+        output_obj.file.save(name=output_obj.filename, content=content, save=False)
+        output_obj.status = EOProductStatusChoices.Ready
+        output_obj.save()
+    return
+
+
 ######
 # DEBUG TASKS
 
