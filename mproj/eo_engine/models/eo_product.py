@@ -127,13 +127,15 @@ def eoproduct_post_save_handler(instance: EOProduct, **kwargs):
                     output_folder=product.output_folder,
                     task_name=product.task_name,
                     task_kwargs=product.task_kwargs,
-                    status=EOProductStatusChoices.Available,
                     product_group=product.group
 
                 )
-                # mark inputs
-                obj.eo_products_inputs.set([instance, ])
-                obj.save()
+                if created:
+                    # mark as available if this entry was just made now
+                    obj.status = EOProductStatusChoices.Available
+                    # mark inputs
+                    obj.eo_products_inputs.set([instance, ])
+                    obj.save()
 
 
 __all__ = [
