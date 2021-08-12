@@ -62,18 +62,29 @@ def generate_products_from_source(filename: str) -> List[product_output]:
     """  """
     # check https://docs.google.com/spreadsheets/d/1C59BF349gMW-HxnEoWT1Pnxj0tuHOwX7/edit#gid=1748752542
 
-    # is a source filename starts with the following, these two products can be made.
+    # NDVI 100m -> {date_str_YYYYMMDD}_SE3_AFR_0300m_0010_NDVI.nc
     if fnmatch(filename.lower(), 'c_gls_ndvi300*.nc'.lower()):
         name_elements = parse_copernicus_name(filename)
         date_str_YYYYMMDD = name_elements.datetime.date().strftime('%Y%m%d')
         return [
             product_output('S2_P02/NDVI_300',  # folder
                            f"{date_str_YYYYMMDD}_SE3_AFR_0300m_0010_NDVI.nc",  # filename
-                           EOProductGroupChoices.a_agro_ndvi_300m_v2,  # group
+                           EOProductGroupChoices.a_agro_ndvi_300m_v3,  # group
                            'task_s02p02_c_gls_ndvi_300_clip',  # task_name
                            {
                                'aoi': [-30, 40, 60, -40]  # kwargs
                            })
+        ]
+
+    # NDVI 1000m ->  {date_str_YYYYMMDD}_SE3_AFR_1000m_0010_NDVI.nc
+    if fnmatch(filename.lower(), '????????_SE3_AFR_0300m_0010_NDVI.nc'.lower()):
+        date_str_YYYYMMDD = filename.split('_')[0]
+        return [
+            product_output('S2_P02/NDVI_1km',
+                           f"{date_str_YYYYMMDD}_SE3_AFR_1000m_0010_NDVI.nc",
+                           EOProductGroupChoices.a_agro_ndvi_1km_v3,
+                           'task_s02p02_agro_nvdi_300_resample_to_1km',
+                           task_kwargs={})
         ]
 
     # g2_BIOPAR_VCI_??????_AFRI_OLCI_V2.0.nc
@@ -87,16 +98,6 @@ def generate_products_from_source(filename: str) -> List[product_output]:
                            )
         ]
 
-    # {date_str_YYYYMMDD}_SE3_AFR_1000m_0010_NDVI.nc
-    if fnmatch(filename.lower(), '????????_SE3_AFR_0300m_0010_NDVI.nc'.lower()):
-        date_str_YYYYMMDD = filename.split('_')[0]
-        return [
-            product_output('S2_P02/NDVI_1km',
-                           f"{date_str_YYYYMMDD}_SE3_AFR_1000m_0010_NDVI.nc",
-                           EOProductGroupChoices.a_agro_ndvi_1km_v3,
-                           'task_s02p02_agro_nvdi_300_resample_to_1km',
-                           task_kwargs={})
-        ]
 
     if fnmatch(filename.lower(), 'c_gls_LAI300-RT1*.nc'.lower()):
         name_elements = parse_copernicus_name(filename)
