@@ -270,6 +270,7 @@ def task_s02p02_agro_nvdi_300_resample_to_1km(eo_product_pk):
             content = File(fh)
             eo_product.file.save(name=eo_product.filename, content=content)
             eo_product.status = EOProductStatusChoices.Ready
+            eo_product.datetime_creation = now
             eo_product.save()
         os.unlink(output_temp_file)
 
@@ -397,6 +398,7 @@ def task_s02p02_compute_vci(eo_product_pk):
 
         output_obj.file.save(name=output_obj.filename, content=content, save=False)
         output_obj.status = EOProductStatusChoices.Ready
+        output_obj.datetime_creation = now
         output_obj.save()
     return
 

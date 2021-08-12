@@ -141,6 +141,7 @@ def eosource_post_save_handler(instance: EOSource, **kwargs):
             )
             # mark if the scheduler should ignore it
             if prod.is_ignored():
+                print('this entry is marked as ignored.')
                 prod.status = EOProductStatusChoices.Ignore
 
             # mark it's inputs

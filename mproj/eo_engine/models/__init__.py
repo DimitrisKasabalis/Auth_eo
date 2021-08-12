@@ -11,6 +11,7 @@ __all__ = [
     "EOSourceStatusChoices",
     "EOSourceProductChoices",
     "EOProductGroupChoices",
+    "EOProductStatusChoices",
     "GeopGroupTask",
     "GeopTask",
     "FunctionalRules"
