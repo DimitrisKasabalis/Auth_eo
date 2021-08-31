@@ -26,6 +26,11 @@ def random_name_gen(length=10) -> str:
     return ''.join(random.choice(string.ascii_uppercase) for i in range(10))
 
 
+# Notes:
+#  task should use the kwargs eo_source_pk and eo_product_pk.
+#  these kw are picked up to tie the task with the element
+
+
 @shared_task
 def task_init_spider(spider_name):
     from scrapy.spiderloader import SpiderLoader
@@ -90,28 +95,28 @@ def task_schedule_create_eoproduct():
 
 
 @shared_task(bind=True)
-def task_download_file(self, filename: str, force_dl=False):
+def task_download_file(self, eo_source_pk: int):
     """
     Download a remote asset identified by it's ID number.
     if it's already available locally, set force_dl=True to download again.
 
     """
-    logger.info(f'downloading file {filename}')
-    eo_source = EOSource.objects.get(filename=filename)
+    from urllib.parse import urlparse
+    eo_source = EOSource.objects.get(pk=eo_source_pk)
+    url_parse = urlparse(eo_source.url)
+    scheme = url_parse.scheme
 
-    if force_dl and eo_source.local_file_exists:
-        print(f"File {eo_source.filename} file found at directory {eo_source.local_path}. Skipping")
-        return eo_source.filename
-    try:
-        eo_source.download()
+    logger.info(f'downloading file {eo_source.filename}')
 
-        if eo_source.file.size == 0:
-            logger.warn(f"warning: file {eo_source.filename} has really filesize of 0.")
-    except Exception as e:
-        eo_source.status = EOSourceStatusChoices.availableRemotely
-        raise e
+    if scheme.startswith('ftp'):
+        from eo_engine.common import download_ftp_eosource
+        return download_ftp_eosource(eo_source_pk)
 
-    return eo_source.filename  # return the name of the file, ckts as PK
+    elif scheme.startswith('http'):
+        from eo_engine.common import download_http_eosource
+        return download_http_eosource(eo_source_pk)
+    else:
+        raise Exception(f'There was no defined method for scheme: {scheme}')
 
 
 #############################

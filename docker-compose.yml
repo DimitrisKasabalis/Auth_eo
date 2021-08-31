@@ -1,6 +1,6 @@
-version: "3"
-
-x-default-env: &default-env
+version: "3.8"
+x-default-env:
+  &default-env
   environment:
     DATABASE_PASSWORD: postgres
     DATABASE_NAME: postgres
@@ -11,12 +11,12 @@ x-default-env: &default-env
     RABBIT_PASSWORD: carrot
     DEBUG: 'False'
 
-x-default-volumes: &default-volumes
+x-default-volumes:
+  &default-volumes
   volumes:
     - './docker-entrypoint.sh:/docker-entrypoint'
     - "./mproj:/src"
     - "./local_files/local_files_root:/local_files_root"  # local file repo
-
 
 services:
 
@@ -70,10 +70,10 @@ services:
     <<: *default-volumes
     image: vesnikos/eo_engine:latest
     entrypoint: '/docker-entrypoint'
-    restart: "always"
+    restart: "unless-stopped"
     command: [ 'web' ]
     depends_on:
       - rabbit
       - db
     ports:
-      - 8000:8000
+      - "8000:8000"

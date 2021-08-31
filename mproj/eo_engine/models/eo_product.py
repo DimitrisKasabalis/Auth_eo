@@ -34,7 +34,7 @@ class EOProductStatusChoices(models.TextChoices):
     Scheduled = "Scheduled", "SCHEDULED For generation."
     Failed = 'Failed', 'Generation was attempted but FAILED'
     Generating = 'Generating', "GENERATING..."
-    Ignore = 'Ignore', "Ignore."
+    Ignore = 'Ignore', "Skip generation (Ignored) ."
     Ready = 'Ready', "Product is READY."
 
 

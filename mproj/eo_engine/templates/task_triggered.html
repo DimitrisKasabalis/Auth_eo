@@ -11,3 +11,6 @@
     <a href={{ previous_page.url }}>{{ previous_page.label }}</a>
     <a href={{ main_page.url }}>{{ main_page.label }}</a>
 {% endblock %}
+{% block header %}
+    {{ header | default:"Context: header" }}
+{% endblock %}

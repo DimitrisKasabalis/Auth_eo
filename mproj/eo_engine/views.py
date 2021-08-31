@@ -1,4 +1,3 @@
-import os
 from typing import Literal
 import logging
 from celery.result import AsyncResult

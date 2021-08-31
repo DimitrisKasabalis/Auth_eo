@@ -17,9 +17,9 @@ def _file_storage_path(instance: 'EOSource', filename: str):
 class EOSourceStatusChoices(models.TextChoices):
     availableRemotely = "availableRemotely", 'Available on the Remote Server'
     scheduledForDownload = "scheduledForDownload", "Scheduled For Download"
-    availableLocally = "availableLocally", 'File available locally'
-    beingDownloaded = 'beingDownloaded', 'File is Being downloaded'
-    ignore = "Ignore", 'IgnoreFile'
+    availableLocally = "availableLocally", 'File is Available Locally'
+    beingDownloaded = 'beingDownloaded', 'File is Being Downloaded'
+    ignore = "Ignore", 'Action on this file has been canceled (Ignored/Revoked Action)'
 
 
 class EOSourceProductChoices(models.TextChoices):
