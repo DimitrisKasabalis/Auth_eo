@@ -53,7 +53,11 @@ class GeopTask(models.Model):
 
     root_id = models.UUIDField(editable=False, db_index=True, null=True)
 
+    eo_source = models.ManyToManyField('EOSource', related_name='task', related_query_name='task')
+    eo_product = models.ManyToManyField('EOProduct', related_name='task', related_query_name='task')
+
     class Meta:
+        get_latest_by = ["datetime_submitted", ]
         ordering = ["datetime_submitted", ]
         indexes = [
             GinIndex(fields=['task_kwargs'])

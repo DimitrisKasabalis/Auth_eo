@@ -12,16 +12,28 @@ Earth Observation Sources
             <th>Reference Date</th>
             <th>Group</th>
             <th>Status</th>
+            <th>Cancel Task</th>
             <th>Download</th>
             <th>Delete</th>
         </tr>
         {% for eo_source in eo_sources %}
             <tr>
                 <td>{{ eo_source.filename }}</td>
-                <td>{{ eo_source.datetime_reference |date:"D d M Y" }}</td>
+                <td>{{ eo_source.datetime_reference | date:"D d M Y" }}</td>
                 <td>{{ eo_source.get_product_display }}</td>
-                <td>{{ eo_source.get_status_display }}</td>
-                <td><a href={% url "eo_engine:trigger-dl-eosource" eo_source.filename %}>Fetch from remote server</a>
+                <td>
+                    {{ eo_source.get_status_display }}
+                                    {{ eo_source.task.latest.status  }}
+                    {{ valid_status_to_cancel}}
+                {% if eo_source.task.latest.status in valid_status_to_cancel %}
+                        <a href="{% url "eo_engine:revoke-task" task_id=eo_source.task.latest.task_id %}?return_page={% url "eo_engine:list-eosources" %}">cancel</a>
+                    {% endif %}
+                </td>
+                <td>
+
+
+                </td>
+                <td><a href={% url "eo_engine:trigger-dl-eosource" eo_source_pk=eo_source.id %}>Fetch from remote server</a>
                 </td>
                 {% if eo_source.file %}
                     <td><a href="{{ eo_source.file.url }}" download>Download</a></td>

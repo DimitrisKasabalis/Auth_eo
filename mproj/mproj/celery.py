@@ -40,13 +40,10 @@ app.conf.beat_schedule = {
 
 @before_task_publish.connect
 def handles_task_publish(sender: str = None, headers=None, body=None, **kwargs):
-    """ Essential procedures after a task was published on the broker.
-    This function is connected to the  after_task_publish signal """
-    # set the default Django settings module for the 'celery' program.
-    # print('Before connect signal firing up')
-    from eo_engine.models import GeopGroupTask, GeopTask
+    """ Essential procedures before a task is published on the broker.
+    This function is connected to the  before_task_publish signal """
 
-    print('handles_task_publish')
+    from eo_engine.models import GeopGroupTask, GeopTask
 
     if not (sender.startswith('eo_engine') or
             sender.startswith('app')):
@@ -68,17 +65,29 @@ def handles_task_publish(sender: str = None, headers=None, body=None, **kwargs):
     task_obj, created = GeopTask.objects.get_or_create(task_id=task_id)
 
     if created:
+        task_kwargs = body[1]
         _data = dict()
-        _data.update(task_name=info['task'],
-                     task_args=info['argsrepr'],
-                     task_kwargs=body[1],
-                     parent_id=info['parent_id'],
-                     root_id=info['root_id'],
-                     group_task=group_task_obj
-                     )
+        _data.update(
+            task_name=info['task'],
+            task_args=info['argsrepr'],
+            task_kwargs=task_kwargs,
+            parent_id=info['parent_id'],
+            root_id=info['root_id'],
+            group_task=group_task_obj,
+        )
         for k, v in _data.items():
             setattr(task_obj, k, v)
         task_obj.save()
+
+        eo_source_pk = task_kwargs.get('eo_source_pk')
+        eo_product_pk = task_kwargs.get('eo_product_pk')
+        for pk_bag in [eo_source_pk, eo_product_pk]:
+            if pk_bag:
+                if isinstance(pk_bag, list):
+                    task_obj.eo_source.add(*pk_bag)
+                else:  # not a list
+                    task_obj.eo_source.add(pk_bag)
+
         logger.info(f'{inspect.stack()[0][3]}: Created task: {info["id"]}')
     else:
         logger.info(f'{inspect.stack()[0][3]}: Task {info["id"]} found.')

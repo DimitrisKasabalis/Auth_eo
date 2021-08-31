@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block body %}
+    <div>
+        <div>{{ text }}</div>
+        {% if return_page %}
+            <div><a href={{ return_page }}>Cancel</a></div>{% endif %}
+        {% if next %}
+            <div><a href={{ next }}> Yes</a></div>{% endif %}
+    </div>
+{% endblock %}
+
+{% block header %}
+    Cancel Task
+{% endblock %}
+
+{% block Title %}
+    Cancel Task
+{% endblock %}

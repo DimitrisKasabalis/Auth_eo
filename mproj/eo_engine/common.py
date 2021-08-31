@@ -4,6 +4,7 @@ from fnmatch import fnmatch
 from typing import Literal, List, Dict, Any, Optional
 from typing import NamedTuple
 from pathlib import Path
+from copy import copy
 
 from django.core.files import File
 
@@ -98,7 +99,6 @@ def generate_products_from_source(filename: str) -> List[product_output]:
                            )
         ]
 
-
     if fnmatch(filename.lower(), 'c_gls_LAI300-RT1*.nc'.lower()):
         name_elements = parse_copernicus_name(filename)
         date_str_YYYYMMDD = name_elements.datetime.date().strftime('%Y%m%d')
@@ -162,12 +162,13 @@ def get_task_ref_from_name(token: str):
     return getattr(tasks, token)
 
 
-def download_http_eosource(eosource: 'EOSource') -> str:
+def download_http_eosource(pk_eosource: int) -> str:
     import requests
     from eo_engine.models import EOSourceStatusChoices
 
-    remote_url = eosource.url
-    credentials = eosource.get_credentials
+    eo_source = EOSource.objects.get(pk=pk_eosource)
+    remote_url = eo_source.url
+    credentials = eo_source.get_credentials
 
     response = requests.get(
         url=remote_url,
@@ -178,58 +179,78 @@ def download_http_eosource(eosource: 'EOSource') -> str:
     headers = response.headers
     FILE_LENGTH = headers.get('Content-Length', None)
 
-    eosource.set_status(EOSourceStatusChoices.beingDownloaded)
+    eo_source.set_status(EOSourceStatusChoices.beingDownloaded)
 
     with TemporaryFile(mode='w+b') as file_handle:
         # TemporaryFile has noname, and will cease to exist when it is closed.
 
         for chunk in response.iter_content(chunk_size=2 * 1024):
-            eosource.refresh_from_db()  # ping to keep db connection alive
+            # eosource.refresh_from_db()  # ping to keep db connection alive
             file_handle.write(chunk)
             file_handle.flush()
 
         content = File(file_handle)
-        print(eosource.filename)
-        from django.db import connections
-        for conn in connections.all():
-            conn.close_if_unusable_or_obsolete()
-        eosource.refresh_from_db()
+
+        # from django.db import connections
+        # for conn in connections.all():
+        #     conn.close_if_unusable_or_obsolete()
+        # eosource.refresh_from_db()
+        eosource = EOSource.objects.get(pk=pk_eosource)
         eosource.file.save(name=eosource.filename, content=content, save=False)
 
-    eosource.filesize = eosource.file.size
-    eosource.status = EOSourceStatusChoices.availableLocally
-
-    eosource.save()
+        eosource.filesize = eosource.file.size
+        eosource.status = EOSourceStatusChoices.availableLocally
+        eosource.save()
 
     return eosource.file.name
 
 
-def download_ftp_eosource(eosource: 'EOSource') -> str:
+def download_ftp_eosource(pk_eosource: int) -> str:
     from urllib.parse import urlparse
     from eo_engine.models import EOSourceStatusChoices
     import ftputil
     # instructions for lib at https://ftputil.sschwarzer.net/trac/wiki/Documentation
-    url_parse = urlparse(eosource.url)
+
+    eo_source = EOSource.objects.get(pk=pk_eosource)
+    url_parse = urlparse(eo_source.url)
     server: str = url_parse.netloc
     ftp_path = url_parse.path
-    user: str = eosource.credentials.username
-    password: str = eosource.credentials.password
+    user: str = copy(eo_source.credentials.username)
+    password: str = copy(eo_source.credentials.password)
 
     def progress_cb(chunk: bytearray):
+        # This function is called with a byte chunk.
         pass
 
-    with ftputil.FTPHost(server, user, password) as ftp_host:
-        with NamedTemporaryFile() as file_handle:
-            ftp_host.download(source=ftp_path, target=file_handle.name, callback=progress_cb)
-            content = File(file_handle)
-            from django.db import connections
-            for conn in connections.all():
-                conn.close_if_unusable_or_obsolete()
-            eosource.refresh_from_db()
-            eosource.file.save(name=eosource.filename, content=content, save=False)
-        eosource.filesize = eosource.file.size
-        eosource.set_status(EOSourceStatusChoices.availableLocally)
+    with ftputil.FTPHost(server, user, password) as ftp_host, \
+            NamedTemporaryFile() as file_handle:
+        ftp_host.download(source=ftp_path, target=file_handle.name, callback=progress_cb)
+        content = File(file_handle)
+        # recreate reference to db to refresh the database connection
+        eo_source = EOSource.objects.get(pk=pk_eosource)
+        eo_source.file.save(name=eo_source.filename, content=content, save=False)
+        eo_source.filesize = eo_source.file.size
+        eo_source.set_status(EOSourceStatusChoices.availableLocally)
 
-        eosource.save()
+        eo_source.save()
 
-        return eosource.file.name
+    return eo_source.file.name
+
+
+def revoke_task(task_id, terminate: bool = False):
+    from mproj import celery_app as app
+    from eo_engine.models import GeopTask
+    from eo_engine.models import EOSourceStatusChoices, EOProductStatusChoices
+
+    task = GeopTask.objects.get(task_id=task_id)
+
+    if task.eo_product.exists():
+        db_entries = task.eo_product.all()
+        db_entries.update(status=EOProductStatusChoices.Ignore)
+
+    elif task.eo_source.exists():
+        db_entries = task.eo_source.all()
+        db_entries.update(status=EOSourceStatusChoices.ignore)
+    task.status = GeopTask.TaskTypeChoices.REVOKED
+    task.save()
+    app.control.revoke(task_id=task_id, terminate=terminate)

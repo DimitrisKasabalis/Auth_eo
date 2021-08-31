@@ -1,7 +1,8 @@
 from typing import Literal
 import logging
 from celery.result import AsyncResult
-from django.http import HttpResponse
+from celery.utils.serialization import strtobool
+
 from django.shortcuts import render, redirect
 
 # Create your views here.
@@ -16,9 +17,14 @@ def hello(request):
 
 def list_eosources(request):
     from .models import EOSource
-    qs = EOSource.objects.all()
+    from .models import GeopTask
+    # default order [product, date]
+    qs = EOSource.objects.all().prefetch_related('task')
 
-    context = {'eo_sources': qs}
+    context = {'eo_sources': qs,
+               'valid_status_to_cancel': [GeopTask.TaskTypeChoices.STARTED.value,
+                                          GeopTask.TaskTypeChoices.SUBMITTED.value]
+               }
 
     return render(request, 'list_eosources.html', context=context)
 
@@ -70,24 +76,28 @@ def trigger_generate_eoproduct(request, filename):
     return render(request, 'task_triggered.html', context)
 
 
-def trigger_download_eosource(request, filename):
+def trigger_download_eosource(request, eo_source_pk):
     from .tasks import task_download_file
     from .models import EOSource, EOSourceStatusChoices
-    obj = EOSource.objects.get(filename=filename)
+
+    template_header_title = 'Download file'
+
+    obj = EOSource.objects.get(pk=eo_source_pk)
+    task = task_download_file.s(eo_source_pk=eo_source_pk)
+    job: AsyncResult = task.apply_async()
     obj.status = EOSourceStatusChoices.scheduledForDownload
     obj.save()
 
-    task = task_download_file.s(filename=filename)
-    job: AsyncResult = task.apply_async()
-
-    context = {'card_info':
-                   {'task_name': task.name,
-                    'param': filename,
-                    'job_id': job.task_id
-                    },
-               'previous_page': {'url': reverse('eo_engine:list-eosources'), 'label': 'Sources List'},
-               'main_page': {'url': reverse('eo_engine:main-page'), 'label': "Main Page"}
-               }
+    context = {
+        'header': template_header_title,
+        'card_info':
+            {'task_name': task.name,
+             'param': eo_source_pk,
+             'job_id': job.task_id
+             },
+        'previous_page': {'url': reverse('eo_engine:list-eosources'), 'label': 'Sources List'},
+        'main_page': {'url': reverse('eo_engine:main-page'), 'label': "Main Page"}
+    }
     return render(request, 'task_triggered.html', context)
 
 
@@ -121,3 +131,46 @@ def trigger_spider(request, spider_name: str):
                }
 
     return render(request, 'task_triggered.html', context)
+
+
+def view_revoke_task(request, task_id: str):
+    from eo_engine.models import GeopTask
+    from eo_engine.common import revoke_task
+
+    return_page = request.GET.get('return_page', '')
+    confirm = strtobool(request.GET.get('confirm', 'False'))
+    context = {
+        "text": None,
+        "return_page": return_page,
+        "next": None
+    }
+    try:
+        task = GeopTask.objects.get(task_id=task_id)
+    except GeopTask.DoesNotExist:
+        context.update(
+            text=f'the task_id {task_id} was not found',
+        )
+        return render(request, 'task_revoke.html', context=context)
+
+    if confirm is False:
+        context.update(
+            text=f'are you sure?',
+            next=f"{reverse('eo_engine:revoke-task', kwargs={'task_id': task_id})}?confirm=true&return_page={return_page}"
+        )
+    elif confirm is True:
+        context.update(
+            text=f'task{task_id} revoked!',
+            next=reverse('eo_engine:list-eosources')
+        )
+        revoke_task(task_id, terminate=True)
+
+    return render(request, 'task_revoke.html', context=context)
+
+    # q = GeopTask.objects.filter(~Q(status='SUCCESS')).filter(~Q(task_name__contains='schedule')).filter(
+    #     task_kwargs__filename="c_gls_NDVI300_202107010000_GLOBE_OLCI_V2.0.1.nc")
+
+    # from mproj import celery_app as app
+
+    # app.control.revoke()
+
+    # return None

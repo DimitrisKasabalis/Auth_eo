@@ -22,8 +22,11 @@ class Command(BaseCommand):
         eo_source = options['eo_source']
         as_task = options['as_task']
 
+        eo_source_pk = eo_source.pk
         if as_task:
-            task = task_download_file.s(filename=eo_source.filename)
+            task = task_download_file.s(eo_source_pk=eo_source_pk)
             job = task.apply_async()
+            self.stdout(f"job submited with task_id: {job}")
+            return
 
-        task_download_file(filename=eo_source.filename)
+        task_download_file(eo_source_pk=eo_source_pk)
