@@ -14,20 +14,20 @@ def _file_storage_path(instance: 'EOSource', filename: str):
     return f"{instance.domain}/{local_path}"
 
 
-class EOSourceStatusChoices(models.TextChoices):
-    availableRemotely = "availableRemotely", 'Available on the Remote Server'
-    scheduledForDownload = "scheduledForDownload", "Scheduled For Download"
-    availableLocally = "availableLocally", 'File is Available Locally'
-    beingDownloaded = 'beingDownloaded', 'File is Being Downloaded'
-    ignore = "Ignore", 'Action on this file has been canceled (Ignored/Revoked Action)'
+class EOSourceStateChoices(models.TextChoices):
+    AvailableRemotely = "availableRemotely", 'Available on the Remote Server'
+    ScheduledForDownload = "ScheduledForDownload", "Scheduled For Download"
+    AvailableLocally = "availableLocally", 'File is Available Locally'
+    BeingDownloaded = 'BeingDownloaded', 'File is Being Downloaded'
+    Ignore = "Ignore", 'Action on this file has been canceled (Ignored/Revoked Action)'
 
 
 class EOSourceProductChoices(models.TextChoices):
     # add mode products here
-    c_gsl_ndvi300_v2_glob = 'c_gsl_ndvi300-v2-glob', "Copernicus Global Land Service NDVI 300m v2"
-    c_gsl_ndvi1km_v3_glob = 'c_gsl_ndvi1km-v3-glob', "Copernicus Global Land Service NDVI 1km v3"
+    c_gls_ndvi300_v2_glob = 'c_gsl_ndvi300-v2-glob', "Copernicus Global Land Service NDVI 300m v2"
+    c_gls_ndvi1km_v3_glob = 'c_gsl_ndvi1km-v3-glob', "Copernicus Global Land Service NDVI 1km v3"
     a_agro_ndvi300_v3_glob = 'a_agro_ndvi300-v3-afr', "AuthAgro Service NDVI 1km v3"
-    c_gsl_lai300_v1_glob = 'c_gsl_lai300-v1-glob', "Copernicus Global Land Service LAI 300m v1"
+    c_gls_lai300_v1_glob = 'c_gsl_lai300-v1-glob', "Copernicus Global Land Service LAI 300m v1"
 
     # https://land.copernicus.eu/global/sites/cgls.vito.be/files/products/CGLOPS2_PUM_WB100m_V1_I1.10.pdf
     c_gls_WB100_v1_glob = 'c_gls_wb100-v1-glob', "Copernicus Global Land Service Water Bodies Collection 100m Version 1"
@@ -52,8 +52,8 @@ class EOSource(models.Model):
 
     # status of file.
     status = models.CharField(max_length=255,
-                              choices=EOSourceStatusChoices.choices,
-                              default=EOSourceStatusChoices.availableRemotely)
+                              choices=EOSourceStateChoices.choices,
+                              default=EOSourceStateChoices.AvailableRemotely)
 
     # what product is it?
     product = models.CharField(max_length=255, choices=EOSourceProductChoices.choices)
@@ -110,10 +110,10 @@ class EOSource(models.Model):
 def eosource_post_save_handler(instance: EOSource, **kwargs):
     """ Post save logic goes here. ie an asset is now available locally, are there products that can be made?"""
     from eo_engine.common import generate_products_from_source
-    from eo_engine.models import EOProduct, EOProductStatusChoices
+    from eo_engine.models import EOProduct, EOProductStateChoices
     eo_source = instance
     # if asset is local
-    if eo_source.status == EOSourceStatusChoices.availableLocally:
+    if eo_source.status == EOSourceStateChoices.AvailableLocally:
         # pass
         products = generate_products_from_source(eo_source.filename)
 
@@ -126,10 +126,10 @@ def eosource_post_save_handler(instance: EOSource, **kwargs):
                 task_name=product.task_name,
                 task_kwargs=product.task_kwargs
             )
-            # mark if the scheduler should ignore it
+            # mark if the scheduler should Ignore it
             if prod.is_ignored():
                 print('this entry is marked as ignored.')
-                prod.status = EOProductStatusChoices.Ignore
+                prod.status = EOProductStateChoices.Ignore
 
             # mark it's inputs
             prod.eo_sources_inputs.set([eo_source, ])
@@ -139,5 +139,5 @@ def eosource_post_save_handler(instance: EOSource, **kwargs):
 __all__ = [
     "EOSource",
     "EOSourceProductChoices",
-    "EOSourceStatusChoices"
+    "EOSourceStateChoices"
 ]

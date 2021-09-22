@@ -18,6 +18,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='eosource',
             name='status',
-            field=models.CharField(choices=[('availableRemotely', 'NO_LABEL'), ('scheduledForDownload', 'Scheduled For Download'), ('availableLocally', 'NO_LABEL'), ('beingDownloaded', 'NO_LABEL'), ('Ignore', 'NO_LABEL')], default='availableRemotely', max_length=255),
+            field=models.CharField(choices=[('availableRemotely', 'NO_LABEL'), ('ScheduledForDownload', 'Scheduled For Download'), ('availableLocally', 'NO_LABEL'), ('BeingDownloaded', 'NO_LABEL'), ('Ignore', 'NO_LABEL')], default='availableRemotely', max_length=255),
         ),
     ]

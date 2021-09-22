@@ -11,7 +11,7 @@ from pytz import utc
 from scrapy.exceptions import DropItem
 
 from eo_engine.common import parse_copernicus_name
-from eo_engine.models import EOSource, Credentials, EOSourceStatusChoices
+from eo_engine.models import EOSource, Credentials, EOSourceStateChoices
 from eo_scraper.items import RemoteSourceItem
 
 
@@ -34,7 +34,7 @@ class DefaultPipeline:
 
             cred_obj = Credentials.objects.get(domain=domain)
             EOSource.objects.create(
-                status=EOSourceStatusChoices.availableRemotely,
+                status=EOSourceStateChoices.AvailableRemotely,
                 product=spider.product_name,
                 file=None,
                 filename=filename,  # unique acts as id

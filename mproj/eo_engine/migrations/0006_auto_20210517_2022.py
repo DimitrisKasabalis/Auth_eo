@@ -25,6 +25,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='eosource',
             name='status',
-            field=models.CharField(choices=[('availableRemotely', 'Availableremotely'), ('availableLocally', 'Availablelocally'), ('ignore', 'Ignore')], default='availableRemotely', max_length=255),
+            field=models.CharField(choices=[('availableRemotely', 'Availableremotely'), ('availableLocally', 'Availablelocally'), ('Ignore', 'Ignore')], default='availableRemotely', max_length=255),
         ),
     ]

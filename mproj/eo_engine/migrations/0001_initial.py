@@ -27,7 +27,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('datetime_seen', models.DateTimeField(auto_created=True)),
-                ('status', models.CharField(choices=[('availableRemotely', 'available Remotely'), ('availableLocally', 'available Locally'), ('ignore', 'ignore')], default='availableRemotely', max_length=255)),
+                ('status', models.CharField(choices=[('availableRemotely', 'available Remotely'), ('availableLocally', 'available Locally'), ('Ignore', 'Ignore')], default='availableRemotely', max_length=255)),
                 ('product', models.CharField(choices=[('ndvi-300m-v1', 'ndvi 300m v1'), ('ndvi-300m-v2', 'ndvi 300m v2'), ('ndvi-1km-v3', 'ndvi 1km v3'), ('ndvi-1km-v2', 'ndvi 1km v2'), ('ndvi-1km-v1', 'ndvi 1km v1'), ('lai-300m-v1', 'lai 300m v1'), ('lai-1km-v1', 'lai 1km v1'), ('lai-1km-v2', 'lai 1km v2'), ('vc1-v1', 'vc1 v1'), ('wb-africa-v1', 'wb africa V1')], max_length=255)),
                 ('file', models.FileField(editable=False, max_length=1000, upload_to='')),
                 ('filename', models.CharField(max_length=255, unique=True)),

@@ -1,7 +1,7 @@
 from django.utils.timezone import now
 
-from eo_engine.models import EOProduct, EOProductStatusChoices
-from eo_engine.models import EOSource, Credentials, EOSourceStatusChoices
+from eo_engine.models import EOProduct, EOProductStateChoices
+from eo_engine.models import EOSource, Credentials, EOSourceStateChoices
 from . import BaseTest
 
 
@@ -12,7 +12,7 @@ class TestSignals(BaseTest):
         cls.eo_sourse = EOSource.objects.create(
             domain='www.mock.site.gr',
             filename='c_gls_WB100_202105010000_GLOBE_S2_V1.0.1.nc',
-            status=EOSourceStatusChoices.availableRemotely,
+            status=EOSourceStateChoices.AvailableRemotely,
             url="test/testity.nc",
             credentials=c,
             product="c_gls_WB100-V1-GLOB",
@@ -28,7 +28,7 @@ class TestSignals(BaseTest):
         self.assertEqual(len(EOProduct.objects.all()), 0)
 
         #  source becames
-        self.eo_sourse.status = EOSourceStatusChoices.availableLocally
+        self.eo_sourse.status = EOSourceStateChoices.AvailableLocally
         self.eo_sourse.save()
 
-        self.assertGreaterEqual(len(EOProduct.objects.filter(status=EOProductStatusChoices.Available)), 1)
+        self.assertGreaterEqual(len(EOProduct.objects.filter(status=EOProductStateChoices.Available)), 1)

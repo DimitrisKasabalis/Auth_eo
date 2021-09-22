@@ -1,17 +1,17 @@
 from .c import *
-from .eo_product import EOProductGroupChoices, EOProductStatusChoices, EOProduct
-from .eo_source import EOSourceStatusChoices, EOSource, EOSourceProductChoices
-from .other import Credentials,FunctionalRules
+from .eo_product import EOProductGroupChoices, EOProductStateChoices, EOProduct
+from .eo_source import EOSourceStateChoices, EOSource, EOSourceProductChoices
+from .other import Credentials, FunctionalRules
 
 
 __all__ = [
     "Credentials",
     "EOProduct",
     "EOSource",
-    "EOSourceStatusChoices",
+    "EOSourceStateChoices",
     "EOSourceProductChoices",
     "EOProductGroupChoices",
-    "EOProductStatusChoices",
+    "EOProductStateChoices",
     "GeopGroupTask",
     "GeopTask",
     "FunctionalRules"

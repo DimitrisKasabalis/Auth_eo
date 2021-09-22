@@ -164,7 +164,7 @@ def get_task_ref_from_name(token: str):
 
 def download_http_eosource(pk_eosource: int) -> str:
     import requests
-    from eo_engine.models import EOSourceStatusChoices
+    from eo_engine.models import EOSourceStateChoices
 
     eo_source = EOSource.objects.get(pk=pk_eosource)
     remote_url = eo_source.url
@@ -179,7 +179,7 @@ def download_http_eosource(pk_eosource: int) -> str:
     headers = response.headers
     FILE_LENGTH = headers.get('Content-Length', None)
 
-    eo_source.set_status(EOSourceStatusChoices.beingDownloaded)
+    eo_source.set_status(EOSourceStateChoices.BeingDownloaded)
 
     with TemporaryFile(mode='w+b') as file_handle:
         # TemporaryFile has noname, and will cease to exist when it is closed.
@@ -199,7 +199,7 @@ def download_http_eosource(pk_eosource: int) -> str:
         eosource.file.save(name=eosource.filename, content=content, save=False)
 
         eosource.filesize = eosource.file.size
-        eosource.status = EOSourceStatusChoices.availableLocally
+        eosource.status = EOSourceStateChoices.AvailableLocally
         eosource.save()
 
     return eosource.file.name
@@ -207,7 +207,7 @@ def download_http_eosource(pk_eosource: int) -> str:
 
 def download_ftp_eosource(pk_eosource: int) -> str:
     from urllib.parse import urlparse
-    from eo_engine.models import EOSourceStatusChoices
+    from eo_engine.models import EOSourceStateChoices
     import ftputil
     # instructions for lib at https://ftputil.sschwarzer.net/trac/wiki/Documentation
 
@@ -230,7 +230,7 @@ def download_ftp_eosource(pk_eosource: int) -> str:
         eo_source = EOSource.objects.get(pk=pk_eosource)
         eo_source.file.save(name=eo_source.filename, content=content, save=False)
         eo_source.filesize = eo_source.file.size
-        eo_source.set_status(EOSourceStatusChoices.availableLocally)
+        eo_source.set_status(EOSourceStateChoices.AvailableLocally)
 
         eo_source.save()
 
@@ -240,17 +240,17 @@ def download_ftp_eosource(pk_eosource: int) -> str:
 def revoke_task(task_id, terminate: bool = False):
     from mproj import celery_app as app
     from eo_engine.models import GeopTask
-    from eo_engine.models import EOSourceStatusChoices, EOProductStatusChoices
+    from eo_engine.models import EOSourceStateChoices, EOProductStateChoices
 
     task = GeopTask.objects.get(task_id=task_id)
 
     if task.eo_product.exists():
         db_entries = task.eo_product.all()
-        db_entries.update(status=EOProductStatusChoices.Ignore)
+        db_entries.update(status=EOProductStateChoices.Ignore)
 
     elif task.eo_source.exists():
         db_entries = task.eo_source.all()
-        db_entries.update(status=EOSourceStatusChoices.ignore)
+        db_entries.update(status=EOSourceStateChoices.Ignore)
     task.status = GeopTask.TaskTypeChoices.REVOKED
     task.save()
     app.control.revoke(task_id=task_id, terminate=terminate)

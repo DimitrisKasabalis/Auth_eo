@@ -5,8 +5,8 @@ from dateutil.relativedelta import relativedelta
 from django.test import override_settings
 from django.utils.timezone import now
 
-from eo_engine.models import EOSource, Credentials, EOSourceProductChoices, \
-    EOSourceProductGroupChoices, EOSourceStatusChoices, EOProduct
+from eo_engine.models import (EOSource, Credentials, EOSourceProductChoices,
+                              EOSourceStateChoices, EOProduct)
 from . import BaseTest
 
 TEST_MEDIA_ROOT = Path(r'D:\src\geoAuthPipe\test_MEDIA_ROOT')
@@ -36,13 +36,12 @@ class TestUnit(BaseTest):
         self.eo_sourse = EOSource.objects.create(
             domain='land.copernicus.vgt.vito.be',
             filename='c_gls_NDVI300_202103210000_GLOBE_OLCI_V2.0.1.nc',
-            status=EOSourceStatusChoices.availableRemotely,
+            status=EOSourceStateChoices.AvailableRemotely,
             url=self.target_url,
             credentials=Credentials.objects.first(),
             product=EOSourceProductChoices.ndvi_300m_v2,
             datetime_uploaded=self.NOW - relativedelta(days=2),
             datetime_seen=self.NOW,
-            product_group=EOSourceProductGroupChoices.NDVI
         )
 
     def tearDown(self) -> None:
@@ -51,14 +50,14 @@ class TestUnit(BaseTest):
 
     def test_download_file_stand_alone(self):
         from eo_engine.common import download_asset
-        self.assertEqual(self.eo_sourse.status, EOSourceStatusChoices.availableRemotely)
+        self.assertEqual(self.eo_sourse.status, EOSourceStateChoices.AvailableRemotely)
         r = download_asset(self.eo_sourse)
-        self.assertEqual(self.eo_sourse.status, EOSourceStatusChoices.availableLocally)
+        self.assertEqual(self.eo_sourse.status, EOSourceStateChoices.AvailableLocally)
 
     def test_download_file_fro_object(self):
-        self.assertEqual(self.eo_sourse.status, EOSourceStatusChoices.availableRemotely)
+        self.assertEqual(self.eo_sourse.status, EOSourceStateChoices.AvailableRemotely)
         self.eo_sourse.download()
-        self.assertEqual(self.eo_sourse.status, EOSourceStatusChoices.availableLocally)
+        self.assertEqual(self.eo_sourse.status, EOSourceStateChoices.AvailableLocally)
         self.assertEqual(EOProduct.objects.all().count(), 1)
         p = EOProduct.objects.first()
         self.assertEqual(p.inputs.count(), 1)

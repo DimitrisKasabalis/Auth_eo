@@ -1,8 +1,11 @@
-from typing import Literal
 import logging
+import os
+from pathlib import Path
+from typing import Literal
+
 from celery.result import AsyncResult
 from celery.utils.serialization import strtobool
-
+from django.contrib import messages
 from django.shortcuts import render, redirect
 
 # Create your views here.
@@ -57,11 +60,11 @@ def delete_file(request, file_type: Literal['eosource', 'eoproduct'], filename: 
 
 def trigger_generate_eoproduct(request, filename):
     from eo_engine.common import get_task_ref_from_name
-    from .models import EOProduct, EOProductStatusChoices
+    from .models import EOProduct, EOProductStateChoices
     eo_product = EOProduct.objects.get(filename=filename)
     task = get_task_ref_from_name(eo_product.task_name).s(eo_product_pk=eo_product.pk, **eo_product.task_kwargs)
     job: AsyncResult = task.apply_async()
-    eo_product.status = EOProductStatusChoices.Scheduled
+    eo_product.status = EOProductStateChoices.Scheduled
     eo_product.save()
     context = {'card_info':
                    {'task_name': task.name,
@@ -78,14 +81,14 @@ def trigger_generate_eoproduct(request, filename):
 
 def trigger_download_eosource(request, eo_source_pk):
     from .tasks import task_download_file
-    from .models import EOSource, EOSourceStatusChoices
+    from .models import EOSource, EOSourceStateChoices
 
     template_header_title = 'Download file'
 
     obj = EOSource.objects.get(pk=eo_source_pk)
     task = task_download_file.s(eo_source_pk=eo_source_pk)
     job: AsyncResult = task.apply_async()
-    obj.status = EOSourceStatusChoices.scheduledForDownload
+    obj.status = EOSourceStateChoices.ScheduledForDownload
     obj.save()
 
     context = {

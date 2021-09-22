@@ -4,7 +4,7 @@ from celery import Task
 from celery.utils.log import get_task_logger
 from django.utils import timezone
 
-from eo_engine.models import GeopTask, EOProduct, EOProductStatusChoices
+from eo_engine.models import GeopTask, EOProduct, EOProductStateChoices
 
 logger = get_task_logger(__name__)
 
@@ -38,7 +38,7 @@ class BaseTaskWithRetry(Task):
             eo_product_pk = kwargs['eo_product_pk']
             eo_product = EOProduct.objects.get(pk=eo_product_pk)
             logger.info(f"Marking product {eo_product} as 'GENERATING'")
-            eo_product.status = EOProductStatusChoices.Generating
+            eo_product.status = EOProductStateChoices.Generating
             eo_product.save()
 
         return self.run(*args, **kwargs)
@@ -64,7 +64,7 @@ class BaseTaskWithRetry(Task):
             # mark generating product as 'GENERATING'
             eo_product_pk = kwargs['eo_product_pk']
             eo_product = EOProduct.objects.get(pk=eo_product_pk)
-            eo_product.status = EOProductStatusChoices.Ready
+            eo_product.status = EOProductStateChoices.Ready
             eo_product.save()
 
         task.save()
@@ -93,5 +93,5 @@ class BaseTaskWithRetry(Task):
         if fnmatch(self.name, 'eo_engine.tasks.task_s??p??*'):
             eo_product_pk = kwargs['eo_product_pk']
             eo_product = EOProduct.objects.get(pk=eo_product_pk)
-            eo_product.status = EOProductStatusChoices.Failed
+            eo_product.status = EOProductStateChoices.Failed
             eo_product.save()

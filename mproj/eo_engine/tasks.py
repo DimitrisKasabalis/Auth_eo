@@ -12,8 +12,8 @@ from django.utils import timezone
 from pytz import utc
 
 from eo_engine.common import get_task_ref_from_name
-from eo_engine.models import EOProduct, EOProductStatusChoices, FunctionalRules
-from eo_engine.models import (EOSource, EOSourceStatusChoices)
+from eo_engine.models import EOProduct, EOProductStateChoices, FunctionalRules
+from eo_engine.models import EOSource, EOSourceStateChoices
 
 logger = get_task_logger(__name__)
 
@@ -65,14 +65,14 @@ def task_schedule_download_eosource(self):
 
     for rule in download_rules['rules']:
         for prod, start_date in more_itertools.chunked(rule.values(), 2):  # two elements in every rule entry
-            qs |= EOSource.objects.filter(status=EOSourceStatusChoices.availableRemotely,
+            qs |= EOSource.objects.filter(status=EOSourceStateChoices.AvailableRemotely,
                                           product=prod,
                                           datetime_reference__gte=datetime.strptime(start_date, '%d/%m/%Y').replace(
                                               tzinfo=utc))
 
     if qs.exists():
         job = group(task_download_file.s(filename=eo_source.filename) for eo_source in qs)
-        qs.update(status=EOSourceStatusChoices.scheduledForDownload)
+        qs.update(status=EOSourceStateChoices.ScheduledForDownload)
         return job.apply_async()
 
 
@@ -81,14 +81,14 @@ def task_schedule_download_eosource(self):
 def task_schedule_create_eoproduct():
     qs = EOProduct.objects.none()
 
-    qs |= EOProduct.objects.filter(status=EOProductStatusChoices.Available)
+    qs |= EOProduct.objects.filter(status=EOProductStateChoices.Available)
     if qs.exists():
         logger.info(f'Found {qs.count()} EOProducts that are ready')
 
         job = group(
             get_task_ref_from_name(eo_product.task_name).s(eo_product_pk=eo_product.pk, **eo_product.task_kwargs) for
             eo_product in qs)
-        qs.update(status=EOProductStatusChoices.Scheduled)
+        qs.update(status=EOProductStateChoices.Scheduled)
         return job.apply_async()
 
     return
@@ -205,7 +205,7 @@ def task_s02p02_c_gls_ndvi_300_clip(eo_product_pk: Union[int, EOProduct], aoi: L
             content = File(file.open('rb'))
             eo_product.file.save(name=eo_product.filename, content=content, save=False)
             eo_product.filesize = eo_product.file.size
-            eo_product.status = EOProductStatusChoices.Ready
+            eo_product.status = EOProductStateChoices.Ready
             logger.debug(f'removing temp file {file.name}')
             file.unlink(missing_ok=True)
     except Exception as ex:
@@ -214,7 +214,7 @@ def task_s02p02_c_gls_ndvi_300_clip(eo_product_pk: Union[int, EOProduct], aoi: L
         print(message)
         raise ex
 
-    eo_product.status = EOProductStatusChoices.Ready
+    eo_product.status = EOProductStateChoices.Ready
     eo_product.datetime_creation = now
     eo_product.save()
     return eo_product.file.path
@@ -232,7 +232,7 @@ def task_s02p02_agro_nvdi_300_resample_to_1km(eo_product_pk):
     xmin, ymin, xmax, ymax = -30.0044643, -40.0044643, 60.0066643, 40.0044643
 
     # Mark it as 'in process'
-    eo_product.status = EOProductStatusChoices.Generating
+    eo_product.status = EOProductStateChoices.Generating
     eo_product.save()
     # input file//eo_product
     input_obj: EOProduct = eo_product.eo_products_inputs.first()
@@ -274,7 +274,7 @@ def task_s02p02_agro_nvdi_300_resample_to_1km(eo_product_pk):
         with open(output_temp_file, 'rb') as fh:
             content = File(fh)
             eo_product.file.save(name=eo_product.filename, content=content)
-            eo_product.status = EOProductStatusChoices.Ready
+            eo_product.status = EOProductStateChoices.Ready
             eo_product.datetime_creation = now
             eo_product.save()
         os.unlink(output_temp_file)
@@ -402,7 +402,7 @@ def task_s02p02_compute_vci(eo_product_pk):
         content = File(open(outfile, 'rb'))
 
         output_obj.file.save(name=output_obj.filename, content=content, save=False)
-        output_obj.status = EOProductStatusChoices.Ready
+        output_obj.status = EOProductStateChoices.Ready
         output_obj.datetime_creation = now
         output_obj.save()
     return

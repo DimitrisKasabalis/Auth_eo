@@ -42,7 +42,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='eosource',
             name='status',
-            field=models.CharField(choices=[('availableRemotely', 'Availableremotely'), ('availableLocally', 'Availablelocally'), ('beingDownloaded', 'Beingdownloaded'), ('ignore', 'Ignore')], default='availableRemotely', max_length=255),
+            field=models.CharField(choices=[('availableRemotely', 'Availableremotely'), ('availableLocally', 'Availablelocally'), ('BeingDownloaded', 'Beingdownloaded'), ('Ignore', 'Ignore')], default='availableRemotely', max_length=255),
         ),
         migrations.RenameModel(
             old_name='UBDCGroupTask',

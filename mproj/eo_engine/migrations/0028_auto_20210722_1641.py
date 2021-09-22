@@ -41,6 +41,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='eosource',
             name='status',
-            field=models.CharField(choices=[('availableRemotely', 'Available on the Remote Server'), ('scheduledForDownload', 'Scheduled For Download'), ('availableLocally', 'File available locally'), ('beingDownloaded', 'File is Being downloaded'), ('Ignore', 'IgnoreFile')], default='availableRemotely', max_length=255),
+            field=models.CharField(choices=[('availableRemotely', 'Available on the Remote Server'), ('ScheduledForDownload', 'Scheduled For Download'), ('availableLocally', 'File available locally'), ('BeingDownloaded', 'File is Being downloaded'), ('Ignore', 'IgnoreFile')], default='availableRemotely', max_length=255),
         ),
     ]
