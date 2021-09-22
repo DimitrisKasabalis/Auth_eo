@@ -53,7 +53,7 @@ RUN mamba clean --all -f -y
 
 WORKDIR ${HOME}
 
-#####
+##### add pip
 ADD requirements.txt requirements.txt
 RUN pip install -r requirements.txt
 
@@ -61,4 +61,6 @@ RUN pip install -r requirements.txt
 USER root
 RUN apt-get -qq update && \
     apt-get -qq install --yes --no-install-recommends nco
+
+##### END
 USER ${NB_USER}

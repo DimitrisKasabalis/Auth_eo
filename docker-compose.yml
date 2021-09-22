@@ -1,22 +1,20 @@
 version: "3.8"
-x-default-env:
-  &default-env
+x-default-env:  &default-env
   environment:
     DATABASE_PASSWORD: postgres
     DATABASE_NAME: postgres
     DATABASE_USERNAME: postgres
     # 'host.docker.internal'
-    DATABASE_HOST: db # talk directly to db, rather than through the host
+    DATABASE_HOST: "${DATABASE_HOST:-db}" # talk directly to db, rather than through the host
     RABBIT_HOST: rabbit
     RABBIT_PASSWORD: carrot
     DEBUG: 'False'
 
-x-default-volumes:
-  &default-volumes
+x-default-volumes:  &default-volumes
   volumes:
     - './docker-entrypoint.sh:/docker-entrypoint'
     - "./mproj:/src"
-    - "./local_files/local_files_root:/local_files_root"  # local file repo
+    - "${LOCAL_FILES_ROOT:-./local_files/local_files_root}:/local_files_root"  # local file repo
 
 services:
 
@@ -33,7 +31,7 @@ services:
     ports:
       - 5432:5432
     volumes:
-      - ./local_files/pg_data:/var/lib/postgresql/data
+      - "${LOCAL_DB_ROOT:-./local_files/pg_data}:/var/lib/postgresql/data"
 
   rabbit:
     image: rabbitmq:3.8-management
