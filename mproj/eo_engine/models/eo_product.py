@@ -29,7 +29,7 @@ class EOProductGroupChoices(models.TextChoices):
     a_geop_wb_100m_ner = 'agro_wb-100m-ner'
 
 
-class EOProductStatusChoices(models.TextChoices):
+class EOProductStateChoices(models.TextChoices):
     Available = 'Available', "AVAILABLE for generation."
     Scheduled = "Scheduled", "SCHEDULED For generation."
     Failed = 'Failed', 'Generation was attempted but FAILED'
@@ -57,8 +57,18 @@ class EOProduct(models.Model):
     datetime_creation = models.DateTimeField(null=True)
     file = models.FileField(upload_to=_upload_to, null=True, max_length=2048)
 
-    eo_sources_inputs = models.ManyToManyField("eo_engine.EOSource")
-    eo_products_inputs = models.ManyToManyField('self', symmetrical=False)
+    eo_sources_inputs = models.ManyToManyField(
+        "eo_engine.EOSource",
+        related_query_name='eo_product',
+        related_name='eo_products',
+        symmetrical=False  # A is input to B but B is not Input to A
+    )
+    eo_products_inputs = models.ManyToManyField(
+        'self',
+        related_name='depended_eo_product',
+        related_query_name='depended_eo_products',
+        symmetrical=False  # A is input to B but B is not Input to A
+    )
 
     timestamp = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=255, choices=EOProductStatusChoices.choices,
@@ -89,7 +99,7 @@ class EOProduct(models.Model):
     def make_product(self, as_task: bool = False):
         from eo_engine import tasks
         func = getattr(tasks, self.task_name)  # get ref to task function using its name
-        self.status = EOProductStatusChoices.Generating
+        self.status = EOProductStateChoices.Generating
         self.save()
         if func is None:
             raise NotImplementedError('No generation method has been defined for this product.')
@@ -106,7 +116,7 @@ class EOProduct(models.Model):
                 func(eo_product_pk=self, **self.task_kwargs)
                 self.save()
             except Exception as e:
-                self.status = EOProductStatusChoices.Failed
+                self.status = EOProductStateChoices.Failed
                 self.save()
                 raise e
 

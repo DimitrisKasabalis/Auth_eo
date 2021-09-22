@@ -22,7 +22,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='eosource',
             name='status',
-            field=models.CharField(choices=[('availableRemotely', 'Available on the Remote Server'), ('scheduledForDownload', 'Scheduled For Download'), ('availableLocally', 'File is Available Locally'), ('beingDownloaded', 'File is Being Downloaded'), ('Ignore', 'Action on this file has been canceled (Ignored/Revoked Action)')], default='availableRemotely', max_length=255),
+            field=models.CharField(choices=[('availableRemotely', 'Available on the Remote Server'), ('ScheduledForDownload', 'Scheduled For Download'), ('availableLocally', 'File is Available Locally'), ('BeingDownloaded', 'File is Being Downloaded'), ('Ignore', 'Action on this file has been canceled (Ignored/Revoked Action)')], default='availableRemotely', max_length=255),
         ),
         migrations.AlterField(
             model_name='geoptask',
