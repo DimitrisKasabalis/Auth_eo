@@ -1,7 +1,7 @@
 import logging
 import os
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Callable
 
 from celery.result import AsyncResult
 from celery.utils.serialization import strtobool
@@ -41,30 +41,39 @@ def list_eoproducts(request):
     return render(request, 'list_eoproducts.html', context=context)
 
 
-def delete_file(request, file_type: Literal['eosource', 'eoproduct'], filename: str):
-    if file_type == "eosource":
-        raise NotImplementedError()
-        from .models import EOSource
-        obj = EOSource.objects.get(filename=filename)
+def delete_file(request, resource_type: Literal['eo_source', 'eo_product'], pk: int):
+    from eo_engine.common.db_ops import delete_eo_product, delete_eo_source
+    from eo_engine.errors import AfriCultuReSFileNotExist, AfriCultuReSFileInUse
+
+    fun: Callable
+    if resource_type == "eo_source":
+        fun = delete_eo_source
     else:
-        from .models import EOProduct
-        from .models import EOProductStatusChoices
-        obj = EOProduct.objects.get(filename=filename)
-        if obj.status == EOProductStatusChoices.Ready:
-            logger.info(f'Removing file{obj.filename}')
-            obj.file.delete()
-            obj.status = EOProductStatusChoices.Available
-            obj.save()
-        return redirect('eo_engine:list-eoproducts')
+        fun = delete_eo_product
+
+    try:
+        result = fun(pk)
+        messages.add_message(request, messages.info,
+                             f"Removed {result['eo_source']} eo_source and {result['eo_product']}")
+    except AfriCultuReSFileNotExist:
+        messages.add_message(request, messages.ERROR,
+                             "File does not exist to delete ")
+    except AfriCultuReSFileInUse:
+        messages.add_message(request, messages.ERROR,
+                             "File in use, did not delete")
+
+    finally:
+        return redirect('eo_engine:list-eosources')
+
 
 
 def trigger_generate_eoproduct(request, filename):
-    from eo_engine.common import get_task_ref_from_name
+    from eo_engine.common.tasks import get_task_ref_from_name
     from .models import EOProduct, EOProductStateChoices
     eo_product = EOProduct.objects.get(filename=filename)
     task = get_task_ref_from_name(eo_product.task_name).s(eo_product_pk=eo_product.pk, **eo_product.task_kwargs)
     job: AsyncResult = task.apply_async()
-    eo_product.status = EOProductStateChoices.Scheduled
+    eo_product.state = EOProductStateChoices.Scheduled
     eo_product.save()
     context = {'card_info':
                    {'task_name': task.name,
@@ -88,7 +97,7 @@ def trigger_download_eosource(request, eo_source_pk):
     obj = EOSource.objects.get(pk=eo_source_pk)
     task = task_download_file.s(eo_source_pk=eo_source_pk)
     job: AsyncResult = task.apply_async()
-    obj.status = EOSourceStateChoices.ScheduledForDownload
+    obj.state = EOSourceStateChoices.ScheduledForDownload
     obj.save()
 
     context = {
@@ -138,7 +147,7 @@ def trigger_spider(request, spider_name: str):
 
 def view_revoke_task(request, task_id: str):
     from eo_engine.models import GeopTask
-    from eo_engine.common import revoke_task
+    from eo_engine.common.tasks import revoke_task
 
     return_page = request.GET.get('return_page', '')
     confirm = strtobool(request.GET.get('confirm', 'False'))

@@ -22,15 +22,15 @@
                 <td><a href="{% url 'eo_engine:trigger-eoproduct_generation' eo_product.filename %}">Generate</a></td>
                 {% if eo_product.file %}
                     <td><a href="{{ eo_product.file.url }}" download>Download</a></td>
-                    <td><a style="-webkit-appearance: button;-moz-appearance: button;text-decoration: none; color: initial"
+                    <td>
+                        <a style="-webkit-appearance: button;-moz-appearance: button;text-decoration: none; color: initial"
 
-                            href="{% url 'eo_engine:delete-file' file_type="eo_product" filename=eo_product.filename %}">delete</a>
+                           href="{% url 'eo_engine:delete-file' resource_type="eo_product" pk=eo_product.pk %}">delete</a>
                     </td>
                 {% else %}
                     <td>-</td>
                     <td>-</td>
                 {% endif %}
-
             </tr>
         {% endfor %}
     </table>

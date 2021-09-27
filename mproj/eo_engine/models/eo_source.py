@@ -51,9 +51,9 @@ class EOSource(models.Model):
     """ A ledger for known files """
 
     # status of file.
-    status = models.CharField(max_length=255,
-                              choices=EOSourceStateChoices.choices,
-                              default=EOSourceStateChoices.AvailableRemotely)
+    state = models.CharField(max_length=255,
+                             choices=EOSourceStateChoices.choices,
+                             default=EOSourceStateChoices.AvailableRemotely)
 
     # what product is it?
     product = models.CharField(max_length=255, choices=EOSourceProductChoices.choices)
@@ -81,7 +81,7 @@ class EOSource(models.Model):
         ordering = ["product", "-datetime_reference"]
 
     def __str__(self):
-        return f"{self.__class__.__name__}/{self.filename}/{self.status}/{self.id}"
+        return f"{self.__class__.__name__}/{self.filename}/{self.state}/{self.id}"
 
     @property
     def local_path(self) -> Path:
@@ -102,7 +102,7 @@ class EOSource(models.Model):
         return self.credentials.username, self.credentials.password
 
     def set_status(self, status: str):
-        self.status = status
+        self.state = status
         self.save()
 
 
@@ -113,7 +113,7 @@ def eosource_post_save_handler(instance: EOSource, **kwargs):
     from eo_engine.models import EOProduct, EOProductStateChoices
     eo_source = instance
     # if asset is local
-    if eo_source.status == EOSourceStateChoices.AvailableLocally:
+    if eo_source.state == EOSourceStateChoices.AvailableLocally:
         # pass
         products = generate_products_from_source(eo_source.filename)
 
@@ -129,7 +129,7 @@ def eosource_post_save_handler(instance: EOSource, **kwargs):
             # mark if the scheduler should Ignore it
             if prod.is_ignored():
                 print('this entry is marked as ignored.')
-                prod.status = EOProductStateChoices.Ignore
+                prod.state = EOProductStateChoices.Ignore
 
             # mark it's inputs
             prod.eo_sources_inputs.set([eo_source, ])

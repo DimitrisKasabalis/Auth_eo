@@ -28,7 +28,7 @@ class TestSignals(BaseTest):
         self.assertEqual(len(EOProduct.objects.all()), 0)
 
         #  source becames
-        self.eo_sourse.status = EOSourceStateChoices.AvailableLocally
+        self.eo_sourse.state = EOSourceStateChoices.AvailableLocally
         self.eo_sourse.save()
 
         self.assertGreaterEqual(len(EOProduct.objects.filter(status=EOProductStateChoices.Available)), 1)

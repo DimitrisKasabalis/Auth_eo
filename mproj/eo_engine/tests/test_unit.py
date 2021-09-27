@@ -50,14 +50,14 @@ class TestUnit(BaseTest):
 
     def test_download_file_stand_alone(self):
         from eo_engine.common import download_asset
-        self.assertEqual(self.eo_sourse.status, EOSourceStateChoices.AvailableRemotely)
+        self.assertEqual(self.eo_sourse.state, EOSourceStateChoices.AvailableRemotely)
         r = download_asset(self.eo_sourse)
-        self.assertEqual(self.eo_sourse.status, EOSourceStateChoices.AvailableLocally)
+        self.assertEqual(self.eo_sourse.state, EOSourceStateChoices.AvailableLocally)
 
     def test_download_file_fro_object(self):
-        self.assertEqual(self.eo_sourse.status, EOSourceStateChoices.AvailableRemotely)
+        self.assertEqual(self.eo_sourse.state, EOSourceStateChoices.AvailableRemotely)
         self.eo_sourse.download()
-        self.assertEqual(self.eo_sourse.status, EOSourceStateChoices.AvailableLocally)
+        self.assertEqual(self.eo_sourse.state, EOSourceStateChoices.AvailableLocally)
         self.assertEqual(EOProduct.objects.all().count(), 1)
         p = EOProduct.objects.first()
         self.assertEqual(p.inputs.count(), 1)

@@ -38,7 +38,7 @@ class BaseTaskWithRetry(Task):
             eo_product_pk = kwargs['eo_product_pk']
             eo_product = EOProduct.objects.get(pk=eo_product_pk)
             logger.info(f"Marking product {eo_product} as 'GENERATING'")
-            eo_product.status = EOProductStateChoices.Generating
+            eo_product.state = EOProductStateChoices.Generating
             eo_product.save()
 
         return self.run(*args, **kwargs)
@@ -57,14 +57,14 @@ class BaseTaskWithRetry(Task):
                 (task.datetime_finished - task.datetime_started).__str__()
         except:
             task.time_to_complete = None
-        task.status = task.TaskTypeChoices.SUCCESS
+        task.state = task.TaskTypeChoices.SUCCESS
 
         # mark product available on success
         if fnmatch(self.name, 'eo_engine.tasks.task_s??p??*'):
             # mark generating product as 'GENERATING'
             eo_product_pk = kwargs['eo_product_pk']
             eo_product = EOProduct.objects.get(pk=eo_product_pk)
-            eo_product.status = EOProductStateChoices.Ready
+            eo_product.state = EOProductStateChoices.Ready
             eo_product.save()
 
         task.save()
@@ -75,7 +75,7 @@ class BaseTaskWithRetry(Task):
             task = GeopTask.objects.get(task_id=task_id)
         except GeopTask.DoesNotExist:
             return
-        task.status = task.TaskTypeChoices.RETRY
+        task.state = task.TaskTypeChoices.RETRY
         task.retries += 1
         task.save()
 
@@ -86,12 +86,12 @@ class BaseTaskWithRetry(Task):
         except GeopTask.DoesNotExist:
             return
         ubdc_taskentry.datetime_finished = timezone.now()
-        ubdc_taskentry.status = ubdc_taskentry.TaskTypeChoices.FAILURE
+        ubdc_taskentry.state = ubdc_taskentry.TaskTypeChoices.FAILURE
         ubdc_taskentry.save()
 
         # mark generating product as failed
         if fnmatch(self.name, 'eo_engine.tasks.task_s??p??*'):
             eo_product_pk = kwargs['eo_product_pk']
             eo_product = EOProduct.objects.get(pk=eo_product_pk)
-            eo_product.status = EOProductStateChoices.Failed
+            eo_product.state = EOProductStateChoices.Failed
             eo_product.save()

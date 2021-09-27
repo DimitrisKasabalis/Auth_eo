@@ -71,8 +71,8 @@ class EOProduct(models.Model):
     )
 
     timestamp = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=255, choices=EOProductStateChoices.choices,
-                              default=EOProductStateChoices.Available)
+    state = models.CharField(max_length=255, choices=EOProductStateChoices.choices,
+                             default=EOProductStateChoices.Available)
     task_name = models.CharField(max_length=255)
     task_kwargs = models.JSONField(default=dict)
 
@@ -80,7 +80,7 @@ class EOProduct(models.Model):
         ordering = ["product_group", "filename"]
 
     def __str__(self):
-        return f"{self.__class__.__name__}/{self.filename}/{self.status}/{self.id}"
+        return f"{self.__class__.__name__}/{self.filename}/{self.state}/{self.id}"
 
     def inputs(self) -> TypedDict('EO_SOURCE', {'eo_sources': Any, 'eo_product': Any}):
         """Return a dictionary of this products inputs. """
@@ -99,7 +99,7 @@ class EOProduct(models.Model):
     def make_product(self, as_task: bool = False):
         from eo_engine import tasks
         func = getattr(tasks, self.task_name)  # get ref to task function using its name
-        self.status = EOProductStateChoices.Generating
+        self.state = EOProductStateChoices.Generating
         self.save()
         if func is None:
             raise NotImplementedError('No generation method has been defined for this product.')
@@ -116,7 +116,7 @@ class EOProduct(models.Model):
                 func(eo_product_pk=self, **self.task_kwargs)
                 self.save()
             except Exception as e:
-                self.status = EOProductStateChoices.Failed
+                self.state = EOProductStateChoices.Failed
                 self.save()
                 raise e
 
@@ -125,7 +125,7 @@ class EOProduct(models.Model):
 
 @receiver(post_save, sender=EOProduct, weak=False, dispatch_uid='eoproduct_post_save_handler')
 def eoproduct_post_save_handler(instance: EOProduct, **kwargs):
-    if instance.status == EOProductStateChoices.Ready:
+    if instance.state == EOProductStateChoices.Ready:
         if (
                 instance.product_group == EOProductGroupChoices.a_agro_ndvi_300m_v3 or
                 instance.product_group == EOProductGroupChoices.a_agro_ndvi_1km_v3
@@ -142,7 +142,7 @@ def eoproduct_post_save_handler(instance: EOProduct, **kwargs):
                 )
                 if created:
                     # mark as available if this entry was just made now
-                    obj.status = EOProductStateChoices.Available
+                    obj.state = EOProductStateChoices.Available
                     # mark inputs
                     obj.eo_products_inputs.set([instance, ])
                     obj.save()
