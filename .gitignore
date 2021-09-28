@@ -40,7 +40,6 @@ db.sqlite3-journal
 .env
 .venv
 
-test_*
 .pytest*
 pg_data
 requirements.in
