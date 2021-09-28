@@ -138,3 +138,7 @@ BROKER_URL = f"amqp://rabbit:carrot@{os.getenv('RABBIT_HOST', 'host.docker.inter
 CELERYD_MAX_TASKS_PER_CHILD = 1
 CELERY_ACKS_LATE = True
 CELERYD_PREFETCH_MULTIPLIER = 1
+
+# Application specific
+GDAL_TRANSLATE = os.getenv("GDAl_TRANSLATE_PATH", "/srv/conda/envs/env_snap/bin/gdal_translate")
+GDAL_WRAP = os.getenv("GDAL_WARP_PATH", '/srv/conda/envs/env_snap/bin/gdalwarp')
