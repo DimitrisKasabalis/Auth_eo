@@ -62,5 +62,10 @@ USER root
 RUN apt-get -qq update && \
     apt-get -qq install --yes --no-install-recommends nco
 
+#### 28/09/2021 add s06p06 libs
+USER root
+RUN pip install tables pyproj rasterio
+
+
 ##### END
 USER ${NB_USER}
