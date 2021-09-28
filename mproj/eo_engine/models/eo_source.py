@@ -109,7 +109,7 @@ class EOSource(models.Model):
 @receiver(post_save, sender=EOSource, weak=False, dispatch_uid='eosource_post_save_handler')
 def eosource_post_save_handler(instance: EOSource, **kwargs):
     """ Post save logic goes here. ie an asset is now available locally, are there products that can be made?"""
-    from eo_engine.common import generate_products_from_source
+    from eo_engine.common.products import generate_products_from_source
     from eo_engine.models import EOProduct, EOProductStateChoices
     eo_source = instance
     # if asset is local
