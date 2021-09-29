@@ -10,7 +10,7 @@ from fnmatch import fnmatch
 from pytz import utc
 from scrapy.exceptions import DropItem
 
-from eo_engine.common import parse_copernicus_name
+from eo_engine.common.copernicus import parse_copernicus_name
 from eo_engine.models import EOSource, Credentials, EOSourceStateChoices
 from eo_scraper.items import RemoteSourceItem
 
