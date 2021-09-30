@@ -32,6 +32,10 @@ class EOSourceProductChoices(models.TextChoices):
     # https://land.copernicus.eu/global/sites/cgls.vito.be/files/products/CGLOPS2_PUM_WB100m_V1_I1.10.pdf
     c_gls_WB100_v1_glob = 'c_gls_wb100-v1-glob', "Copernicus Global Land Service Water Bodies Collection 100m Version 1"
 
+    # LSASAF
+    LSASAF_ET_3000M = 'LSASAF-ET-3000M', 'LSA-SAF ET product 3Km'
+
+
     # ndvi_300m_v1 = "ndvi-300m-v1", "ndvi 300m v1"
     # ndvi_300m_v2 = "ndvi-300m-v2", "ndvi 300m v2"
     # ndvi_1km_v3 = "ndvi-1km-v3", "ndvi 1km v3"
@@ -73,6 +77,7 @@ class EOSource(models.Model):
     # when did we see it?
     datetime_seen = models.DateTimeField(auto_created=True, help_text="datetime of when it was seen")
     # full url to resource.
+    #  eg ftp://ftp.globalland.cls.fr/path/filename.nc
     url = models.URLField(help_text="Resource URL")
     # username/password of resource
     credentials = models.ForeignKey("Credentials", on_delete=models.SET_NULL, null=True)
