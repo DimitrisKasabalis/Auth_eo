@@ -44,3 +44,4 @@ db.sqlite3-journal
 pg_data
 requirements.in
 docker-compose.override.yml
+LOCAL_DB_ROOT
