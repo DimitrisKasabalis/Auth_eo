@@ -12,9 +12,7 @@ from scrapy.loader import ItemLoader
 from scrapy.spiders import CrawlSpider, Spider
 from scrapy.spiders import Rule
 from scrapy.spiders.init import InitSpider
-from scrapy.utils.project import get_project_settings
 
-from eo_engine.models import EOSourceProductChoices
 from eo_scraper.items import RemoteSourceItem
 from eo_scraper.utils import get_credentials, credentials
 
@@ -70,7 +68,6 @@ class CopernicusVgtDatapool(InitSpider, CrawlSpider):
 
     def __init__(self, *args, **kwargs):
         super(CopernicusVgtDatapool, self).__init__(*args, **kwargs)  # default init binds kwargs to self
-
 
     def init_request(self):
         print("init_request")
@@ -130,40 +127,39 @@ class AnonFtpRequest(Request):
         meta = {'ftp_user': username,
                 'ftp_password': password}
 
-        self.meta.update(meta)
+        # self.meta.update(meta)
+        super(AnonFtpRequest, self).__init__(url, meta=meta, errback=self.errback_for_failure, *args, **kwargs)
 
 
-# https://github.com/laserson/ftptree/blob/master/ftptree_crawler/spiders.py
-class FtpGlobalLand(Spider):
+    def errback_for_failure(self, failure):
+        pass
+
+
+class FtpSpider(Spider):
     # there's no robots.txt
     custom_settings = {
         'ROBOTSTXT_OBEY': False
     }
-    name = 'ftp-spider-wb100'
-    product_name = EOSourceProductChoices.c_gls_WB100_v1_glob
-    allowed_domains = ['ftp.globalland.cls.fr', ]
-    credentials: credentials  # username, password
-    'ftp://ftp.globalland.cls.fr/Core/SIRS/dataset-sirs-wb-nrt-100m/'
-    ftp_url: str = 'ftp://ftp.globalland.cls.fr/home/glbland_ftp/Core/SIRS/dataset-sirs-wb-nrt-100m'
+    ftp_root_url = None
+    credentials: credentials
 
     def __init__(self, *args, **kwargs):
-        super(FtpGlobalLand, self).__init__(*args, **kwargs)
-        if self.ftp_url is None:
-            raise NotImplementedError('ftp_url is unset')
+        super(FtpSpider, self).__init__(*args, **kwargs)
+        if self.ftp_root_url is None:
+            raise NotImplementedError('ftp_root_url is unset')
 
-        url_split = urlsplit(self.ftp_url)
+        url_split = urlsplit(self.ftp_root_url)
         domain = url_split.netloc
         self.credentials = get_credentials(domain)
 
     def start_requests(self):
-        yield AnonFtpRequest(self.ftp_url, credentials=self.credentials)
+        yield AnonFtpRequest(self.ftp_root_url, credentials2=self.credentials)
 
     def parse(self, response, **kwargs):
         url = urlparse(response.url)
-        basepath = url.path
         files = json.loads(response.body)
         for f in files:
-            if f['filetype'] == 'd':  # if filettype is 'd', route for seed
+            if f['filetype'] == 'd':  # filetype is 'd' -> Directory, route for seed
                 path = os.path.join(response.url, f['filename'])
                 yield AnonFtpRequest(path, self.credentials)
 
@@ -176,6 +172,6 @@ class FtpGlobalLand(Spider):
                     domain=url.netloc,
                     # datetime_uploaded=0,  # we cannot tell from ftp
                     datetime_seen=datetime.utcnow().replace(tzinfo=utc),
-                    url=os.path.join(response.url,f['filename'])
+                    url=os.path.join(response.url, f['filename'])
                 )
                 yield result
