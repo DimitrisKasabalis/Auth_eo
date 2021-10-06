@@ -16,6 +16,7 @@ urlpatterns = [
     path('delete_file/<str:resource_type>/<int:pk>', views.delete_file, name='delete-file'),
     path('tasks/revoke/<str:task_id>', views.view_revoke_task, name='revoke-task'),
     path('tasks/submit', views.submit_task, name='submit-task'),
+    path('utilities/refresh-rows', views.utilities_save_rows, name='refresh-rows'),
 
     # json responses
     # 'c/task/done/<task_pattern:task_id>/'

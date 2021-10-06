@@ -10,6 +10,7 @@ from django.shortcuts import render, redirect
 from django.urls import reverse
 
 from eo_engine.common.tasks import get_task_ref_from_name
+from eo_engine.models import EOSource, EOProduct
 
 logger = logging.getLogger('eo_engine.frontend_ops')
 
@@ -190,3 +191,14 @@ def view_revoke_task(request, task_id: str):
         revoke_task(task_id, terminate=True)
 
     return render(request, 'task_revoke.html', context=context)
+
+
+def utilities_save_rows(request):
+    # 'save' all rows in EOSource/Product to trigger the post-save signal
+    all_eosource = EOSource.objects.all()
+    all_eoproduct = EOProduct.objects.all()
+    for model in [all_eoproduct, all_eosource]:
+        for e in model:
+            e.save()
+    messages.info(request, 'Done!')
+    return redirect(reverse('eo_engine:main-page'))
