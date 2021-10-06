@@ -12,6 +12,8 @@ logger = get_task_logger(__name__)
 
 class BaseTaskWithRetry(Task):
 
+    # doc: https://docs.celeryproject.org/en/latest/userguide/application.html#abstract-tasks
+
     def __call__(self, *args, **kwargs):
         task_id = self.request.id
         if task_id is None:
@@ -34,6 +36,7 @@ class BaseTaskWithRetry(Task):
                 group_task.datetime_started = now
                 group_task.save()
             task.save()
+
         if is_process_task(self.name):  # ie eo_engine.tasks.task_s02p02_c_gls_ndvi_300_clip
             # mark generating product as 'GENERATING'
             eo_product_pk = kwargs['eo_product_pk']
@@ -58,7 +61,7 @@ class BaseTaskWithRetry(Task):
                 (task.datetime_finished - task.datetime_started).__str__()
         except:
             task.time_to_complete = None
-        task.state = task.TaskTypeChoices.SUCCESS
+        task.status = task.TaskTypeChoices.SUCCESS
 
         # mark product available on success
         if is_process_task(self.name):
@@ -75,8 +78,9 @@ class BaseTaskWithRetry(Task):
         try:
             task = GeopTask.objects.get(task_id=task_id)
         except GeopTask.DoesNotExist:
+            logger.info('on_retry: task_id is not tracked by app')
             return
-        task.state = task.TaskTypeChoices.RETRY
+        task.status = task.TaskTypeChoices.RETRY
         task.retries += 1
         task.save()
 
@@ -85,9 +89,10 @@ class BaseTaskWithRetry(Task):
         try:
             task = GeopTask.objects.get(task_id=task_id)
         except GeopTask.DoesNotExist:
+            logger.info('on_failure: task_id is not tracked by app')
             return
         task.datetime_finished = timezone.now()
-        task.state = task.TaskTypeChoices.FAILURE
+        task.status = task.TaskTypeChoices.FAILURE
         task.save()
 
         # mark generating product as failed
