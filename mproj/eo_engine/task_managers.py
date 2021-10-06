@@ -24,16 +24,16 @@ class BaseTaskWithRetry(Task):
 
         # The task namespace is eo_engine or mproj
         if self.name.startswith('eo_engine') or self.name.startswith('mproj'):
-            task_entry: GeopTask = GeopTask.objects.get(task_id=task_id)
+            task: GeopTask = GeopTask.objects.get(task_id=task_id)
             now = timezone.now()
-            task_entry.datetime_started = now
-            task_entry.status = task_entry.TaskTypeChoices.STARTED
+            task.datetime_started = now
+            task.status = task.TaskTypeChoices.STARTED
 
-            group_task = task_entry.group_task
+            group_task = task.group_task
             if group_task and group_task.datetime_started is None:
                 group_task.datetime_started = now
                 group_task.save()
-            task_entry.save()
+            task.save()
         if is_process_task(self.name):  # ie eo_engine.tasks.task_s02p02_c_gls_ndvi_300_clip
             # mark generating product as 'GENERATING'
             eo_product_pk = kwargs['eo_product_pk']
@@ -83,12 +83,12 @@ class BaseTaskWithRetry(Task):
     def on_failure(self, exc, task_id, args, kwargs, einfo):
         """ This is run by the worker when the task fails."""
         try:
-            ubdc_taskentry = GeopTask.objects.get(task_id=task_id)
+            task = GeopTask.objects.get(task_id=task_id)
         except GeopTask.DoesNotExist:
             return
-        ubdc_taskentry.datetime_finished = timezone.now()
-        ubdc_taskentry.state = ubdc_taskentry.TaskTypeChoices.FAILURE
-        ubdc_taskentry.save()
+        task.datetime_finished = timezone.now()
+        task.state = task.TaskTypeChoices.FAILURE
+        task.save()
 
         # mark generating product as failed
         if is_process_task(self.name):
