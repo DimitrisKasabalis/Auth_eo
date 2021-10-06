@@ -9,10 +9,12 @@ from celery.app import shared_task
 from celery.utils.log import get_task_logger
 from django.core.files import File
 from django.utils import timezone
+from more_itertools import flatten, collapse
 from pytz import utc
 
+from eo_engine.common.products import filename_to_product
 from eo_engine.common.tasks import get_task_ref_from_name
-from eo_engine.models import EOProduct, EOProductStateChoices, FunctionalRules
+from eo_engine.models import EOProduct, EOProductStateChoices, FunctionalRules, Credentials
 from eo_engine.models import EOSource, EOSourceStateChoices
 
 logger = get_task_logger(__name__)
@@ -50,6 +52,29 @@ def task_init_spider(spider_name):
     process.start()
 
     return "Spider {} finished crawling".format(spider_name)
+
+
+# SFTP
+@shared_task
+def task_sftp_parse_remote_dir(remote_dir: Union[str, List[str]]):
+    # remote dir is in the form of
+    #  sftp://adf.adf.com/asdf/aa'
+    if isinstance(remote_dir, List):
+        remote_dir = next(collapse(remote_dir))
+
+    from urllib.parse import urlparse
+    from eo_engine.common.sftp import list_dir_entries, sftp_connection
+    from eo_engine.common.db_ops import add_to_db
+    o = urlparse(remote_dir)
+    domain = o.netloc
+    path = o.path
+    credentials = Credentials.objects.get(domain=domain)
+    sftp_connection = sftp_connection(host=domain,
+                                      username=credentials.username,
+                                      password=credentials.password)
+    for entry in list_dir_entries(remotepath=path, connection=sftp_connection):
+        product_group = filename_to_product(entry.filename)
+        add_to_db(entry, product_group=product_group)
 
 
 @shared_task(bind=True)
@@ -102,6 +127,9 @@ def task_download_file(self, eo_source_pk: int):
 
     """
     from urllib.parse import urlparse
+    from eo_engine.common.download import (download_http_eosource,
+                                           download_ftp_eosource,
+                                           download_sftp_eosource)
     eo_source = EOSource.objects.get(pk=eo_source_pk)
     url_parse = urlparse(eo_source.url)
     scheme = url_parse.scheme
@@ -109,12 +137,13 @@ def task_download_file(self, eo_source_pk: int):
     logger.info(f'downloading file {eo_source.filename}')
 
     if scheme.startswith('ftp'):
-        from eo_engine.common import download_ftp_eosource
         return download_ftp_eosource(eo_source_pk)
 
     elif scheme.startswith('http'):
-        from eo_engine.common import download_http_eosource
         return download_http_eosource(eo_source_pk)
+
+    elif scheme.startswith('sftp'):
+        return download_sftp_eosource(eo_source_pk)
     else:
         raise Exception(f'There was no defined method for scheme: {scheme}')
 

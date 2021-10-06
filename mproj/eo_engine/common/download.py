@@ -1,14 +1,14 @@
 from copy import copy
+from pathlib import Path
 from tempfile import TemporaryFile, NamedTemporaryFile
 
 from django.core.files import File
 
-from eo_engine.models import EOSource
+from eo_engine.models import EOSource, EOSourceStateChoices
 
 
 def download_http_eosource(pk_eosource: int) -> str:
     import requests
-    from eo_engine.models import EOSourceStateChoices
 
     eo_source = EOSource.objects.get(pk=pk_eosource)
     remote_url = eo_source.url
@@ -51,7 +51,6 @@ def download_http_eosource(pk_eosource: int) -> str:
 
 def download_ftp_eosource(pk_eosource: int) -> str:
     from urllib.parse import urlparse
-    from eo_engine.models import EOSourceStateChoices
     import ftputil
     # instructions for common at https://ftputil.sschwarzer.net/trac/wiki/Documentation
 
@@ -72,6 +71,29 @@ def download_ftp_eosource(pk_eosource: int) -> str:
         content = File(file_handle)
         # recreate reference to db to refresh the database connection
         eo_source = EOSource.objects.get(pk=pk_eosource)
+        eo_source.file.save(name=eo_source.filename, content=content, save=False)
+        eo_source.filesize = eo_source.file.size
+        eo_source.set_status(EOSourceStateChoices.AvailableLocally)
+
+        eo_source.save()
+
+    return eo_source.file.name
+
+
+def download_sftp_eosource(pk_eosource: int) -> str:
+
+    from eo_engine.common.sftp import sftp_connection
+
+    eo_source = EOSource.objects.get(pk=pk_eosource)
+    credentials = eo_source.credentials
+    connection = sftp_connection(host=eo_source.domain,
+                                 username=credentials.username,
+                                 password=credentials.password)
+
+    remote_path = Path(eo_source.url).relative_to(f'sftp://{eo_source.domain}/').as_posix()
+    with connection as c, NamedTemporaryFile() as temp_file:
+        c.get('/' + remote_path, temp_file.name)
+        content = File(temp_file)
         eo_source.file.save(name=eo_source.filename, content=content, save=False)
         eo_source.filesize = eo_source.file.size
         eo_source.set_status(EOSourceStateChoices.AvailableLocally)

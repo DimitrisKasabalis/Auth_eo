@@ -5,7 +5,7 @@ from dateutil.relativedelta import relativedelta
 from django.test import override_settings
 from django.utils.timezone import now
 
-from eo_engine.models import (EOSource, Credentials, EOSourceProductChoices,
+from eo_engine.models import (EOSource, Credentials, EOSourceGroupChoices,
                               EOSourceStateChoices, EOProduct)
 from . import BaseTest
 
@@ -39,7 +39,7 @@ class TestUnit(BaseTest):
             status=EOSourceStateChoices.AvailableRemotely,
             url=self.target_url,
             credentials=Credentials.objects.first(),
-            product=EOSourceProductChoices.ndvi_300m_v2,
+            product=EOSourceGroupChoices.ndvi_300m_v2,
             datetime_uploaded=self.NOW - relativedelta(days=2),
             datetime_seen=self.NOW,
         )

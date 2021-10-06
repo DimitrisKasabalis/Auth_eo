@@ -1,8 +1,12 @@
-from typing import TypedDict
+from typing import TypedDict, Union
 
-from eo_engine.errors import AfriCultuReSFileNotExist, AfriCultuReSFileInUse
-from eo_engine.models import EOSource, EOSourceStateChoices
-from eo_engine.models import EOProduct, EOProductStateChoices
+from django.utils.timezone import now
+
+from eo_engine.common.sftp import SftpFile
+from eo_engine.errors import AfriCultuReSFileNotExist, AfriCultuReSFileInUse, AfriCultuReSFileInvalidDataType
+from eo_engine.models import Credentials
+from eo_engine.models import EOProduct, EOProductStateChoices, EOProductGroupChoices
+from eo_engine.models import EOSource, EOSourceStateChoices, EOSourceGroupChoices
 
 DeletedReport = TypedDict('DeletedReport', {'eo_source': int, 'eo_product': int})
 
@@ -73,7 +77,7 @@ def delete_eo_source(eo_source_pk: int) -> DeletedReport:
     """
 
     eo_source = EOSource.objects.get(pk=eo_source_pk)
-    deb_eo_products = EOProduct.objects.filter(eo_products_inputs=eo_source)
+    deb_eo_products = EOProduct.objects.filter(eo_sources_inputs=eo_source)
     if not bool(eo_source.file):
         raise AfriCultuReSFileNotExist("The file does not exist to delete.")
 
@@ -92,5 +96,29 @@ def delete_eo_source(eo_source_pk: int) -> DeletedReport:
 
     eo_source.file.delete(save=False)
     eo_source.state = EOSourceStateChoices.Ignore
+    eo_source.save()
 
     return {"eo_source": 1, "eo_product": deleted_eo_products}
+
+
+def add_to_db(data: SftpFile, product_group: Union[EOProductGroupChoices, EOSourceGroupChoices]):
+    """ Adds entry in the database. Checks if entry exists based on filename and date of reference. """
+    if isinstance(product_group, EOSourceGroupChoices):
+        model = EOSource
+    elif isinstance(product_group, EOProductGroupChoices):
+        model = EOProduct
+    else:
+        raise AfriCultuReSFileInvalidDataType
+
+    obj, created = model.objects.get_or_create(
+        domain=data.domain,
+        filename=data.filename,
+        url=data.url,
+        defaults={
+            'datetime_reference': data.datetime_reference,
+            'group': product_group,
+            'credentials': Credentials.objects.get(domain=data.domain),
+            'datetime_seen': now(),
+            'filesize_reported': data.filesize_reported,
+        }
+    )

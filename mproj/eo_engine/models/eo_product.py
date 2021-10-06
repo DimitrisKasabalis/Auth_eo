@@ -53,7 +53,7 @@ def _upload_to(instance: 'EOProduct', filename):
 class EOProduct(models.Model):
     filename = models.TextField(unique=True)
     output_folder = models.TextField()
-    product_group = models.CharField(max_length=255, choices=EOProductGroupChoices.choices)
+    group = models.CharField(max_length=255, choices=EOProductGroupChoices.choices)
     datetime_creation = models.DateTimeField(null=True)
     file = models.FileField(upload_to=_upload_to, null=True, max_length=2048)
 
@@ -77,7 +77,7 @@ class EOProduct(models.Model):
     task_kwargs = models.JSONField(default=dict)
 
     class Meta:
-        ordering = ["product_group", "filename"]
+        ordering = ["group", "filename"]
 
     def __str__(self):
         return f"{self.__class__.__name__}/{self.filename}/{self.state}/{self.id}"
@@ -94,7 +94,7 @@ class EOProduct(models.Model):
         from eo_engine.models import FunctionalRules
         ignore_rules = FunctionalRules.objects.get(domain='ignore_rules').rules
         ignore_product_rules = ignore_rules['ignore_products']
-        return self.product_group in ignore_product_rules
+        return self.group in ignore_product_rules
 
     def make_product(self, as_task: bool = False):
         from eo_engine import tasks
@@ -127,8 +127,8 @@ class EOProduct(models.Model):
 def eoproduct_post_save_handler(instance: EOProduct, **kwargs):
     if instance.state == EOProductStateChoices.Ready:
         if (
-                instance.product_group == EOProductGroupChoices.a_agro_ndvi_300m_v3 or
-                instance.product_group == EOProductGroupChoices.a_agro_ndvi_1km_v3
+                instance.group == EOProductGroupChoices.a_agro_ndvi_300m_v3 or
+                instance.group == EOProductGroupChoices.a_agro_ndvi_1km_v3
         ):
             from eo_engine.common import generate_products_from_source
             for product in generate_products_from_source(instance.filename):

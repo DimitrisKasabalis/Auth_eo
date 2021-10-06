@@ -1,4 +1,4 @@
-from eo_engine.models import EOSourceProductChoices
+from eo_engine.models import EOSourceGroupChoices
 from eo_scraper.spiders.abstract_spiders import CopernicusVgtDatapool
 
 from twisted.protocols.ftp import FTPFileListProtocol

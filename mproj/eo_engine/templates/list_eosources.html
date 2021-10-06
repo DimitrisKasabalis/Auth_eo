@@ -11,7 +11,7 @@
             <th>Filename</th>
             <th>Reference Date</th>
             <th>Group</th>
-            <th>Status</th>
+            <th>State</th>
             <th>Cancel Task</th>
             <th>Download</th>
             <th>Delete</th>
@@ -22,10 +22,10 @@
                 <td>{{ eo_source.datetime_reference | date:"D d M Y" }}</td>
                 <td>{{ eo_source.get_product_display }}</td>
                 <td>
-                    {{ eo_source.get_status_display }}
-                    {{ eo_source.task.latest.status }}
-                    {{ valid_status_to_cancel }}
-                    {% if eo_source.task.latest.status in valid_status_to_cancel %}
+                    {{ eo_source.get_state_display }}
+                    {{ eo_source.task.latest.state }}
+                    {#                    {{ valid_status_to_cancel }}#}
+                    {% if eo_source.task.latest.state in valid_status_to_cancel %}
                         <a href="{% url "eo_engine:revoke-task" task_id=eo_source.task.latest.task_id %}?return_page={% url "eo_engine:list-eosources" %}">cancel</a>
                     {% endif %}
                 </td>
@@ -38,8 +38,7 @@
                 {% if eo_source.file %}
                     <td><a href="{{ eo_source.file.url }}" download>Download</a></td>
                     <td>
-                        <a
-                                href="{% url "eo_engine:delete-file" resource_type="eo_source" pk=eo_source.pk %}">Delete</a>
+                        <a href="{% url "eo_engine:delete-file" resource_type="eo_source" pk=eo_source.pk %}">Delete</a>
                     </td>
                 {% else %}
                     <td>-</td>

@@ -6,8 +6,8 @@
 {% block body %}
     <table style="width: 100%">
         <tr>
-            <th>filename</th>
-            <th>group</th>
+            <th>Filename</th>
+            <th>Group</th>
             <th>Action</th>
             <th>Generate</th>
             <th>Download</th>
@@ -18,13 +18,12 @@
             <tr>
                 <td>{{ eo_product.filename }}</td>
                 <td>{{ eo_product.get_product_group_display }}</td>
-                <td>{{ eo_product.get_status_display }}</td>
+                <td>{{ eo_product.get_state_display }}</td>
                 <td><a href="{% url 'eo_engine:trigger-eoproduct_generation' eo_product.filename %}">Generate</a></td>
                 {% if eo_product.file %}
                     <td><a href="{{ eo_product.file.url }}" download>Download</a></td>
                     <td>
                         <a style="-webkit-appearance: button;-moz-appearance: button;text-decoration: none; color: initial"
-
                            href="{% url 'eo_engine:delete-file' resource_type="eo_product" pk=eo_product.pk %}">delete</a>
                     </td>
                 {% else %}
@@ -35,8 +34,6 @@
         {% endfor %}
     </table>
 {% endblock %}
-
-
 {% block extra_header %}
 
 {% endblock %}

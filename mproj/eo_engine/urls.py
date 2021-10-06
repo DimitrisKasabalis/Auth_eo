@@ -6,7 +6,7 @@ app_name = 'eo_engine'
 
 urlpatterns = [
     path('', views.hello, name='main-page'),
-    path('spiders/', views.list_spiders, name='list-spiders'),
+    path('spiders/', views.list_crawelers, name='list-spiders'),
     path('eosources/', views.list_eosources, name='list-eosources'),
     path('eoproducts/', views.list_eoproducts, name='list-eoproducts'),
     path('trigger/spider_crawl/<str:spider_name>', views.trigger_spider, name='trigger-spider'),
@@ -15,6 +15,7 @@ urlpatterns = [
          name='trigger-eoproduct_generation'),
     path('delete_file/<str:resource_type>/<int:pk>', views.delete_file, name='delete-file'),
     path('tasks/revoke/<str:task_id>', views.view_revoke_task, name='revoke-task'),
+    path('tasks/submit', views.submit_task, name='submit-task'),
 
     # json responses
     # 'c/task/done/<task_pattern:task_id>/'

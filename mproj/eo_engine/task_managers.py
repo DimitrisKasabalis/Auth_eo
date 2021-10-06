@@ -4,6 +4,7 @@ from celery import Task
 from celery.utils.log import get_task_logger
 from django.utils import timezone
 
+from eo_engine.common.tasks import is_process_task
 from eo_engine.models import GeopTask, EOProduct, EOProductStateChoices
 
 logger = get_task_logger(__name__)
@@ -33,7 +34,7 @@ class BaseTaskWithRetry(Task):
                 group_task.datetime_started = now
                 group_task.save()
             task_entry.save()
-        if fnmatch(self.name, 'eo_engine.tasks.task_s??p??*'):  # ie eo_engine.tasks.task_s02p02_c_gls_ndvi_300_clip
+        if is_process_task(self.name):  # ie eo_engine.tasks.task_s02p02_c_gls_ndvi_300_clip
             # mark generating product as 'GENERATING'
             eo_product_pk = kwargs['eo_product_pk']
             eo_product = EOProduct.objects.get(pk=eo_product_pk)
@@ -60,7 +61,7 @@ class BaseTaskWithRetry(Task):
         task.state = task.TaskTypeChoices.SUCCESS
 
         # mark product available on success
-        if fnmatch(self.name, 'eo_engine.tasks.task_s??p??*'):
+        if is_process_task(self.name):
             # mark generating product as 'GENERATING'
             eo_product_pk = kwargs['eo_product_pk']
             eo_product = EOProduct.objects.get(pk=eo_product_pk)
@@ -90,7 +91,7 @@ class BaseTaskWithRetry(Task):
         ubdc_taskentry.save()
 
         # mark generating product as failed
-        if fnmatch(self.name, 'eo_engine.tasks.task_s??p??*'):
+        if is_process_task(self.name):
             eo_product_pk = kwargs['eo_product_pk']
             eo_product = EOProduct.objects.get(pk=eo_product_pk)
             eo_product.state = EOProductStateChoices.Failed

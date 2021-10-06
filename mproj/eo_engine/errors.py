@@ -8,3 +8,7 @@ class AfriCultuReSFileNotExist(AfriCultuReSError):
 
 class AfriCultuReSFileInUse(AfriCultuReSError):
     """The file is in Use in an operation"""
+
+
+class AfriCultuReSFileInvalidDataType(AfriCultuReSError):
+    """It could not identified nor as Product or Source"""

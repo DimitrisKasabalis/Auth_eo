@@ -1,8 +1,8 @@
 from fnmatch import fnmatch
-from typing import NamedTuple, Dict, Any, List
+from typing import NamedTuple, Dict, Any, List, Union, Tuple
 
 from eo_engine.common.copernicus import parse_copernicus_name
-from eo_engine.models import EOProductGroupChoices
+from eo_engine.models import EOProductGroupChoices, EOSourceGroupChoices
 
 product_output = NamedTuple('product_output',
                             [('output_folder', str),
@@ -12,11 +12,43 @@ product_output = NamedTuple('product_output',
                              ('task_kwargs', Dict[str, Any])
                              ])
 
+typeProductGroup = Union[EOProductGroupChoices, EOSourceGroupChoices]
+
+
+def filename_to_product(filename: str) -> Union[typeProductGroup,
+                                                Tuple[typeProductGroup,
+                                                      typeProductGroup]]:
+    filename = filename.lower()
+
+    if fnmatch(filename, 'c_gls_ndvi300*.nc'.lower()):
+        return EOProductGroupChoices.a_agro_ndvi_300m_v3
+
+    if fnmatch(filename, '????????_SE3_AFR_0300m_0010_NDVI.nc'.lower()):
+        return EOProductGroupChoices.a_agro_ndvi_1km_v3
+
+    if fnmatch(filename, '????????_SE3_AFR_1000m_0010_NDVI.nc'.lower()):
+        return EOProductGroupChoices.a_agro_vci_1km_v2_afr
+
+    if fnmatch(filename, 'c_gls_LAI300-RT1*.nc'.lower()):
+        return (EOProductGroupChoices.a_agro_lai_300m_v1_afr,
+                EOProductGroupChoices.a_agro_lai_1km_v2_afr)
+
+    if fnmatch(filename, 'hdf5_lsasaf_msg_dmet_msg-disk_????????????.bz2'.lower()):
+        return EOSourceGroupChoices.LSASAF_ET_3000M
+
+    # not implemented yet
+    if fnmatch(filename, 'c_gls_WB100*V1.0.1.nc'):
+        raise NotImplementedError
+
+    raise NotImplementedError(f'No rule for +{filename}+')
+
+
 # TODO: HIGH PRIORITY: To move this logic in database
 # TODO: Add more logic as it arrives
 def generate_products_from_source(filename: str) -> List[product_output]:
     """  """
     # check https://docs.google.com/spreadsheets/d/1C59BF349gMW-HxnEoWT1Pnxj0tuHOwX7/edit#gid=1748752542
+    product = filename_to_product(filename)
 
     # NDVI 100m -> {date_str_YYYYMMDD}_SE3_AFR_0300m_0010_NDVI.nc
     if fnmatch(filename.lower(), 'c_gls_ndvi300*.nc'.lower()):

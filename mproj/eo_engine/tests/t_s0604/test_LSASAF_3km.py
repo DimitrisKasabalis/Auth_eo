@@ -1,6 +1,7 @@
 import bz2
 import tempfile
 from pathlib import Path
+from eo_engine.models import EOSource
 
 from .. import BaseTest
 
@@ -38,5 +39,16 @@ class Test_S06P04_3KM(BaseTest):
                     file_nc = Path(temp_dir) / Path(SAMPLE_BZ2.name[5:-8]).with_suffix(".nc")
                     netcdf_file = h5g.to_netcdf(file_nc)
         self.assertGreater(netcdf_file.stat().st_size, 10)  # file exists, and has some size
+
+        print('--done--')
+
+    def test_scan_remote_dir(self):
+        from eo_engine.tasks import task_sftp_parse_remote_dir
+        from eo_engine.tasks import task_download_file
+        url = 'sftp://safmil.ipma.pt/home/safpt/OperationalChain/LSASAF_Products/DMET'
+        t = task_sftp_parse_remote_dir(remote_dir=url)
+
+        all = EOSource.objects.all()
+        t2 = task_download_file(eo_source_pk=all.first().pk)
 
         print('--done--')

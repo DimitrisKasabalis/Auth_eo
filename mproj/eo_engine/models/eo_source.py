@@ -22,7 +22,7 @@ class EOSourceStateChoices(models.TextChoices):
     Ignore = "Ignore", 'Action on this file has been canceled (Ignored/Revoked Action)'
 
 
-class EOSourceProductChoices(models.TextChoices):
+class EOSourceGroupChoices(models.TextChoices):
     # add mode products here
     c_gls_ndvi300_v2_glob = 'c_gsl_ndvi300-v2-glob', "Copernicus Global Land Service NDVI 300m v2"
     c_gls_ndvi1km_v3_glob = 'c_gsl_ndvi1km-v3-glob', "Copernicus Global Land Service NDVI 1km v3"
@@ -60,7 +60,7 @@ class EOSource(models.Model):
                              default=EOSourceStateChoices.AvailableRemotely)
 
     # what product is it?
-    product = models.CharField(max_length=255, choices=EOSourceProductChoices.choices)
+    group = models.CharField(max_length=255, choices=EOSourceGroupChoices.choices)
     # physical file. Read about DJANGO media files
     file = models.FileField(upload_to=_file_storage_path,
                             editable=False,
@@ -83,7 +83,7 @@ class EOSource(models.Model):
     credentials = models.ForeignKey("Credentials", on_delete=models.SET_NULL, null=True)
 
     class Meta:
-        ordering = ["product", "-datetime_reference"]
+        ordering = ["group", "-datetime_reference"]
 
     def __str__(self):
         return f"{self.__class__.__name__}/{self.filename}/{self.state}/{self.id}"
@@ -143,6 +143,6 @@ def eosource_post_save_handler(instance: EOSource, **kwargs):
 
 __all__ = [
     "EOSource",
-    "EOSourceProductChoices",
+    "EOSourceGroupChoices",
     "EOSourceStateChoices"
 ]

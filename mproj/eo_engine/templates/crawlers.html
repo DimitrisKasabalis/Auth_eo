@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block body %}
+    <ul>
+        {% for spider in spiders %}
+            <li>{{ spider }} - <a href="{% url 'eo_engine:trigger-spider' spider %}">trigger</a></li>
+        {% endfor %}
+        <li>LSAF - <a
+                href="{% url 'eo_engine:submit-task' %}?{{ 'task_name=task_sftp_parse_remote_dir&remote_dir=sftp://safmil.ipma.pt/home/safpt/OperationalChain/LSASAF_Products/DMET' | urlencode:'=&' }}"
+        >trigger</a>
+        </li>
+    </ul>
+{% endblock %}

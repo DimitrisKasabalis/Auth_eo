@@ -19,14 +19,25 @@ app.config_from_object('django.conf:settings')
 
 app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
 
+every_third_day_at_1am = crontab(minute=0, hour=1, day_of_month='*/3')
+
 app.conf.beat_schedule = {
-    'init_spider': {
+    'c_gsl_ndvi300-crawler': {
         'task': 'eo_engine.tasks.task_init_spider',
-        'schedule': crontab(minute=0, hour=1, day_of_month='*/3'),  # 1:00 am every 3rd day
+        'schedule': every_third_day_at_1am,  # 1:00 am every 3rd day
         'kwargs': {
             'spider_name': 'c_gsl_ndvi300-v2-glob-spider'
         },
     },
+    'LSASAF-3k-crawler': {
+        'task': 'eo_engine.tasks.task_sftp_parse_remote_dir',
+        'schedule': every_third_day_at_1am,  # 1:00 am every 3rd day'
+        'kwargs': {
+            # don't forget the sftp://
+            'remote_dir': 'sftp://safmil.ipma.pt/home/safpt/OperationalChain/LSASAF_Products/DMET'
+        },
+    },
+
     'queue_download_available_eosource': {
         'task': 'eo_engine.tasks.task_schedule_download_eosource',
         'schedule': crontab(minute='0', hour='*/8')  # 0 minute every  8th hour

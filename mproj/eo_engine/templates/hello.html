@@ -1,8 +1,31 @@
 {% extends "base.html" %}
+{% block Title %}Main Page{% endblock %}
+{% block header %}AfriCultuRes{% endblock %}
 {% block body %}
+    <div class="container">
+        <div class="row">
+            <div class="col">
+                <h3>Files</h3>
+                <ul>
+                    <li><a href="{% url "eo_engine:list-eosources" %}">EO Sources</a></li>
+                    <li><a href="{% url "eo_engine:list-eoproducts" %}">EO Products</a></li>
+                </ul>
+            </div>
+            <div class="col">
+                <h3>Utilities</h3>
+                <a href="#">Refresh Database</a>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <h3>Crawlers</h3>
+                <ul>
+                    <li><a href="{% url "eo_engine:list-spiders" %}">Spiders</a></li>
+                </ul>
+            </div>
+            <div class="col">2-2</div>
+        </div>
+    </div>
     <ul>
-        <li><a href="{% url "eo_engine:list-spiders" %}">Spiders</a></li>
-        <li><a href="{% url "eo_engine:list-eosources" %}">EO Sources</a></li>
-        <li><a href="{% url "eo_engine:list-eoproducts" %}">EO Products</a></li>
     </ul>
 {% endblock %}

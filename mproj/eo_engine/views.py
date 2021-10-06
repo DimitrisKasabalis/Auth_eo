@@ -1,15 +1,15 @@
 import logging
-import os
-from pathlib import Path
 from typing import Literal, Callable
 
 from celery.result import AsyncResult
 from celery.utils.serialization import strtobool
 from django.contrib import messages
+from django.http import QueryDict
 from django.shortcuts import render, redirect
-
 # Create your views here.
 from django.urls import reverse
+
+from eo_engine.common.tasks import get_task_ref_from_name
 
 logger = logging.getLogger('eo_engine.frontend_ops')
 
@@ -53,8 +53,9 @@ def delete_file(request, resource_type: Literal['eo_source', 'eo_product'], pk: 
 
     try:
         result = fun(pk)
-        messages.add_message(request, messages.info,
-                             f"Removed {result['eo_source']} eo_source and {result['eo_product']}")
+        messages.add_message(request=request,
+                             level=messages.INFO,
+                             message=f"Removed {str(result['eo_source'])} eo_source and {str(result['eo_product'])}")
     except AfriCultuReSFileNotExist:
         messages.add_message(request, messages.ERROR,
                              "File does not exist to delete ")
@@ -62,9 +63,7 @@ def delete_file(request, resource_type: Literal['eo_source', 'eo_product'], pk: 
         messages.add_message(request, messages.ERROR,
                              "File in use, did not delete")
 
-    finally:
-        return redirect('eo_engine:list-eosources')
-
+    return redirect('eo_engine:list-eosources')
 
 
 def trigger_generate_eoproduct(request, filename):
@@ -113,9 +112,8 @@ def trigger_download_eosource(request, eo_source_pk):
     return render(request, 'task_triggered.html', context)
 
 
-def list_spiders(request):
+def list_crawelers(request):
     from scrapy.spiderloader import SpiderLoader
-    from scrapy.crawler import CrawlerProcess
     from scrapy.utils.project import get_project_settings
     # requires SCRAPY_SETTINGS_MODULE env variable
     # currently it's set in DJ's manage.py
@@ -126,7 +124,22 @@ def list_spiders(request):
         "spiders": spider_loader.list()
     }
 
-    return render(request, 'spiders.html', context=context)
+    return render(request, 'crawlers.html', context=context)
+
+
+def submit_task(request):
+    query_dictionary = QueryDict('', mutable=True)
+    query_dictionary.update(**request.GET)
+    next_page = query_dictionary.pop('next_page', reverse('eo_engine:main-page'))
+    task_name = query_dictionary.pop('task_name').pop(0)
+
+    task = get_task_ref_from_name(task_name).s(**query_dictionary)
+    job = task.apply_async()
+    messages.add_message(
+        request=request, level=messages.SUCCESS,
+        message=f'Task {task.name} with task id: {job} successfully submitted')
+
+    return redirect(next_page)
 
 
 def trigger_spider(request, spider_name: str):
@@ -177,12 +190,3 @@ def view_revoke_task(request, task_id: str):
         revoke_task(task_id, terminate=True)
 
     return render(request, 'task_revoke.html', context=context)
-
-    # q = GeopTask.objects.filter(~Q(status='SUCCESS')).filter(~Q(task_name__contains='schedule')).filter(
-    #     task_kwargs__filename="c_gls_NDVI300_202107010000_GLOBE_OLCI_V2.0.1.nc")
-
-    # from mproj import celery_app as app
-
-    # app.control.revoke()
-
-    # return None
