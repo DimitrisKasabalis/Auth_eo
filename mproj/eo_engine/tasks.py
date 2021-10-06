@@ -438,6 +438,49 @@ def task_s02p02_compute_vci(eo_product_pk):
 
 
 ######
+# S06P04
+
+@shared_task
+def task_s06p04_et_3km(eo_product_pk: int):
+    from eo_engine.common.contrib.h5georef import H5Georef
+    import bz2
+
+    eo_product = EOProduct.objects.get(pk=eo_product_pk)
+    # only has one input
+    eo_source_input: EOSource = eo_product.eo_sources_inputs.first()
+    hdf5File = eo_source_input.file.path
+    with tempfile.NamedTemporaryFile() as dest, \
+            tempfile.NamedTemporaryFile() as final_file:
+        logger.info('Processing file: %s' % hdf5File)
+
+        dest.write(bz2.decompress(eo_source_input.file.read()))
+        dest.flush()
+
+        h5g = H5Georef(Path(dest.name))
+        logger.info("\nCreating sample points ...")
+        samples = h5g.get_sample_coords()
+        logger.info("%s" % [s for s in samples])
+
+        logger.info("\nGeoreferencing...")
+        georef_file = h5g.georef_gtif(samples)
+
+        if georef_file != -1:
+            logger.info("\nProjecting...")
+            warped_file = h5g.warp('EPSG:4326')
+
+            if warped_file != -1:
+                logger.info("\nConverting to netcdf...")
+                # file_nc = "" + outDirName + "/" + file[5:-8] + ".nc"
+                netcdf_file = h5g.to_netcdf(Path(final_file.name))
+
+        content = File(final_file)
+        eo_product.file.save(name=eo_product.filename, content=content, save=False)
+        eo_product.state = EOProductStateChoices.Ready
+        eo_product.datetime_creation = now
+        eo_product.save()
+
+
+######
 # DEBUG TASKS
 
 @shared_task

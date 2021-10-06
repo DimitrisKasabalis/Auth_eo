@@ -1,8 +1,12 @@
 from fnmatch import fnmatch
-from typing import NamedTuple, Dict, Any, List, Union, Tuple
+from typing import NamedTuple, Dict, Any, List, Union, Tuple, Optional
 
 from eo_engine.common.copernicus import parse_copernicus_name
 from eo_engine.models import EOProductGroupChoices, EOSourceGroupChoices
+
+from celery.utils.log import get_task_logger
+
+logger = get_task_logger('eo_engine.products')
 
 product_output = NamedTuple('product_output',
                             [('output_folder', str),
@@ -15,9 +19,8 @@ product_output = NamedTuple('product_output',
 typeProductGroup = Union[EOProductGroupChoices, EOSourceGroupChoices]
 
 
-def filename_to_product(filename: str) -> Union[typeProductGroup,
-                                                Tuple[typeProductGroup,
-                                                      typeProductGroup]]:
+def filename_to_product(filename: str) \
+        -> Optional[Union[typeProductGroup, Tuple[typeProductGroup, typeProductGroup]]]:
     filename = filename.lower()
 
     if fnmatch(filename, 'c_gls_ndvi300*.nc'.lower()):
@@ -34,13 +37,14 @@ def filename_to_product(filename: str) -> Union[typeProductGroup,
                 EOProductGroupChoices.a_agro_lai_1km_v2_afr)
 
     if fnmatch(filename, 'hdf5_lsasaf_msg_dmet_msg-disk_????????????.bz2'.lower()):
-        return EOSourceGroupChoices.LSASAF_ET_3000M
+        return EOSourceGroupChoices.MSG_3km_GLOB
 
     # not implemented yet
     if fnmatch(filename, 'c_gls_WB100*V1.0.1.nc'):
         raise NotImplementedError
 
-    raise NotImplementedError(f'No rule for +{filename}+')
+    logger.warn(f'No rule for +{filename}+')
+    return None
 
 
 # TODO: HIGH PRIORITY: To move this logic in database
@@ -116,6 +120,22 @@ def generate_products_from_source(filename: str) -> List[product_output]:
                            'task_MISSING', {}),
             product_output('S6_P01/WB_100/NER', f"{YYYYMM}_SE2_NER_0100m_0030_WBMA.nc", 'WB-100m-NER',
                            'task_MISSING', {}),
+        ]
+
+    # from here onwards we use the new logic:
+
+    if product == EOSourceGroupChoices.MSG_3km_GLOB:
+        output_filename_template = 'LSASAF_MSG_DMET_Africa_{YYYYMMDD}.nc'
+        return [
+            product_output(
+                output_folder='S6_P04/ET_3km',
+                filename=output_filename_template.format(
+                    YYYYMMDD=(lambda: filename.removesuffix('.bz2').split('_')[-1][:-4])()
+                ),
+                group=EOProductGroupChoices.MSG_3km_AFR,
+                task_name='task_s06p04_et_3km',
+                task_kwargs={}
+            )
         ]
 
     return []
