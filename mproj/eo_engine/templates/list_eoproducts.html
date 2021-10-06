@@ -17,7 +17,7 @@
         {% for eo_product in eo_products %}
             <tr>
                 <td>{{ eo_product.filename }}</td>
-                <td>{{ eo_product.get_product_group_display }}</td>
+                <td>{{ eo_product.get_group_display }}</td>
                 <td>{{ eo_product.get_state_display }}</td>
                 <td><a href="{% url 'eo_engine:trigger-eoproduct_generation' eo_product.filename %}">Generate</a></td>
                 {% if eo_product.file %}

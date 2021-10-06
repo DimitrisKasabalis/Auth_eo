@@ -33,7 +33,7 @@ class EOSourceGroupChoices(models.TextChoices):
     c_gls_WB100_v1_glob = 'c_gls_wb100-v1-glob', "Copernicus Global Land Service Water Bodies Collection 100m Version 1"
 
     # LSASAF
-    LSASAF_ET_3000M = 'LSASAF-ET-3000M', 'LSA-SAF ET product 3Km'
+    MSG_3km_GLOB = 'MSG-3km_GLOB', 'LSA-SAF Global ET product 3Km'
 
 
     # ndvi_300m_v1 = "ndvi-300m-v1", "ndvi 300m v1"
@@ -127,7 +127,7 @@ def eosource_post_save_handler(instance: EOSource, **kwargs):
             prod, created = EOProduct.objects.get_or_create(
                 filename=product.filename,
                 output_folder=product.output_folder,
-                product_group=product.group,
+                group=product.group,
                 task_name=product.task_name,
                 task_kwargs=product.task_kwargs
             )

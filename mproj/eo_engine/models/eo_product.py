@@ -28,6 +28,9 @@ class EOProductGroupChoices(models.TextChoices):
     a_geop_wb_100m_gha = 'agro_wb-100m-gha'
     a_geop_wb_100m_ner = 'agro_wb-100m-ner'
 
+    # LSA-SAF
+    MSG_3km_AFR = 'MSG-3km_AFR', 'LSA-SAF 3km Africa'
+
 
 class EOProductStateChoices(models.TextChoices):
     Available = 'Available', "AVAILABLE for generation."
@@ -137,7 +140,7 @@ def eoproduct_post_save_handler(instance: EOProduct, **kwargs):
                     output_folder=product.output_folder,
                     task_name=product.task_name,
                     task_kwargs=product.task_kwargs,
-                    product_group=product.group
+                    group=product.group
 
                 )
                 if created:
