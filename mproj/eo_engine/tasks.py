@@ -131,21 +131,28 @@ def task_download_file(self, eo_source_pk: int):
                                            download_ftp_eosource,
                                            download_sftp_eosource)
     eo_source = EOSource.objects.get(pk=eo_source_pk)
+    eo_source.state = EOSourceStateChoices.BeingDownloaded
+    eo_source.save()
     url_parse = urlparse(eo_source.url)
     scheme = url_parse.scheme
 
     logger.info(f'downloading file {eo_source.filename}')
 
-    if scheme.startswith('ftp'):
-        return download_ftp_eosource(eo_source_pk)
+    try:
+        if scheme.startswith('ftp'):
+            return download_ftp_eosource(eo_source_pk)
 
-    elif scheme.startswith('http'):
-        return download_http_eosource(eo_source_pk)
+        elif scheme.startswith('http'):
+            return download_http_eosource(eo_source_pk)
 
-    elif scheme.startswith('sftp'):
-        return download_sftp_eosource(eo_source_pk)
-    else:
-        raise Exception(f'There was no defined method for scheme: {scheme}')
+        elif scheme.startswith('sftp'):
+            return download_sftp_eosource(eo_source_pk)
+        else:
+            raise Exception(f'There was no defined method for scheme: {scheme}')
+    except BaseException as e:
+        eo_source.state = EOSourceStateChoices.FailedToDownload
+        eo_source.save()
+        raise Exception('Could not download.') from e
 
 
 #############################

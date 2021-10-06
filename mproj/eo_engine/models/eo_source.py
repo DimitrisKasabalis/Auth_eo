@@ -19,6 +19,7 @@ class EOSourceStateChoices(models.TextChoices):
     ScheduledForDownload = "ScheduledForDownload", "Scheduled For Download"
     AvailableLocally = "availableLocally", 'File is Available Locally'
     BeingDownloaded = 'BeingDownloaded', 'File is Being Downloaded'
+    FailedToDownload = 'FailedToDownload', 'Failed to Download'
     Ignore = "Ignore", 'Action on this file has been canceled (Ignored/Revoked Action)'
 
 
