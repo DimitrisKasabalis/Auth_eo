@@ -1,7 +1,7 @@
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import List, Union
+from typing import List, Union, Optional
 
 import more_itertools
 from celery import group
@@ -9,7 +9,7 @@ from celery.app import shared_task
 from celery.utils.log import get_task_logger
 from django.core.files import File
 from django.utils import timezone
-from more_itertools import flatten, collapse
+from more_itertools import collapse
 from pytz import utc
 
 from eo_engine.common.products import filename_to_product
@@ -482,6 +482,7 @@ def task_s06p04_et_3km(eo_product_pk: int):
 
 ######
 # DEBUG TASKS
+# Add the debug in the name
 
 @shared_task
 def task_debug_add(x: int, y: int) -> int:
@@ -495,3 +496,14 @@ def task_debug_append_char(token: str) -> str:
     new_char = choice(string.ascii_letters)
     print(f'Appending {new_char} to {token}.')
     return token + new_char
+
+
+@shared_task
+def task_debug_failing(wait_time: Optional[int] = None):
+    if wait_time is None:
+        wait_time = 2
+    import time
+    time.sleep(wait_time)
+
+    logger.info('About to throw exception!')
+    raise Exception('Expected-Error')
