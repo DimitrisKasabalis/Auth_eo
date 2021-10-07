@@ -35,7 +35,7 @@ class DefaultPipeline:
             cred_obj = Credentials.objects.get(domain=domain)
             EOSource.objects.create(
                 state=EOSourceStateChoices.AvailableRemotely,
-                product=spider.product_name,
+                group=spider.product_name,
                 file=None,
                 filename=filename,  # unique acts as id
                 domain=domain,
