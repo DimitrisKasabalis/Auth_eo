@@ -54,7 +54,7 @@ def hello(request):
 
     context.update(scrappers=scrappers)
     return render(request,
-                  "hello.html", context=context
+                  "home.html", context=context
                   )
 
 
