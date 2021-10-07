@@ -1,6 +1,6 @@
 import logging
 from typing import Literal, Callable
-
+from more_itertools import collapse
 from celery.result import AsyncResult
 from celery.utils.serialization import strtobool
 from django.contrib import messages
@@ -16,7 +16,45 @@ logger = logging.getLogger('eo_engine.frontend_ops')
 
 
 def hello(request):
-    return render(request, "hello.html")
+    from eo_engine.common.misc import list_spiders
+    from eo_engine.tasks import task_init_spider, task_sftp_parse_remote_dir
+
+    url_template = '{base_url}?{querystring}'
+
+    task_init_spider_name = task_init_spider.name
+
+    context = {}
+
+    scrappers = {}
+    spider_list = list_spiders()
+    for spider in spider_list:
+        query_dictionary = QueryDict('', mutable=True)
+        query_dictionary.update(
+            task_name=task_init_spider_name,
+            spider_name=spider
+        )
+        url = url_template.format(
+            base_url=reverse("eo_engine:submit-task"),
+            querystring=query_dictionary.urlencode()
+        )
+        scrappers[spider] = url
+
+    # extra scrappers
+    # scrappers[LABEL] = URL
+    q = QueryDict('', mutable=True)
+    q.update(
+        task_name=task_sftp_parse_remote_dir.name,
+        remote_dir='sftp://safmil.ipma.pt/home/safpt/OperationalChain/LSASAF_Products/DMET'
+    )
+    scrappers['LSAF'] = url_template.format(
+        base_url=reverse("eo_engine:submit-task"),
+        querystring=q.urlencode()
+    )
+
+    context.update(scrappers=scrappers)
+    return render(request,
+                  "hello.html", context=context
+                  )
 
 
 def list_eosources(request):
@@ -134,7 +172,12 @@ def submit_task(request):
     next_page = query_dictionary.pop('next_page', reverse('eo_engine:main-page'))
     task_name = query_dictionary.pop('task_name').pop(0)
 
-    task = get_task_ref_from_name(task_name).s(**query_dictionary)
+    task_kwargs = {}
+    for k, v in query_dictionary.items():
+        param = list(collapse(v))
+        task_kwargs[k] = param[0] if len(param) == 1 else tuple(param)
+
+    task = get_task_ref_from_name(task_name).s(**task_kwargs)
     job = task.apply_async()
     messages.add_message(
         request=request, level=messages.SUCCESS,

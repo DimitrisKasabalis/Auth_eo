@@ -35,17 +35,21 @@ def random_name_gen(length=10) -> str:
 
 @shared_task
 def task_init_spider(spider_name):
-    from scrapy.spiderloader import SpiderLoader
-    from scrapy.crawler import CrawlerProcess
-    from scrapy.utils.project import get_project_settings
-
-    # requires SCRAPY_SETTINGS_MODULE env variable
-    # currently it's set in DJ's manage.py
-    scrapy_settings = get_project_settings()
-    spider_loader = SpiderLoader.from_settings(scrapy_settings)
+    from eo_engine.common.misc import get_spider_loader
+    from eo_engine.common.misc import get_crawler_process
+    # from scrapy.spiderloader import SpiderLoader
+    # from scrapy.crawler import CrawlerProcess
+    # from scrapy.utils.project import get_project_settings
+    #
+    # # # requires SCRAPY_SETTINGS_MODULE env variable
+    # # # currently it's set in DJ's manage.py
+    # # scrapy_settings = get_project_settings()
+    # # spider_loader = SpiderLoader.from_settings(scrapy_settings)
+    spider_loader = get_spider_loader()
     spider = spider_loader.load(spider_name)
-    print(scrapy_settings)
-    process = CrawlerProcess(scrapy_settings)
+    # print(scrapy_settings)
+
+    process = get_crawler_process()
     process.crawl(spider)
 
     # # block until the crawling is finished

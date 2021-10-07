@@ -16,6 +16,8 @@ def get_task_ref_from_name(token: Union[str, List[str]]):
     from eo_engine import tasks
     if isinstance(token, List):
         token = next(collapse(token))
+    # remove namespaces: a.b.task_name -> task_name
+    token = token.split('.')[-1]
     return getattr(tasks, token)
 
 
