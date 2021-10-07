@@ -1,6 +1,6 @@
 import logging
 from typing import Literal, Callable
-from more_itertools import collapse
+
 from celery.result import AsyncResult
 from celery.utils.serialization import strtobool
 from django.contrib import messages
@@ -8,6 +8,7 @@ from django.http import QueryDict
 from django.shortcuts import render, redirect
 # Create your views here.
 from django.urls import reverse
+from more_itertools import collapse
 
 from eo_engine.common.tasks import get_task_ref_from_name
 from eo_engine.models import EOSource, EOProduct
@@ -245,3 +246,29 @@ def utilities_save_rows(request):
             e.save()
     messages.info(request, 'Done!')
     return redirect(reverse('eo_engine:main-page'))
+
+
+def utilities_view_post_credentials(request):
+    if request.method == "GET":
+        context = {}
+        from .models import Credentials
+        from .forms import CredentialsUsernamePassowordForm, CredentialsAPIKEYForm
+        all_credentials = Credentials.objects.all()
+        forms = []
+        for c in all_credentials.filter(type=Credentials.CredentialsTypeChoices.USERNAME_PASSWORD):
+            forms.append(CredentialsUsernamePassowordForm(instance=c))
+        context['userpass_forms'] = forms
+
+        forms = []
+        for c in all_credentials.filter(type=Credentials.CredentialsTypeChoices.API_KEY):
+            forms.append(CredentialsAPIKEYForm(instance=c))
+        context['apikey_forms'] = forms
+        return render(request, "credentials.html", context=context)
+
+    if request.method == "POST":
+        try:
+            messages.success(request, 'change submitted')
+        except:
+            messages.error(request, 'error')
+        finally:
+            return redirect(reverse('eo_engine:credentials'))

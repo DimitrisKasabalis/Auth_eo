@@ -6,6 +6,7 @@ app_name = 'eo_engine'
 
 urlpatterns = [
     path('', views.hello, name='main-page'),
+    path('credentials',views.utilities_view_post_credentials,name='credentials'),
     path('spiders/', views.list_crawelers, name='list-spiders'),
     path('eosources/', views.list_eosources, name='list-eosources'),
     path('eoproducts/', views.list_eoproducts, name='list-eoproducts'),
