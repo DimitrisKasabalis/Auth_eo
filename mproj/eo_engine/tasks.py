@@ -1,3 +1,4 @@
+import subprocess
 import tempfile
 from datetime import datetime
 from pathlib import Path
@@ -483,6 +484,16 @@ def task_s06p04_et_3km(eo_product_pk: int):
                 logger.info("\nConverting to netcdf...")
                 # file_nc = "" + outDirName + "/" + file[5:-8] + ".nc"
                 netcdf_file = h5g.to_netcdf(Path(final_file.name))
+
+        cp = subprocess.run(['ncatted',
+                             '-a', 'short_name,Band1,o,c,Daily_ET',
+                             '-a', "long_name,Band1,o,c,Daily_Evapotranspiration_3km",
+                             '-a', "ET_UNITS,Band1,o,c,[mm/day]",
+                             '-a', "ET_SCALING_FACTOR,Band1,o,d,1000",
+                             '-a', "ET_OFFSET,Band1,o,d,0",
+                             '-a', "ET_MISSING_VALUE,Band1,o,d,-1",
+                             '-a', "_FillValue,Band1,o,d, -0.001",
+                             final_file.name])
 
         content = File(final_file)
         eo_product.file.save(name=eo_product.filename, content=content, save=False)
