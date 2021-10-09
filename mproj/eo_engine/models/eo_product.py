@@ -20,13 +20,14 @@ class EOProductGroupChoices(models.TextChoices):
     a_agro_lai_1km_v2_afr = "agro_lai_1km-v2-afr", 'AUTH/AGRO/LAI 1km, V2 Africa'
 
     # WB Products
-    a_agro_wb_100m_tun = 'agro_wb-100m-tun'
-    a_agro_wb_100m_rwa = 'agro_wb-100m-rwa'
     a_agro_wb_100m_eth = 'agro_wb-100m-eth'
+    a_agro_wb_100m_gha = 'agro_wb-100m-gha'
+    a_agro_wb_100m_ken = 'agro_wb-100m-ken'
     a_agro_wb_100m_moz = 'agro_wb-100m-moz'
+    a_agro_wb_100m_ner = 'agro_wb-100m-ner'
+    a_agro_wb_100m_rwa = 'agro_wb-100m-rwa'
+    a_agro_wb_100m_tun = 'agro_wb-100m-tun'
     a_agro_wb_100m_zaf = 'agro_wb-100m-zaf'
-    a_geop_wb_100m_gha = 'agro_wb-100m-gha'
-    a_geop_wb_100m_ner = 'agro_wb-100m-ner'
 
     # LSA-SAF
     MSG_3km_AFR = 'MSG-3km_AFR', 'LSA-SAF 3km Africa'

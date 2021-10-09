@@ -3,7 +3,7 @@ from typing import NamedTuple, Dict, Any, List, Union, Tuple, Optional
 
 from eo_engine.common.copernicus import parse_copernicus_name
 from eo_engine.models import EOProductGroupChoices, EOSourceGroupChoices
-
+from eo_engine import tasks as eo_tasks
 from celery.utils.log import get_task_logger
 
 logger = get_task_logger('eo_engine.products')
@@ -104,22 +104,87 @@ def generate_products_from_source(filename: str) -> List[product_output]:
 
     if fnmatch(filename, 'c_gls_WB100*V1.0.1.nc'):
         name_elements = parse_copernicus_name(filename)
-        YYYYMM = name_elements.datetime.date().strftime('%Y%m')
+        YYYYMMDD = name_elements.datetime.date().strftime('%Y%m%d')
+
         return [
-            product_output('S6_P01/WB_100/TUN', f"{YYYYMM}_SE2_TUN_0100m_0030_WBMA.nc", 'WB-100m-TUN',
-                           'task_MISSING', {}),
-            product_output('S6_P01/WB_100/RWA', f"{YYYYMM}_SE2_RWA_0100m_0030_WBMA.nc", 'WB-100m-RWA',
-                           'task_MISSING', {}),
-            product_output('S6_P01/WB_100/ETH', f"{YYYYMM}_SE2_ETH_0100m_0030_WBMA.nc", 'WB-100m-ETH',
-                           'task_MISSING', {}),
-            product_output('S6_P01/WB_100/MOZ', f"{YYYYMM}_SE2_MOZ_0100m_0030_WBMA.nc", 'WB-100m-MOZ',
-                           'task_MISSING', {}),
-            product_output('S6_P01/WB_100/ZAF', f"{YYYYMM}_SE2_ZAF_0100m_0030_WBMA.nc", 'WB-100m-ZAF',
-                           'task_MISSING', {}),
-            product_output('S6_P01/WB_100/GHA', f"{YYYYMM}_SE2_GHA_0100m_0030_WBMA.nc", 'WB-100m-GHA',
-                           'task_MISSING', {}),
-            product_output('S6_P01/WB_100/NER', f"{YYYYMM}_SE2_NER_0100m_0030_WBMA.nc", 'WB-100m-NER',
-                           'task_MISSING', {}),
+            product_output(
+                'S6_P01/WB_100/TUN',
+                f"{YYYYMMDD}_SE2_TUN_0100m_0030_WBMA.nc",
+                EOProductGroupChoices.a_agro_wb_100m_tun.value,
+                eo_tasks.task_s0601_wb_100m.name,
+                {
+                    'wkt': "POLYGON((7.491 37.345,  11.583 37.345,  11.583 30.219, 7.491 30.219, 7.491 37.345, 7.491 37.345))",
+                    'iso': 'TUN'
+                }),
+            product_output(
+                'S6_P01/WB_100/RWA',
+                f"{YYYYMMDD}_SE2_RWA_0100m_0030_WBMA.nc",
+                EOProductGroupChoices.a_agro_wb_100m_rwa.value,
+                eo_tasks.task_s0601_wb_100m.name,
+                {
+                    'wkt': "POLYGON((28.845 -1.052, 30.894 -1.052, 30.894 -2.827, 28.845 -2.827, 28.845 -1.052, 28.845 -1.052))",
+                    'iso': 'RWA'
+                }),
+            product_output(
+                'S6_P01/WB_100/KEN',
+                f"{YYYYMMDD}_SE2_KEN_0100m_0030_WBMA.nc",
+                EOProductGroupChoices.a_agro_wb_100m_ken.value,
+                eo_tasks.task_s0601_wb_100m.name,
+                {
+                    'wkt': "POLYGON((33.89 4.625, 41.917 4.625, 41.917 -4.671, 33.89 -4.671, 33.89 4.625, 33.89 4.625))",
+                    'iso': 'KEN'
+                }),
+            product_output(
+                'S6_P01/WB_100/ETH',
+                f"{YYYYMMDD}_SE2_ETH_0100m_0030_WBMA.nc",
+                EOProductGroupChoices.a_agro_wb_100m_eth.value,
+                eo_tasks.task_s0601_wb_100m.name,
+                {
+                    'wkt':
+                        "POLYGON((32.98 14.93, 48.0 14.93, 48.0 3.37, 32.98 3.37, 32.98 14.93, 32.98 14.93))",
+                    'iso': 'ETH'
+                }),
+            product_output(
+                'S6_P01/WB_100/MOZ',
+                f"{YYYYMMDD}_SE2_MOZ_0100m_0030_WBMA.nc",
+                EOProductGroupChoices.a_agro_wb_100m_moz.value,
+                eo_tasks.task_s0601_wb_100m.name,
+                {
+                    'wkt':
+                        "POLYGON((30.208 -10.467, 40.849 -10.467, 40.849 -26.865, 30.208 -26.865, 30.208 -10.467, 30.208 -10.467))",
+                    'iso': 'MOZ'
+                }),
+            product_output(
+                'S6_P01/WB_100/ZAF',
+                f"{YYYYMMDD}_SE2_ZAF_0100m_0030_WBMA.nc",
+                EOProductGroupChoices.a_agro_wb_100m_zaf.value,
+                eo_tasks.task_s0601_wb_100m.name,
+                {
+                    'wkt':
+                        "POLYGON((16 -22, 33 -22, 33 -35, 16 -35, 16 -22, 16 -22))",
+                    'iso': 'ZAF'
+                }),
+            product_output(
+                'S6_P01/WB_100/GHA',
+                f"{YYYYMMDD}_SE2_GHA_0100m_0030_WBMA.nc",
+                EOProductGroupChoices.a_agro_wb_100m_gha.value,
+                eo_tasks.task_s0601_wb_100m.name,
+                {
+                    'wkt':
+                        "POLYGON((-3.25 12.16, 2.205 12.16, 2.205 4.7, -3.25 4.7, -3.25 12.16, -3.25 12.16))",
+                    'iso': 'GHA'
+                }),
+            product_output(
+                'S6_P01/WB_100/NER',
+                f"{YYYYMMDD}_SE2_NER_0100m_0030_WBMA.nc",
+                EOProductGroupChoices.a_agro_wb_100m_ner.value,
+                eo_tasks.task_s0601_wb_100m.name,
+                {
+                    'wkt':
+                        "POLYGON((0 23.8, 16.1 23.8, 16.1 11.5, 0 11.5, 0 23.8, 0 23.8))",
+                    'iso': 'NER'
+                }),
+
         ]
 
     # from here onwards we use the new logic:

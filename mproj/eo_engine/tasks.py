@@ -449,6 +449,61 @@ def task_s02p02_compute_vci(eo_product_pk):
     return
 
 
+#####
+# s06p01 WB
+@shared_task
+def task_s0601_wb_100m(eo_product_pk: int, wkt: str, iso: str):
+    import os
+    import snappy
+    from snappy import ProductIO, GPF, HashMap, WKTReader
+
+    # ORder is TUN, RWA, ETH, MOZ, ZAF, GHA, NER, KEN
+
+    eo_product = EOProduct.objects.get(pk=eo_product_pk)
+
+    eo_source: EOSource = eo_product.eo_sources_inputs.first()
+
+    # any of the above eo_product, should point to the same eo_source
+
+    HashMap = snappy.jpy.get_type('java.util.HashMap')
+    # Get snappy Operators
+    GPF.getDefaultInstance().getOperatorSpiRegistry().loadOperatorSpis()
+
+    def clip(data, file_in: Path, dir_out, geom, cnt):
+        params = HashMap()
+        # params.put('sourceBands', 'WB') #'QUAL' # no band selected here. thus all bands are kept
+        params.put('region', '0, 0, 0, 0')
+        params.put('geoRegion', geom)
+        params.put('subSamplingX', 1)
+        params.put('subSamplingY', 1)
+        params.put('fullSwath', False)
+        params.put('copyMetadata', True)
+        clipped = GPF.createProduct('Subset', params, data)
+        date = file_in.name.split('_')[3][:6]
+        # filename='Subset_c_gls_WB100_' + date + '_GLOBE_S2_V1.0.1_snappy_' + cnt + '.nc'
+        filename = date + '_SE2_' + cnt + '_0100m_0030_WBMA.nc'
+        ProductIO.writeProduct(clipped, os.path.join(dir_out, filename), 'NetCDF4-CF')  # 'GeoTIFF'
+        return Path(str(clipped.getFileLocation()))
+
+    # order is TUN, RWA, ETH, MOZ, ZAF, GHA, NER, KEN
+
+    # product_list defined in the outer scope
+    with tempfile.TemporaryDirectory(prefix='task_s0601_wb_100m_') as temp_dir:
+        data = ProductIO.readProduct(eo_source.file.path)
+        geom = WKTReader().read(wkt)
+        cnt = iso.upper()
+        file_in = Path(eo_source.file.path)
+        clipped: Path = clip(data=data, file_in=file_in, dir_out=temp_dir, geom=geom, cnt=cnt)
+
+        content = File(clipped.open('rb'))
+        eo_product.file.save(name=eo_product.filename, content=content, save=False)
+        eo_product.state = EOProductStateChoices.Ready
+        eo_product.datetime_creation = now
+        eo_product.save()
+
+    return 0
+
+
 ######
 # S06P04
 
