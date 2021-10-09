@@ -13,7 +13,6 @@ from django.utils import timezone
 from more_itertools import collapse
 from pytz import utc
 
-from eo_engine.common.products import filename_to_product
 from eo_engine.common.tasks import get_task_ref_from_name
 from eo_engine.models import EOProduct, EOProductStateChoices, FunctionalRules, Credentials
 from eo_engine.models import EOSource, EOSourceStateChoices
@@ -62,6 +61,7 @@ def task_init_spider(spider_name):
 # SFTP
 @shared_task
 def task_sftp_parse_remote_dir(remote_dir: Union[str, List[str]]):
+    from eo_engine.common.products import filename_to_product
     # remote dir is in the form of
     #  sftp://adf.adf.com/asdf/aa'
     if isinstance(remote_dir, List):
@@ -79,7 +79,7 @@ def task_sftp_parse_remote_dir(remote_dir: Union[str, List[str]]):
                                       password=credentials.password)
     for entry in list_dir_entries(remotepath=path, connection=sftp_connection):
         product_group = filename_to_product(entry.filename)
-        add_to_db(entry, product_group=product_group)
+        add_to_db(entry, product_group=product_group[0])
 
 
 @shared_task(bind=True)
@@ -343,6 +343,7 @@ def task_s02p02_compute_vci(eo_product_pk):
         print("Merged Bands:   %s" % (list(band_names)))
         return merged
 
+    # noinspection PyUnresolvedReferences
     def get_VCI(data, file, dir):
         GPF.getDefaultInstance().getOperatorSpiRegistry().loadOperatorSpis()
         BandDescriptor = snappy.jpy.get_type('org.esa.snap.core.gpf.common.BandMathsOp$BandDescriptor')
@@ -494,6 +495,52 @@ def task_s0601_wb_100m(eo_product_pk: int, wkt: str, iso: str):
         cnt = iso.upper()
         file_in = Path(eo_source.file.path)
         clipped: Path = clip(data=data, file_in=file_in, dir_out=temp_dir, geom=geom, cnt=cnt)
+
+        content = File(clipped.open('rb'))
+        eo_product.file.save(name=eo_product.filename, content=content, save=False)
+        eo_product.state = EOProductStateChoices.Ready
+        eo_product.datetime_creation = now
+        eo_product.save()
+
+    return 0
+
+
+#####
+# S06P01
+@shared_task
+def task_s06p01_clip_to_africa(eo_product_pk: int):
+    import snappy
+    from snappy import ProductIO, GPF, HashMap, WKTReader
+
+    eo_product = EOProduct.objects.get(pk=eo_product_pk)
+    eo_source = eo_product.eo_sources_inputs.first()
+
+    wkt = "POLYGON((-30 40, 60 40, 60 -40, -30 -40, -30 40, -30 40))"  # Africa
+    HashMap = snappy.jpy.get_type('java.util.HashMap')
+    # Get snappy Operators
+    GPF.getDefaultInstance().getOperatorSpiRegistry().loadOperatorSpis()
+
+    def clip(file_in, file_out, geom) -> Path:
+        # Read the file
+        data = ProductIO.readProduct(file_in)
+
+        params = HashMap()
+        # params.put('sourceBands', 'WB') #'QUAL'
+        params.put('region', '0, 0, 0, 0')
+        params.put('geoRegion', geom)
+        params.put('subSamplingX', 1)
+        params.put('subSamplingY', 1)
+        params.put('fullSwath', False)
+        params.put('copyMetadata', True)
+        clipped = GPF.createProduct('Subset', params, data)
+
+        ProductIO.writeProduct(clipped, file_out.as_posix(), 'NetCDF4-CF')
+        return Path(str(clipped.getFileLocation()))
+
+    with tempfile.TemporaryDirectory(prefix='task_s06p01_clip_to_africa_') as temp_dir:
+        date = eo_source.filename.split('_')[3][:8]
+        f_out = date + '_SE2_AFR_0300m_0030_WBMA.nc'
+        clipped = clip(eo_source.file.path, Path(temp_dir).joinpath(f_out), WKTReader().read(wkt))
 
         content = File(clipped.open('rb'))
         eo_product.file.save(name=eo_product.filename, content=content, save=False)

@@ -32,7 +32,7 @@ class EOSourceGroupChoices(models.TextChoices):
 
     # https://land.copernicus.eu/global/sites/cgls.vito.be/files/products/CGLOPS2_PUM_WB100m_V1_I1.10.pdf
     c_gls_WB100_v1_glob = 'c_gls_wb100-v1-glob', "Copernicus Global Land Service Water Bodies Collection 100m Version 1"
-
+    WB_300m_v2_GLOB = 'WB_300m_v2_GLOB', "Copernicus Global Land Service Water Bodies Collection 300m Version 2"
     # LSASAF
     MSG_3km_GLOB = 'MSG-3km_GLOB', 'LSA-SAF Global ET product 3Km'
 

@@ -29,6 +29,8 @@ class EOProductGroupChoices(models.TextChoices):
     a_agro_wb_100m_tun = 'agro_wb-100m-tun'
     a_agro_wb_100m_zaf = 'agro_wb-100m-zaf'
 
+    agro_wb_300m_v2_afr = 'agro_wb_300m_v2_afr'
+
     # LSA-SAF
     MSG_3km_AFR = 'MSG-3km_AFR', 'LSA-SAF 3km Africa'
 

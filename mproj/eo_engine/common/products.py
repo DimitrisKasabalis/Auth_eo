@@ -19,29 +19,28 @@ product_output = NamedTuple('product_output',
 typeProductGroup = Union[EOProductGroupChoices, EOSourceGroupChoices]
 
 
-def filename_to_product(filename: str) \
-        -> Optional[Union[typeProductGroup, Tuple[typeProductGroup, typeProductGroup]]]:
+def filename_to_product(filename: str) -> Optional[List[typeProductGroup]]:
     filename = filename.lower()
 
     if fnmatch(filename, 'c_gls_ndvi300*.nc'.lower()):
-        return EOProductGroupChoices.a_agro_ndvi_300m_v3
+        return [EOProductGroupChoices.a_agro_ndvi_300m_v3, ]
 
     if fnmatch(filename, '????????_SE3_AFR_0300m_0010_NDVI.nc'.lower()):
-        return EOProductGroupChoices.a_agro_ndvi_1km_v3
+        return [EOProductGroupChoices.a_agro_ndvi_1km_v3, ]
 
     if fnmatch(filename, '????????_SE3_AFR_1000m_0010_NDVI.nc'.lower()):
-        return EOProductGroupChoices.a_agro_vci_1km_v2_afr
+        return [EOProductGroupChoices.a_agro_vci_1km_v2_afr, ]
 
     if fnmatch(filename, 'c_gls_LAI300-RT1*.nc'.lower()):
-        return (EOProductGroupChoices.a_agro_lai_300m_v1_afr,
-                EOProductGroupChoices.a_agro_lai_1km_v2_afr)
+        return [EOProductGroupChoices.a_agro_lai_300m_v1_afr,
+                EOProductGroupChoices.a_agro_lai_1km_v2_afr]
 
     if fnmatch(filename, 'hdf5_lsasaf_msg_dmet_msg-disk_????????????.bz2'.lower()):
-        return EOSourceGroupChoices.MSG_3km_GLOB
+        return [EOProductGroupChoices.MSG_3km_AFR, ]
 
     # not implemented yet
-    if fnmatch(filename, 'c_gls_WB100*V1.0.1.nc'):
-        raise NotImplementedError
+    if fnmatch(filename, 'c_gls_WB300_????????0000_GLOBE_S2_V2.0.1.nc'.lower()):
+        return [EOProductGroupChoices.agro_wb_300m_v2_afr, ]
 
     logger.warn(f'No rule for +{filename}+')
     return None
@@ -189,7 +188,21 @@ def generate_products_from_source(filename: str) -> List[product_output]:
 
     # from here onwards we use the new logic:
 
-    if product == EOSourceGroupChoices.MSG_3km_GLOB:
+    if product.count(EOProductGroupChoices.agro_wb_300m_v2_afr):
+        output_filenane_template = '{YYYYMMDD}_SE2_AFR_0300m_0030_WBMA.nc'
+        YYYYMMDD = filename.split('_')[3][:8]
+        return [
+            product_output(
+                output_folder='S6_P01/WB_300/v2',
+                filename=output_filenane_template.format(YYYYMMDD=YYYYMMDD),
+                group=EOProductGroupChoices.agro_wb_300m_v2_afr,
+                task_name=eo_tasks.task_s06p01_clip_to_africa.name,
+                task_kwargs={}
+            )
+
+        ]
+
+    if product.count(EOProductGroupChoices.MSG_3km_AFR):
         output_filename_template = 'LSASAF_MSG_DMET_Africa_{YYYYMMDD}.nc'
         return [
             product_output(

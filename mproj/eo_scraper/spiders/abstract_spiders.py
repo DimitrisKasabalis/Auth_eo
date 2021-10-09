@@ -153,7 +153,7 @@ class FtpSpider(Spider):
         self.credentials = get_credentials(domain)
 
     def start_requests(self):
-        yield AnonFtpRequest(self.ftp_root_url, credentials2=self.credentials)
+        yield AnonFtpRequest(self.ftp_root_url, credentials=self.credentials)
 
     def parse(self, response, **kwargs):
         url = urlparse(response.url)

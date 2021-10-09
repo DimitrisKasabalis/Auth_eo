@@ -21,7 +21,7 @@ TEST_FILE = Path(__file__).parent / 'sample_data/c_gls_WB100_202010010000_GLOBE_
 @override_settings(
     MEDIA_ROOT=TEST_MEDIA_ROOT
 )
-class TaskS06P04Test(TransactionTestCase):
+class TaskS06P01Wb100mToCountryTest(TransactionTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -74,4 +74,4 @@ class TaskS06P04Test(TransactionTestCase):
         output_folder = TEST_MEDIA_ROOT
         files = list(output_folder.glob('*.nc'))
 
-        self.assertEqual(len(files),8)
+        self.assertEqual(len(files), 8)
