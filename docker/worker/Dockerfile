@@ -2,7 +2,7 @@ FROM ubuntu:20.04
 
 MAINTAINER Terradue S.r.l
 USER root
-
+ENV PIP_DEFAULT_TIMEOUT=100
 ENV LC_ALL=en_US.UTF-8 \
     LANG=en_US.UTF-8 \
     LANGUAGE=en_US.UTF-8 \
