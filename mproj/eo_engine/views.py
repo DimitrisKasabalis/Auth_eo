@@ -24,7 +24,12 @@ def hello(request):
 
     task_init_spider_name = task_init_spider.name
 
-    context = {}
+    from eo_engine.models import EOProductGroupChoices
+    from eo_engine.models import EOSourceGroupChoices
+    context = {
+        'eo_products_grps_value_label': EOProductGroupChoices.choices,
+        'eo_sources_grps_value_label': EOSourceGroupChoices.choices,
+    }
 
     scrappers = {}
     spider_list = list_spiders()
@@ -58,11 +63,13 @@ def hello(request):
                   )
 
 
-def list_eosources(request):
+def list_eosources(request, product_group=None):
     from .models import EOSource
     from .models import GeopTask
     # default order [product, date]
     qs = EOSource.objects.all().prefetch_related('task')
+    if product_group:
+        qs = qs.filter(group=product_group)
 
     context = {'eo_sources': qs,
                'valid_status_to_cancel': [GeopTask.TaskTypeChoices.STARTED.value,
@@ -72,10 +79,11 @@ def list_eosources(request):
     return render(request, 'list_eosources.html', context=context)
 
 
-def list_eoproducts(request):
+def list_eoproducts(request, product_group=None):
     from .models import EOProduct
     qs = EOProduct.objects.all()
-
+    if product_group:
+        qs = qs.filter(group=product_group)
     context = {'eo_products': qs}
 
     return render(request, 'list_eoproducts.html', context=context)
