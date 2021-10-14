@@ -2,9 +2,10 @@ import json
 import os
 import re
 from datetime import datetime
-from typing import List, Pattern
+from typing import List, Pattern, Callable, Optional
 from urllib.parse import urlsplit, urlparse
 
+from django.core.exceptions import ObjectDoesNotExist
 from pytz import utc
 from scrapy import Request, FormRequest
 from scrapy.linkextractors import LinkExtractor
@@ -118,18 +119,20 @@ class CopernicusVgtDatapool(InitSpider, CrawlSpider):
             yield loader.load_item()
 
 
-class AnonFtpRequest(Request):
+class FtpRequest(Request):
 
-    def __init__(self, url, credentials: credentials, *args, **kwargs):
-        super(AnonFtpRequest, self).__init__(url, *args, **kwargs)
-        username = credentials.username
-        password = credentials.password
-        meta = {'ftp_user': username,
-                'ftp_password': password}
+    def __init__(self, url, credentials: Optional[credentials], *args, **kwargs):
+        super(FtpRequest, self).__init__(url, *args, **kwargs)
+        meta = {}
+        if credentials:
+            meta.update(ftp_user=credentials.username,
+                        ftp_password=credentials.password)
 
         # self.meta.update(meta)
-        super(AnonFtpRequest, self).__init__(url, meta=meta, errback=self.errback_for_failure, *args, **kwargs)
-
+        super(FtpRequest, self).__init__(url,
+                                         meta=meta,
+                                         errback=self.errback_for_failure,
+                                         *args, **kwargs)
 
     def errback_for_failure(self, failure):
         pass
@@ -141,7 +144,12 @@ class FtpSpider(Spider):
         'ROBOTSTXT_OBEY': False
     }
     ftp_root_url = None
-    credentials: credentials
+    credentials: Optional[credentials]
+
+    def filename_filter(self, token: str) -> bool:
+        """a function that accepts the filename token and returns T of F.
+        If False the file is ignored."""
+        return True
 
     def __init__(self, *args, **kwargs):
         super(FtpSpider, self).__init__(*args, **kwargs)
@@ -150,10 +158,13 @@ class FtpSpider(Spider):
 
         url_split = urlsplit(self.ftp_root_url)
         domain = url_split.netloc
-        self.credentials = get_credentials(domain)
+        try:
+            self.credentials = get_credentials(domain)
+        except ObjectDoesNotExist:
+            self.credentials = None
 
     def start_requests(self):
-        yield AnonFtpRequest(self.ftp_root_url, credentials=self.credentials)
+        yield FtpRequest(self.ftp_root_url, credentials=self.credentials)
 
     def parse(self, response, **kwargs):
         url = urlparse(response.url)
@@ -161,7 +172,7 @@ class FtpSpider(Spider):
         for f in files:
             if f['filetype'] == 'd':  # filetype is 'd' -> Directory, route for seed
                 path = os.path.join(response.url, f['filename'])
-                yield AnonFtpRequest(path, self.credentials)
+                yield FtpRequest(path, self.credentials)
 
             if f['filetype'] == '-':
                 result = RemoteSourceItem(
@@ -174,4 +185,7 @@ class FtpSpider(Spider):
                     datetime_seen=datetime.utcnow().replace(tzinfo=utc),
                     url=os.path.join(response.url, f['filename'])
                 )
-                yield result
+
+                if self.filename_filter(result['filename']):
+                    # if filename filter in place, and is true
+                    yield result

@@ -34,6 +34,9 @@ class EOProductGroupChoices(models.TextChoices):
     # LSA-SAF
     MSG_3km_AFR = 'MSG-3km_AFR', 'LSA-SAF 3km Africa'
 
+    # VIIS-1Day for S04P03
+    VIIRS_1DAY_AFR = 'VIIRS-1day-AFR', 'VIIRS 1day AFR'
+
 
 class EOProductStateChoices(models.TextChoices):
     Available = 'Available', "AVAILABLE for generation."

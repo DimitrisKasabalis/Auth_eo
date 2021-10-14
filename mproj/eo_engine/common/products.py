@@ -1,7 +1,8 @@
+import re
 from fnmatch import fnmatch
 from typing import NamedTuple, Dict, Any, List, Union, Tuple, Optional
 
-from eo_engine.common.copernicus import parse_copernicus_name
+from eo_engine.common.parsers import parse_copernicus_name
 from eo_engine.models import EOProductGroupChoices, EOSourceGroupChoices
 from eo_engine import tasks as eo_tasks
 from celery.utils.log import get_task_logger
@@ -41,6 +42,9 @@ def filename_to_product(filename: str) -> Optional[List[typeProductGroup]]:
     # not implemented yet
     if fnmatch(filename, 'c_gls_WB300_????????0000_GLOBE_S2_V2.0.1.nc'.lower()):
         return [EOProductGroupChoices.agro_wb_300m_v2_afr, ]
+
+    if fnmatch(filename, r'RIVER-FLDglobal-composite1_????????_*.part???.tif'):
+        return [EOProductGroupChoices.VIIRS_1DAY_AFR, ]
 
     logger.warn(f'No rule for +{filename}+')
     return None
@@ -187,6 +191,7 @@ def generate_products_from_source(filename: str) -> List[product_output]:
         ]
 
     # from here onwards we use the new logic:
+    # 'if product.count' -> product is a list, and the subroutine checks in the list contains the parameter in it
 
     if product.count(EOProductGroupChoices.agro_wb_300m_v2_afr):
         output_filenane_template = '{YYYYMMDD}_SE2_AFR_0300m_0030_WBMA.nc'
@@ -216,4 +221,19 @@ def generate_products_from_source(filename: str) -> List[product_output]:
             )
         ]
 
+    if product.count(EOProductGroupChoices.VIIRS_1DAY_AFR):
+        pat = re.compile(r'RIVER-FLDglobal-composite1_(?P<YYYYMMDD>[0-9]{1,8})_000000.part(?P<tile>[0-9]{1,3}).tif')
+        match = pat.match(filename)
+        match_groups = match.groupdict()
+        return [
+            product_output(
+                output_folder='S4_P03/Floods_MR',
+                filename='{YYYYMMDD}_VIIRS_{tile}_0375m_0001_FAMA.nc'.format(**match_groups),
+                group=EOProductGroupChoices.VIIRS_1DAY_AFR,
+                task_name='task_s04p03_convert_to_tiff',
+                task_kwargs={
+                    'tile': match_groups['tile']
+                }
+            )
+        ]
     return []

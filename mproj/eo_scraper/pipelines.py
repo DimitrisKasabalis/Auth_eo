@@ -10,7 +10,6 @@ from fnmatch import fnmatch
 from pytz import utc
 from scrapy.exceptions import DropItem
 
-from eo_engine.common.copernicus import parse_copernicus_name
 from eo_engine.models import EOSource, Credentials, EOSourceStateChoices
 from eo_scraper.items import RemoteSourceItem
 
@@ -21,25 +20,23 @@ class DefaultPipeline:
 
         domain = item['domain']
         filename = item['filename']
-        if fnmatch(filename.lower(), 'c_gls*.nc'):
-            product_elements = parse_copernicus_name(filename)
-        else:
-            raise
-        try:  # don't process (drop) duplicates
 
-            # if not found it will raise an exception
+        try:  # don't process (drop) duplicates
             EOSource.objects.get(filename=filename)
             raise DropItem()
         except EOSource.DoesNotExist:
 
-            cred_obj = Credentials.objects.get(domain=domain)
+            try:
+                cred_obj = Credentials.objects.get(domain=domain)
+            except Credentials.DoesNotExist:
+                cred_obj = None
             EOSource.objects.create(
                 state=EOSourceStateChoices.AvailableRemotely,
                 group=spider.product_name,
                 file=None,
                 filename=filename,  # unique acts as id
                 domain=domain,
-                datetime_reference=product_elements.datetime,
+                datetime_reference=None,
                 filesize_reported=item.get('size'),
                 datetime_seen=item.get('datetime_seen', datetime.utcnow().replace(tzinfo=utc)),
                 url=item.get('url'),

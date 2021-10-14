@@ -37,6 +37,8 @@ class EOSourceGroupChoices(models.TextChoices):
     MSG_3km_GLOB = 'MSG-3km_GLOB', 'LSA-SAF Global ET product 3Km'
 
 
+    # VIIRS-1day-xxx
+    VIIRS_1day = 'VIIRS-1day', 'VIIRS-1day'
     # ndvi_300m_v1 = "ndvi-300m-v1", "ndvi 300m v1"
     # ndvi_300m_v2 = "ndvi-300m-v2", "ndvi 300m v2"
     # ndvi_1km_v3 = "ndvi-1km-v3", "ndvi 1km v3"
