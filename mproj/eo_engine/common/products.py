@@ -193,7 +193,7 @@ def generate_products_from_source(filename: str) -> List[product_output]:
     # from here onwards we use the new logic:
     # 'if product.count' -> product is a list, and the subroutine checks in the list contains the parameter in it
 
-    if product.count(EOProductGroupChoices.agro_wb_300m_v2_afr):
+    if product and product.count(EOProductGroupChoices.agro_wb_300m_v2_afr):
         output_filenane_template = '{YYYYMMDD}_SE2_AFR_0300m_0030_WBMA.nc'
         YYYYMMDD = filename.split('_')[3][:8]
         return [
@@ -207,7 +207,7 @@ def generate_products_from_source(filename: str) -> List[product_output]:
 
         ]
 
-    if product.count(EOProductGroupChoices.MSG_3km_AFR):
+    if product and product.count(EOProductGroupChoices.MSG_3km_AFR):
         output_filename_template = 'LSASAF_MSG_DMET_Africa_{YYYYMMDD}.nc'
         return [
             product_output(
@@ -221,7 +221,7 @@ def generate_products_from_source(filename: str) -> List[product_output]:
             )
         ]
 
-    if product.count(EOProductGroupChoices.VIIRS_1DAY_AFR):
+    if product and product.count(EOProductGroupChoices.VIIRS_1DAY_AFR):
         pat = re.compile(r'RIVER-FLDglobal-composite1_(?P<YYYYMMDD>[0-9]{1,8})_000000.part(?P<tile>[0-9]{1,3}).tif')
         match = pat.match(filename)
         match_groups = match.groupdict()

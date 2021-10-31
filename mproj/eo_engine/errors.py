@@ -12,3 +12,11 @@ class AfriCultuReSFileInUse(AfriCultuReSError):
 
 class AfriCultuReSFileInvalidDataType(AfriCultuReSError):
     """It could not identified nor as Product or Source"""
+
+
+class AfriCultuReSMisconfiguration(AfriCultuReSError):
+    """Misconfiguration"""
+
+
+class AfriCultuReSRetriableError(AfriCultuReSError):
+    """Yep, retry the task"""

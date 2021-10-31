@@ -1,4 +1,4 @@
-from eo_scraper.spiders.abstract_spiders import FtpSpider, AnonFtpRequest
+from eo_scraper.spiders.abstract_spiders import FtpSpider
 from eo_engine.models import EOSourceGroupChoices
 
 

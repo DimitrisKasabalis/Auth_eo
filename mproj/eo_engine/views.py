@@ -1,26 +1,39 @@
 import logging
-from typing import Literal, Callable
+from typing import Literal, Callable, Optional, Dict, Union
 
 from celery.result import AsyncResult
 from celery.utils.serialization import strtobool
 from django.contrib import messages
+from django.db import IntegrityError
 from django.http import QueryDict
 from django.shortcuts import render, redirect
-# Create your views here.
 from django.urls import reverse
 from more_itertools import collapse
 
 from eo_engine.common.tasks import get_task_ref_from_name
 from eo_engine.models import EOSource, EOProduct
+from eo_engine.models.factories import create_wapor_object
 
 logger = logging.getLogger('eo_engine.frontend_ops')
+url_template = '{base_url}?{querystring}'
 
 
-def hello(request):
+def create_query_dict(**kwargs) -> QueryDict:
+    query_dict = QueryDict('', mutable=True)
+    for k, v in kwargs.items():
+        query_dict.__setitem__(k, v)
+    return query_dict
+
+
+def querystring_factory(**kwargs) -> str:
+    return create_query_dict(**kwargs).urlencode()
+
+
+def homepage(request):
+    submit_task_url = reverse("eo_engine:submit-task")
     from eo_engine.common.misc import list_spiders
-    from eo_engine.tasks import task_init_spider, task_sftp_parse_remote_dir
-
-    url_template = '{base_url}?{querystring}'
+    from eo_engine.tasks import (task_init_spider,
+                                 task_sftp_parse_remote_dir)
 
     task_init_spider_name = task_init_spider.name
 
@@ -40,7 +53,7 @@ def hello(request):
             spider_name=spider
         )
         url = url_template.format(
-            base_url=reverse("eo_engine:submit-task"),
+            base_url=submit_task_url,
             querystring=query_dictionary.urlencode()
         )
         scrappers[spider] = url
@@ -58,22 +71,35 @@ def hello(request):
     )
 
     context.update(scrappers=scrappers)
-    return render(request,
-                  "home.html", context=context
-                  )
+    return render(request, "homepage.html", context=context)
 
 
 def list_eosources(request, product_group=None):
+    submit_task_url = reverse("eo_engine:submit-task")
+    this_page = reverse("eo_engine:list-eosources", kwargs={'product_group': product_group})
     from .models import EOSource
     from .models import GeopTask
+    from .tasks import task_download_file
+    task_name = task_download_file.name
     # default order [product, date]
     qs = EOSource.objects.all().prefetch_related('task')
     if product_group:
         qs = qs.filter(group=product_group)
 
-    context = {'eo_sources': qs,
-               'valid_status_to_cancel': [GeopTask.TaskTypeChoices.STARTED.value,
-                                          GeopTask.TaskTypeChoices.SUBMITTED.value]
+    def build_eo_structure(qs):
+        if not qs.exists():
+            return []
+
+        eo_source: EOSource
+        for eo_source in qs:
+            querystring = querystring_factory(task_name=task_name, eo_source_pk=eo_source.pk, next_page=this_page)
+            url_string = f'{url_template.format(base_url=submit_task_url, querystring=querystring)}'
+            yield eo_source, url_string
+
+    context = {'eo_sources': build_eo_structure(qs),
+               'valid_status_to_cancel':
+                   [GeopTask.TaskTypeChoices.STARTED.value,
+                    GeopTask.TaskTypeChoices.SUBMITTED.value]
                }
 
     return render(request, 'list_eosources.html', context=context)
@@ -176,22 +202,32 @@ def list_crawelers(request):
 
 
 def submit_task(request):
-    query_dictionary = QueryDict('', mutable=True)
-    query_dictionary.update(**request.GET)
-    next_page = query_dictionary.pop('next_page', reverse('eo_engine:main-page'))
-    task_name = query_dictionary.pop('task_name').pop(0)
+    # ../submit?task_name=task_name&next_page=/smething&task_kw
+    task_name: Optional[str] = None
+    task_kwargs: Dict[str, Union[str, int, float]] = {}
+    next_page: Optional[str] = None
 
-    task_kwargs = {}
-    for k, v in query_dictionary.items():
-        param = list(collapse(v))
-        task_kwargs[k] = param[0] if len(param) == 1 else tuple(param)
+    if request.method == 'GET':
+        query_dictionary = QueryDict('', mutable=True)
+        query_dictionary.update(**request.GET)
+        task_name = query_dictionary.pop('task_name')[0]  # required
+        next_page = query_dictionary.pop('next_page', None)[0][0] or reverse('eo_engine:main-page') # default to main-page
+
+        for k, v in query_dictionary.items():
+            param = list(collapse(v))
+            task_kwargs[k] = param[0] if len(param) == 1 else tuple(param)
+
+    if request.method == 'POST':
+        from .forms import RunTaskForm
+        # TODO: finish submit task through form
+        task_data = RunTaskForm(request.POST)
+        # task_name = request.
 
     task = get_task_ref_from_name(task_name).s(**task_kwargs)
     job = task.apply_async()
     messages.add_message(
         request=request, level=messages.SUCCESS,
         message=f'Task {task.name} with task id: {job} successfully submitted')
-
     return redirect(next_page)
 
 
@@ -280,3 +316,49 @@ def utilities_view_post_credentials(request):
             messages.error(request, 'error')
         finally:
             return redirect(reverse('eo_engine:credentials'))
+
+
+def create_wapor_entry(request, product: str):
+    from eo_engine.common.time import monthly_dekad_to_yearly_dekad
+    from .forms import WaporNdviForm
+    product = product.lower()
+    context = {
+        'product': product
+    }
+    if product == 'ndvi':
+        formKlass = WaporNdviForm
+
+    else:
+        raise
+    if request.method == 'GET':
+        # dekads = get('https://io.apps.fao.org/gismgr/api/v1/catalog/workspaces/WAPOR_2/dimensions/DEKAD/members',
+        #              headers={'Content-Type': 'application/json'})
+        context.update(form=formKlass())
+        return render(request, 'utilities/create-wapor.html', context=context)
+    if request.method == 'POST':
+        def form_to_wapor_name(form) -> str:
+            data = form.data
+            prod_name = form.prod_name
+            if isinstance(form, WaporNdviForm):
+                dimension = form.dimension
+                level = data['level'].upper()
+                time_element = f'{data["year"][2:]}{monthly_dekad_to_yearly_dekad(data["dekad"], data["month"])}'
+                area = None if data['area'].lower() == 'africa' else data['area'].upper()
+            else:
+                raise
+            if area:
+                return f'{level}_{prod_name}_{dimension}_{time_element}_{area}.tif'
+            return f'{level}_{prod_name}_{dimension}_{time_element}.tif'
+
+        form = formKlass(request.POST)
+        if form.is_valid():
+            filename = form_to_wapor_name(form)
+        else:
+            context.update(form=form)
+            return render(request, 'utilities/create-wapor.html', context=context)
+        try:
+            obj = create_wapor_object(filename)
+            messages.success(request, obj)
+        except IntegrityError as exp:
+            messages.error(request, f'Could not create item: {exp}')
+        return redirect(reverse('eo_engine:create-wapor', kwargs={'product': product}))

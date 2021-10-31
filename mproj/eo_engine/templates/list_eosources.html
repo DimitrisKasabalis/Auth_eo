@@ -22,7 +22,7 @@
             <th>Download</th>
             <th>Delete</th>
         </tr>
-        {% for eo_source in eo_sources %}
+        {% for eo_source, url_string in eo_sources %}
             <tr>
                 <td>{{ eo_source.filename }}</td>
                 <td>{{ eo_source.datetime_reference | date:"D d M Y" }}</td>
@@ -38,7 +38,7 @@
                 <td>
 
                 </td>
-                <td><a href={% url "eo_engine:trigger-dl-eosource" eo_source_pk=eo_source.id %}>Fetch from remote
+                <td><a href={{ url_string }}>Fetch from remote
                     server</a>
                 </td>
                 {% if eo_source.file %}

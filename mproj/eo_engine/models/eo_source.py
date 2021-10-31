@@ -10,6 +10,12 @@ from django.dispatch import receiver
 
 def _file_storage_path(instance: 'EOSource', filename: str):
     o = urlsplit(instance.url)
+    if o.scheme.lower() == 'wapor':
+        from eo_engine.common.contrib.waporv2 import WAPORRemoteVariable
+        var = WAPORRemoteVariable.from_filename(filename)
+        product_id = var.product_id
+        # wapor/<product_id>/<filename>
+        return f"{o.scheme}/{product_id}/{filename}"
     local_path = o.path[1:] if o.path.startswith(r'/') else o.path
     return f"{instance.domain}/{local_path}"
 
@@ -18,9 +24,10 @@ class EOSourceStateChoices(models.TextChoices):
     AvailableRemotely = "availableRemotely", 'Available on the Remote Server'
     ScheduledForDownload = "ScheduledForDownload", "Scheduled For Download"
     AvailableLocally = "availableLocally", 'File is Available Locally'
-    BeingDownloaded = 'BeingDownloaded', 'File is Being Downloaded'
+    BeingDownloaded = 'BeingDownloaded', 'Downloading File...'
     FailedToDownload = 'FailedToDownload', 'Failed to Download'
     Ignore = "Ignore", 'Action on this file has been canceled (Ignored/Revoked Action)'
+    Defered = 'Defer', 'Download has been deferred for later'
 
 
 class EOSourceGroupChoices(models.TextChoices):
@@ -33,9 +40,45 @@ class EOSourceGroupChoices(models.TextChoices):
     # https://land.copernicus.eu/global/sites/cgls.vito.be/files/products/CGLOPS2_PUM_WB100m_V1_I1.10.pdf
     c_gls_WB100_v1_glob = 'c_gls_wb100-v1-glob', "Copernicus Global Land Service Water Bodies Collection 100m Version 1"
     WB_300m_v2_GLOB = 'WB_300m_v2_GLOB', "Copernicus Global Land Service Water Bodies Collection 300m Version 2"
+
     # LSASAF
     MSG_3km_GLOB = 'MSG-3km_GLOB', 'LSA-SAF Global ET product 3Km'
 
+    # WAPOR
+    ## AFRICA
+    WAPOR_L1_AETI_D_AFRICA = 'WAPOR_L1_AETI_D_AFRICA', 'WAPOR: L1 AETI D AFRICA'
+    WAPOR_L1_QUAL_LST_D_AFRICA = 'WAPOR_L1_QUAL_LST_D_AFRICA', 'WAPOR: L1_QUAL_LST_D_AFRICA'
+    WAPOR_L1_QUAL_NDVI_D_AFRICA = 'WAPOR_L1_QUAL_NDVI_D_AFRICA', 'WAPOR: L1_QUAL_NDVI_D_AFRICA'
+
+    ## TUN
+    WAPOR_L2_AETI_D_TUN = 'WAPOR_L2_AETI_D_TUN', 'WAPOR: L2_AETI_D_TUN'
+    WAPOR_L2_QUAL_LST_D_TUN = 'WAPOR_L2_QUAL_LST_D_TUN', 'WAPOR: L2_QUAL_LST_D_TUN'
+    WAPOR_L2_QUAL_NDVI_D_TUN = 'WAPOR_L2_QUAL_NDVI_D_TUN', 'WAPOR: L2_QUAL_NDVI_D_TUN'
+
+    ## KEN
+    WAPOR_L2_AETI_D_KEN = 'WAPOR_L2_AETI_D_KEN', 'WAPOR: L2_AETI_D_KEN'
+    WAPOR_L2_QUAL_LST_D_KEN = 'WAPOR_L2_QUAL_LST_D_KEN', 'WAPOR: L2_QUAL_LST_D_KEN'
+    WAPOR_L2_QUAL_NDVI_D_KEN = 'WAPOR_L2_QUAL_NDVI_D_KEN', 'WAPOR: L2_QUAL_NDVI_D_KEN'
+
+    ## MOZ
+    WAPOR_L2_AETI_D_MOZ = 'WAPOR_L2_AETI_D_MOZ', 'WAPOR: L2_AETI_D_MOZ'
+    WAPOR_L2_QUAL_LST_D_MOZ = 'WAPOR_L2_QUAL_LST_D_MOZ', 'WAPOR: L2_QUAL_LST_D_MOZ'
+    WAPOR_L2_QUAL_NDVI_D_MOZ = 'WAPOR_L2_QUAL_NDVI_D_MOZ', 'WAPOR: L2_QUAL_NDVI_D_MOZ'
+
+    ## RWA
+    WAPOR_L2_AETI_D_RWA = 'WAPOR_L2_AETI_D_RWA', 'WAPOR: L2_AETI_D_DRWA'
+    WAPOR_L2_QUAL_LST_D_RWA = 'WAPOR_L2_QUAL_LST_D_RWA', 'WAPOR: L2_QUAL_LST_D_RWA'
+    WAPOR_L2_QUAL_NDVI_D_RWA = 'WAPOR_L2_QUAL_NDVI_D_RWA', 'WAPOR: L2_QUAL_NDVI_D_RWA'
+
+    ## ETH
+    WAPOR_L2_AETI_D_ETH = 'WAPOR_L2_AETI_D_ETH', 'WAPOR: WAPOR_L2_AETI_D_ETH'
+    WAPOR_L2_QUAL_LST_D_ETH = 'WAPOR_L2_QUAL_LST_D_ETH', 'WAPOR: L2_QUAL_LST_D_ETH'
+    WAPOR_L2_QUAL_NDVI_D_ETH = 'WAPOR_L2_QUAL_NDVI_D_ETH', 'WAPOR: L2_QUAL_NDVI_D_ETH'
+
+    ## GHA
+    WAPOR_L2_AETI_D_GAF = 'WAPOR_L2_AETI_D_GAF', 'WAPOR: L2_AETI_GAF'
+    WAPOR_L2_QUAL_LST_D_GAF = 'WAPOR_L2_QUAL_LST_D_GAF', 'WAPOR: L2_QUAL_LST_D_GAF'
+    WAPOR_L2_QUAL_NDVI_D_GAF = 'WAPOR_L2_QUAL_NDVI_D_GAF', 'WAPOR: L2_QUAL_NDVI_D_GAF'
 
     # VIIRS-1day-xxx
     VIIRS_1day = 'VIIRS-1day', 'VIIRS-1day'

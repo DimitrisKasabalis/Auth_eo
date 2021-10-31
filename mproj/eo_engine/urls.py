@@ -5,7 +5,7 @@ from . import views
 app_name = 'eo_engine'
 
 urlpatterns = [
-    path('', views.hello, name='main-page'),
+    path('', views.homepage, name='main-page'),
     path('credentials', views.utilities_view_post_credentials, name='credentials'),
     path('spiders/', views.list_crawelers, name='list-spiders'),
     path('eosources/<str:product_group>', views.list_eosources, name='list-eosources'),
@@ -18,6 +18,7 @@ urlpatterns = [
     path('tasks/revoke/<str:task_id>', views.view_revoke_task, name='revoke-task'),
     path('tasks/submit', views.submit_task, name='submit-task'),
     path('utilities/refresh-rows', views.utilities_save_rows, name='refresh-rows'),
+    path('utilties/create-wapor/<str:product>', views.create_wapor_entry, name='create-wapor'),
 
     # json responses
     # 'c/task/done/<task_pattern:task_id>/'

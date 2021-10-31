@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block Title %}Main Page{% endblock %}
+{% block header %}AfriCultuRes{% endblock %}
+{% block body %}
+    <form action="{% url "eo_engine:create-wapor" product=product %}" method="post">
+        {{ form }}
+        {% csrf_token %}
+    <input type="submit" value="OK">
+    </form>
+    <a href="{% url "eo_engine:main-page" %}">Home</a>
+{% endblock %}

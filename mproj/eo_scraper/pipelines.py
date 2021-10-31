@@ -5,13 +5,19 @@
 
 # useful for handling different item types with a single interface
 from datetime import datetime
-from typing import Union
-from fnmatch import fnmatch
+
 from pytz import utc
 from scrapy.exceptions import DropItem
 
 from eo_engine.models import EOSource, Credentials, EOSourceStateChoices
 from eo_scraper.items import RemoteSourceItem
+
+
+def try_parse_reference_date(token):
+    """ Through heuristics, try to extract a datetime object from the token string.
+    Usually the filename. If uncessful, return none"""
+
+    return None
 
 
 class DefaultPipeline:

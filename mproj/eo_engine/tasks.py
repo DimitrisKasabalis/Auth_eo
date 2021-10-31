@@ -2,7 +2,7 @@ import subprocess
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import List, Union, Optional
+from typing import List, Union, Optional, Literal
 
 import more_itertools
 from celery import group
@@ -14,6 +14,7 @@ from more_itertools import collapse
 from pytz import utc
 
 from eo_engine.common.tasks import get_task_ref_from_name
+from eo_engine.errors import AfriCultuReSRetriableError
 from eo_engine.models import EOProduct, EOProductStateChoices, FunctionalRules, Credentials
 from eo_engine.models import EOSource, EOSourceStateChoices
 
@@ -56,6 +57,39 @@ def task_init_spider(spider_name):
     process.start()
 
     return "Spider {} finished crawling".format(spider_name)
+
+
+# utils
+@shared_task(bind=True)
+def create_wapor_entry(self, level_id: Literal['L1', 'L2'], product_id: Literal['AETI', 'QUAL_LST', 'QUAL_NDVI'],
+                       dimension_id: Literal['D'], dimension_member: str, area_id: str = None):
+    # don't try to be smart. Generate the filename per instructions
+    # and let the factory do the job
+    # L1_AETI_D_1904.tif
+    # L1_QUAL_LST_D_1904.tif
+    # L1_QUAL_NDVI_D_1904.tif
+
+    # L2_AETI_D_1904_TUN.tif
+    # L2_QUAL_LST_D_1904_TUN.tif
+    # L2_QUAL_NDVI_D_1904_TUN.tif
+    from .models.factories import create_wapor_object
+
+    if area_id is None and level_id == "L2":
+        raise AttributeError('L2 can not be choosen without and area')
+    if area_id:
+        wapor_filename = f'{level_id.upper()}_{product_id.upper()}_{dimension_id.upper()}_{dimension_member.upper()}_{area_id.upper()}.tif'
+    else:
+        wapor_filename = f'{level_id.upper()}_{product_id.upper()}_{dimension_id.upper()}_{dimension_member.upper()}.tif'
+
+    logger.info(f'fun: {self.name}, generated filename: {wapor_filename}')
+    create_wapor_object(wapor_filename)
+    return
+
+
+# WAPFOR
+@shared_task
+def task_wapfor_scan_product():
+    pass
 
 
 # SFTP
@@ -124,7 +158,7 @@ def task_schedule_create_eoproduct():
     return
 
 
-@shared_task(bind=True)
+@shared_task(bind=True, autoretry_for=(AfriCultuReSRetriableError,), max_retries=100)
 def task_download_file(self, eo_source_pk: int):
     """
     Download a remote asset identified by it's ID number.
@@ -134,7 +168,8 @@ def task_download_file(self, eo_source_pk: int):
     from urllib.parse import urlparse
     from eo_engine.common.download import (download_http_eosource,
                                            download_ftp_eosource,
-                                           download_sftp_eosource)
+                                           download_sftp_eosource,
+                                           download_wapor_eosource)
     eo_source = EOSource.objects.get(pk=eo_source_pk)
     eo_source.state = EOSourceStateChoices.BeingDownloaded
     eo_source.save()
@@ -142,6 +177,7 @@ def task_download_file(self, eo_source_pk: int):
     scheme = url_parse.scheme
 
     logger.info(f'downloading file {eo_source.filename}')
+    logger.info(f'using scheme: {scheme}')
 
     try:
         if scheme.startswith('ftp'):
@@ -152,9 +188,17 @@ def task_download_file(self, eo_source_pk: int):
 
         elif scheme.startswith('sftp'):
             return download_sftp_eosource(eo_source_pk)
+        elif scheme.startswith('wapor'):
+            return download_wapor_eosource(eo_source_pk)
         else:
             raise Exception(f'There was no defined method for scheme: {scheme}')
+    except AfriCultuReSRetriableError as exc:
+        eo_source.refresh_from_db()
+        eo_source.state = EOSourceStateChoices.Defered
+        eo_source.save()
+        raise self.retry(countdown=10)
     except BaseException as e:
+        eo_source.refresh_from_db()
         eo_source.state = EOSourceStateChoices.FailedToDownload
         eo_source.save()
         raise Exception('Could not download.') from e
@@ -450,6 +494,45 @@ def task_s02p02_compute_vci(eo_product_pk):
     return
 
 
+@shared_task
+def task_s02p02_lai_clip_lai300m_v1(eo_product_pk: int):
+    import snappy
+    from snappy import ProductIO, GPF, HashMap, WKTReader
+
+    eo_product = EOProduct.objects.get(pk=eo_product_pk)
+    eo_source: EOSource = eo_product.eo_sources_inputs.first()
+
+    HashMap = snappy.jpy.get_type('java.util.HashMap')
+    GPF.getDefaultInstance().getOperatorSpiRegistry().loadOperatorSpis()
+    wkt = "POLYGON((-19.5848214278419448 37.738, 54.2276785724937156 37.738, 54.2276785724937156 -35.4776785714023148, -19.5848214278419448 -35.4776785714023148, -19.5848214278419448 37.738, -19.5848214278419448 37.738))"  # Africa by DK
+
+    def clip(data, out_file, geom):
+        # Read the file
+        params = HashMap()
+        # params.put('sourceBands', 'LAI') #'QUAL' all layers are kept!
+        params.put('region', '0, 0, 0, 0')
+        params.put('geoRegion', geom)
+        params.put('subSamplingX', 1)
+        params.put('subSamplingY', 1)
+        params.put('fullSwath', False)
+        params.put('copyMetadata', True)
+        clipped = GPF.createProduct('Subset', params, data)
+
+        ProductIO.writeProduct(clipped, out_file, 'NetCDF4-CF')  # 'GeoTIFF'
+        return Path(str(clipped.getFileLocation()))
+
+    with tempfile.NamedTemporaryFile(prefix='task_s02p02_lai_clip_lai300m_v1_') as temp_file:
+        data = ProductIO.readProduct(eo_source.file.path)
+        geom = WKTReader().read(wkt)
+        clipped: Path = clip(data=data, out_file=temp_file.name, geom=geom)
+
+        content = File(clipped.open('rb'))
+        eo_product.file.save(name=eo_product.filename, content=content, save=False)
+        eo_product.state = EOProductStateChoices.Ready
+        eo_product.datetime_creation = now
+        eo_product.save()
+
+
 #####
 # s06p01 WB
 @shared_task
@@ -549,6 +632,38 @@ def task_s06p01_clip_to_africa(eo_product_pk: int):
         eo_product.save()
 
     return 0
+
+
+####
+# S06P03
+
+@shared_task
+def task_s04p03_convert_to_tiff(eo_product_pk: int, tile: int):
+    from osgeo import gdal, gdalconst
+
+    eo_product = EOProduct.objects.get(pk=eo_product_pk)
+    eo_source: EOSource = eo_product.eo_sources_inputs.first()
+    with tempfile.NamedTemporaryFile('wb') as file_handle:
+        ds = gdal.Open(eo_source.file.path)
+
+        optionsNC2 = gdal.TranslateOptions(
+            format='netCDF',
+            # using gdalconst.GDT_Unknown was the only way to avoid
+            # conversion to float and keep file size reasonable
+            outputType=gdalconst.GDT_Unknown,
+            noData=int(1), options=['COMPRESS=LZW'],
+            outputSRS="EPSG:4326")  # 1 is the nodata value
+        gdal.Translate(srcDS=ds, destName=file_handle.name, options=optionsNC2)
+
+        cp = subprocess.run(['ncrename',
+                             '-v', 'Band1,Flood',
+                             file_handle.name])
+        cp = subprocess.run(['ncatted',
+                             '-a', 'short_name,Flood,o,c,Flood_MR',
+                             '-a', "long_name,Flood,o,c,Flood map at medium resolution",
+                             '-a', "tile_number,Flood,o,c," + str(tile),
+                             '-a', "_FillValue,Flood,o,i,1",
+                             file_handle.name])
 
 
 ######
