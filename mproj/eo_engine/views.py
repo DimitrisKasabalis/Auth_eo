@@ -211,7 +211,7 @@ def submit_task(request):
         query_dictionary = QueryDict('', mutable=True)
         query_dictionary.update(**request.GET)
         task_name = query_dictionary.pop('task_name')[0]  # required
-        next_page = query_dictionary.pop('next_page', None)[0][0] or reverse('eo_engine:main-page') # default to main-page
+        next_page = list(collapse(query_dictionary.pop('next_page', None)))[0] or reverse('eo_engine:main-page') # default to main-page
 
         for k, v in query_dictionary.items():
             param = list(collapse(v))
