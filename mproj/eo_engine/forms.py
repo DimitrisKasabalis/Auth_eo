@@ -4,7 +4,7 @@ from typing import ClassVar, Final
 from django import forms
 from django.forms import TextInput, JSONField, CharField
 
-from eo_engine.common.contrib.waporv2 import well_known_bbox
+from eo_engine.common.contrib.waporv2 import well_known_bboxes
 from .models import Credentials
 
 
@@ -58,8 +58,8 @@ class WaporNdviForm(forms.Form):
     dimension: Final[str] = 'D'  # dekad
     area = forms.ChoiceField(
         required=True,
-        choices=[(s, s) for s in well_known_bbox.keys()], widget=forms.RadioSelect(),
-        initial=list(well_known_bbox.keys())[0])
+        choices=[(s, s) for s in well_known_bboxes.keys()], widget=forms.RadioSelect(),
+        initial=list(well_known_bboxes.keys())[0])
 
     def clean(self):
         cleaned_data = super().clean()

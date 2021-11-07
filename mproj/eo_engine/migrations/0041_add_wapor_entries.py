@@ -6,12 +6,12 @@ from itertools import product
 
 def forwards_func(apps, schema_editor):
     from eo_engine.models.factories import create_wapor_object
-    from eo_engine.common.contrib.waporv2 import well_known_bbox
+    from eo_engine.common.contrib.waporv2 import well_known_bboxes
     products_ids = ['AETI', 'QUAL_LST', 'QUAL_NDVI']
     dimension_ids = ['D', ]
-    yearly_dekads = list(range(1, 31))
+    yearly_dekads = list(range(1, 37))
     years = list(range(2021, 2022))
-    areas = well_known_bbox.keys()
+    areas = well_known_bboxes.keys()
     for product_id, dimension_id, year, yearly_dekad, area in product(products_ids,
                                                                              dimension_ids, years,
                                                                              yearly_dekads, areas):

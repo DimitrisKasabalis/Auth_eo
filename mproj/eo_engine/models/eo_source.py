@@ -1,7 +1,6 @@
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from django.core.files import File
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models.signals import post_save
@@ -11,11 +10,12 @@ from django.dispatch import receiver
 def _file_storage_path(instance: 'EOSource', filename: str):
     o = urlsplit(instance.url)
     if o.scheme.lower() == 'wapor':
-        from eo_engine.common.contrib.waporv2 import WAPORRemoteVariable
-        var = WAPORRemoteVariable.from_filename(filename)
+        from eo_engine.models.factories import wapor_from_filename
+        var = wapor_from_filename(filename)
         product_id = var.product_id
         # wapor/<product_id>/<filename>
         return f"{o.scheme}/{product_id}/{filename}"
+
     local_path = o.path[1:] if o.path.startswith(r'/') else o.path
     return f"{instance.domain}/{local_path}"
 
@@ -76,9 +76,9 @@ class EOSourceGroupChoices(models.TextChoices):
     WAPOR_L2_QUAL_NDVI_D_ETH = 'WAPOR_L2_QUAL_NDVI_D_ETH', 'WAPOR: L2_QUAL_NDVI_D_ETH'
 
     ## GHA
-    WAPOR_L2_AETI_D_GAF = 'WAPOR_L2_AETI_D_GAF', 'WAPOR: L2_AETI_GAF'
-    WAPOR_L2_QUAL_LST_D_GAF = 'WAPOR_L2_QUAL_LST_D_GAF', 'WAPOR: L2_QUAL_LST_D_GAF'
-    WAPOR_L2_QUAL_NDVI_D_GAF = 'WAPOR_L2_QUAL_NDVI_D_GAF', 'WAPOR: L2_QUAL_NDVI_D_GAF'
+    WAPOR_L2_AETI_D_GHA = 'WAPOR_L2_AETI_D_GHA', 'WAPOR: L2_AETI_GHA'
+    WAPOR_L2_QUAL_LST_D_GHA = 'WAPOR_L2_QUAL_LST_D_GHA', 'WAPOR: L2_QUAL_LST_D_GHA'
+    WAPOR_L2_QUAL_NDVI_D_GHA = 'WAPOR_L2_QUAL_NDVI_GHA', 'WAPOR: L2_QUAL_NDVI_D_GHA'
 
     # VIIRS-1day-xxx
     VIIRS_1day = 'VIIRS-1day', 'VIIRS-1day'

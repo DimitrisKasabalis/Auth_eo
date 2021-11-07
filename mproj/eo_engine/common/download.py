@@ -1,4 +1,3 @@
-import tempfile
 from copy import copy
 from pathlib import Path
 from tempfile import TemporaryFile, NamedTemporaryFile
@@ -109,12 +108,13 @@ def download_sftp_eosource(pk_eosource: int) -> str:
 
 
 def download_wapor_eosource(pk_eosource: int) -> str:
-    from eo_engine.common.contrib import waporv2
+    from eo_engine.models.factories import wapor_from_filename
+    from eo_engine.common.contrib.waporv2 import WAPORv2Client, WAPORRemoteJob
     eo_source = EOSource.objects.get(pk=pk_eosource)
-    with waporv2.WAPORv2Client() as wp:
+    with WAPORv2Client() as wp:
         # case I
         if eo_source.url == 'wapor://':
-            remoteVariable = waporv2.WAPORRemoteVariable.from_filename(eo_source.filename)
+            remoteVariable = wapor_from_filename(eo_source.filename)
             remoteVariable.set_api_key(api_key=eo_source.credentials.api_key)
             remoteJob = remoteVariable.submit()
             eo_source.url = f'wapor://{remoteJob.job_id}'
@@ -123,7 +123,7 @@ def download_wapor_eosource(pk_eosource: int) -> str:
             raise AfriCultuReSRetriableError('Job Submitted. ')
         # case II
         uuid = eo_source.url.split(r'//')[1]
-        remoteJob = waporv2.WAPORRemoteJob.from_uuid(uuid)
+        remoteJob = WAPORRemoteJob.from_uuid(uuid)
 
         # too old uuid
         logger.info(f'remote job url: {remoteJob.job_url()}')

@@ -1,21 +1,17 @@
 import re
-from dataclasses import dataclass
 from datetime import datetime
 from functools import wraps
-from typing import Optional, NamedTuple, Literal, Dict, Type, TypeVar, Iterator, Union
+from typing import Optional, Dict, Type, TypeVar, Iterator, Union
 from uuid import UUID
 
 import requests
+from dateutil.relativedelta import relativedelta
 from requests import HTTPError
 
-from eo_engine.common.time import yearly_dekad_to_wapor_range
 from eo_engine.errors import AfriCultuReSMisconfiguration
+from .wapor2_wapor_data import cubes, WAPORVersion, Variable, BBox, default_wapor_version
 
 _D = TypeVar("_D")
-WAPORVersion = NamedTuple('WAPORVersion', [('version', int), ('label', str)])
-wapor_v1 = WAPORVersion(1, 'WAPOR')
-wapor_v2 = WAPORVersion(2, 'WAPOR_2')
-default_wapor_version = wapor_v2
 
 
 def requires_client(method):
@@ -41,88 +37,14 @@ def requires_login(method):
     return wrapper
 
 
-@dataclass
-class Variable(object):
-    id: str
-    description: str
-    measure: str
-    dimension: Literal['YEAR', 'MONTH', 'DAY', 'DEKAD']
-
-    @property
-    def level(self) -> int:
-        return int(self.id.split('_')[0][-1])
-
-    @property
-    def workspace(self) -> WAPORVersion:
-        if self.level == 'L3':
-            return wapor_v1
-        return wapor_v2
+_products = [Variable(cube=cube) for cube in cubes]
 
 
-_products = [
-    Variable('L1_GBWP_A', 'Gross Biomass Water Productivity', 'WPR', 'YEAR'),
-    Variable('L1_NBWP_A', 'Net Biomass Water Productivity', 'WPR', 'YEAR'),
-    Variable('L1_AETI_A', 'Actual EvapoTranspiration and Interception (Annual)', 'WATER_MM', 'YEAR'),
-    Variable('L1_AETI_M', 'Actual EvapoTranspiration and Interception (Monthly)', 'WATER_MM', 'MONTH'),
-    Variable('L1_AETI_D', 'Actual EvapoTranspiration and Interception (Dekadal)', 'WATER_MM', 'DEKAD'),
-    Variable('L1_T_A', 'Transpiration (Annual)', 'WATER_MM', 'YEAR'),
-    Variable('L1_E_A', 'Evaporation (Annual)', 'WATER_MM', 'YEAR'),
-    Variable('L1_I_A', 'Interception (Annual)', 'WATER_MM', 'YEAR'),
-    Variable('L1_T_D', 'Transpiration (Dekadal)', 'WATER_MM', 'DEKAD'),
-    Variable('L1_E_D', 'Evaporation (Dekadal)', 'WATER_MM', 'DEKAD'),
-    Variable('L1_I_D', 'Interception (Dekadal)', 'WATER_MM', 'DEKAD'),
-    Variable('L1_NPP_D', 'Net Primary Production', 'NPP', 'DEKAD'),
-    Variable('L1_TBP_A', 'Total Biomass Production (Annual)', 'LPR', 'YEAR'),
-    Variable('L1_LCC_A', 'Land Cover Classification', 'LCC', 'YEAR'),
-    Variable('L1_RET_A', 'Reference EvapoTranspiration (Annual)', 'WATER_MM', 'YEAR'),
-    Variable('L1_PCP_A', 'Precipitation (Annual)', 'WATER_MM', 'YEAR'),
-    Variable('L1_RET_M', 'Reference EvapoTranspiration (Monthly)', 'WATER_MM', 'MONTH'),
-    Variable('L1_PCP_M', 'Precipitation (Monthly)', 'WATER_MM', 'MONTH'),
-    Variable('L1_RET_D', 'Reference EvapoTranspiration (Dekadal)', 'WATER_MM', 'MONTH'),
-    Variable('L1_PCP_D', 'Precipitation (Dekadal)', 'WATER_MM', 'DEKAD'),
-    Variable('L1_RET_E', 'Reference EvapoTranspiration (Daily)', 'WATER_MM', 'DAY'),
-    Variable('L1_PCP_E', 'Precipitation (Daily)', 'WATER_MM', 'DAY'),
-    Variable('L1_QUAL_NDVI_D', 'Quality of Normalized Difference Vegetation Index (Dekadal)', 'N_DEKADS', 'DEKAD'),
-    Variable('L1_QUAL_LST_D', 'Quality Land Surface Temperature (Dekadal)', 'N_DAYS', 'DEKAD'),
-    # 'L2_GBWP_S': 'Gross Biomass Water Productivity (Seasonal)',
-    Variable('L2_AETI_A', 'Actual EvapoTranspiration and Interception (Annual)', 'WATER_MM', 'YEAR', ),
-    Variable('L2_AETI_M', 'Actual EvapoTranspiration and Interception (Monthly)', 'WATER_MM', 'MONTH'),
-    Variable('L2_AETI_D', 'Actual EvapoTranspiration and Interception (Dekadal)', 'WATER_MM', 'DEKAD'),
-    Variable('L2_T_A', 'Transpiration (Annual)', 'WATER_MM', 'YEAR'),
-    Variable('L2_E_A', 'Evaporation (Annual)', 'WATER_MM', 'YEAR'),
-    Variable('L2_I_A', 'Interception (Annual)', 'WATER_MM', 'YEAR'),
-    Variable('L2_T_D', 'Transpiration (Dekadal)', 'WATER_MM', 'DEKAD'),
-    Variable('L2_E_D', 'Evaporation (Dekadal)', 'WATER_MM', 'DEKAD'),
-    Variable('L2_I_D', 'Interception (Dekadal)', 'WATER_MM', 'DEKAD'),
-    Variable('L2_NPP_D', 'Net Primary Production', 'WATER_MM', 'DEKAD'),
-    # 'L2_TBP_S': 'Total Biomass Production (Seasonal)',
-    Variable('L2_LCC_A', 'Land Cover Classification', 'LCC', 'YEAR'),
-    # 'L2_PHE_S': 'Phenology (Seasonal)',
-    Variable('L2_QUAL_NDVI_D', 'Quality of Normalized Difference Vegetation Index (Dekadal)', 'N_DEKADS',
-             'DEKAD'),
-    Variable('L2_QUAL_LST_D', 'Quality Land Surface Temperature (Dekadal)', 'N_DAYS', 'DEKAD'),
-    Variable('L3_AETI_A', 'Actual EvapoTranspiration and Interception (Annual)', 'WATER_MM', 'YEAR'),
-    Variable('L3_AETI_M', 'Actual EvapoTranspiration and Interception (Monthly)', 'WATER_MM', 'MONTH'),
-    Variable('L3_AETI_D', 'Actual EvapoTranspiration and Interception (Dekadal)', 'WATER_MM', 'DEKAD'),
-    Variable('L3_T_A', 'Transpiration (Annual)', 'WATER_MM', 'YEAR'),
-    Variable('L3_E_A', 'Evaporation (Annual)', 'WATER_MM', 'YEAR'),
-    Variable('L3_I_A', 'Interception (Annual)', 'WATER_MM', 'YEAR'),
-    Variable('L3_T_D', 'Transpiration (Dekadal)', 'WATER_MM', 'DEKAD'),
-    Variable('L3_E_D', 'Evaporation (Dekadal)', 'WATER_MM', 'DEKAD'),
-    Variable('L3_I_D', 'Interception (Dekadal)', 'WATER_MM', 'DEKAD'),
-    Variable('L3_NPP_D', 'Net Primary Production', 'NPP', 'DEKAD'),
-    Variable('L3_QUAL_NDVI_D', 'Quality of Normalized Difference Vegetation Index (Dekadal)', 'N_DEKADS',
-             'DEKAD'),
-    Variable('L3_QUAL_LST_D', 'Quality Land Surface Temperature (Dekadal)', 'N_DAYS', 'DEKAD'),
-    Variable('L3_LCC_A', 'Land Cover Classification', 'LCC', 'YEAR')
-]
+def _build_index() -> Dict[str, Variable]:
+    return dict((r.cube.code.upper(), r) for r in _products)
 
 
-def _build_index(idx: int) -> Dict[str, Variable]:
-    return dict((r.id.upper(), r) for r in _products)
-
-
-_by_name = _build_index(0)
+_by_name = _build_index()
 
 variable_by_name = _by_name
 
@@ -160,70 +82,20 @@ class _VariableLookup:
 
 variables = _VariableLookup()
 
-
-@dataclass
-class BBox:
-    min_x: float
-    min_y: float
-
-    max_x: float
-    max_y: float
-
-    projection: int = 4326
-
-    def as_shape(self):
-        return {
-            "crs": "EPSG:%d" % self.projection,
-            "type": "Polygon",
-            "coordinates": [
-                [
-                    [
-                        self.min_x,
-                        self.max_y
-                    ],
-                    [
-                        self.max_x,
-                        self.max_y
-                    ],
-                    [
-                        self.max_x,
-                        self.min_y
-                    ],
-                    [
-                        self.min_x,
-                        self.min_y
-                    ],
-                    [
-                        self.min_x,
-                        self.max_y
-                    ]
-                ]
-            ]
-        }
-
-
-well_known_bbox = {
+well_known_bboxes = {
     'africa': BBox(min_x=-30, min_y=-40, max_x=60, max_y=40, projection=4326),
     'ken': BBox(min_x=33.89, min_y=-4.625, max_x=41.917, max_y=4.625, projection=4326),
-    'tun': BBox(min_x=7.497, min_y=30.219, max_x=11.583, max_y=37.345,projection=4326),
-    'moz': BBox(min_x=30.208, min_y=-26.865, max_x=40.849, max_y=-10.467,projection=4326),
-    'rwa': BBox(min_x=28.845, max_y=-1.052, max_x=30.894, min_y=-2.827,projection=4326),
-    'eth': BBox(max_x=48.0, min_y=3.37, min_x=32.98, max_y=14.93,projection=4326),
-    'gaf': BBox(min_x=-3.25, max_y=12.16, max_x=2.205, min_y=4.7,projection=4326)
+    'tun': BBox(min_x=7.497, min_y=30.219, max_x=11.583, max_y=37.345, projection=4326),
+    'moz': BBox(min_x=30.208, min_y=-26.865, max_x=40.849, max_y=-10.467, projection=4326),
+    'rwa': BBox(min_x=28.845, max_y=-1.052, max_x=30.894, min_y=-2.827, projection=4326),
+    'eth': BBox(max_x=48.0, min_y=3.37, min_x=32.98, max_y=14.93, projection=4326),
+    'gha': BBox(min_x=-3.25, max_y=12.16, max_x=2.205, min_y=4.7, projection=4326)
 
 }
-default_bbox = well_known_bbox['africa']
+default_bbox = well_known_bboxes['africa']
 
 
 class WAPORRemoteJob(object):
-
-    @classmethod
-    def from_eosource_url(cls, url):
-        match = re.match(r'wapor://(?P<uuid>[A-Za-z0-9-]+)$', url)
-        if match:
-            uuid = match.groupdict()['uuid']
-            return cls.from_uuid(uuid)
-        raise AfriCultuReSMisconfiguration('EOSource url was not recognised! :O')
 
     @classmethod
     def from_uuid(cls, uuid, workspace_version: WAPORVersion = default_wapor_version):
@@ -358,45 +230,21 @@ class WAPORv2Client(object):
 
 
 class WAPORRemoteVariable(object):
-
-    @classmethod
-    def from_filename(cls, string, uuid: Optional[str] = None):
-        m = re.compile(r'(?P<var_name>L[123]_[A-Z]+(_([A-Z]+))?_[DAME])_(?P<time_element>[0-9]+)(_(?P<area>[A-Z]+))?')
-        match = m.match(string)
-        if match is None:
-            raise Exception(f'invalid name: {string}')
-        groupdict = match.groupdict()
-        var = variables.get(match['var_name'])
-        area = groupdict.get('area')
-        time_element = groupdict.get('time_element')
-        if area:
-            area = area.lower()
-            bbox = well_known_bbox[area]
-        else:
-            area = 'africa'
-            bbox = default_bbox
-        c = cls(var, bbox=bbox)
-        c._area = area
-        if uuid:
-            c.ticket = uuid
-        if time_element:
-            c.time_element = time_element
-            c._set_start_end_date()
-        return c
-
     _job_id: Optional[UUID] = None
     _default_client: Optional[WAPORv2Client]
     _latest_update: WAPORRemoteJob
     _time_element: str
-    _start_date: Optional[datetime] = None
-    _end_date: Optional[datetime] = None
+    _start_date: datetime.date
+    _end_date: datetime.date
     _bbox: BBox
     _area: str
+
+    _measure: None
 
     def __init__(self, product: Union[Variable, str], bbox: BBox = default_bbox, api_key: Optional[str] = None):
         if isinstance(product, str):
             product = variables.get(product)
-        self._product = product
+        self._product: Variable = product
         self._bbox = bbox
         if api_key:
             self._default_client = WAPORv2Client(api_key=api_key)
@@ -405,7 +253,7 @@ class WAPORRemoteVariable(object):
 
     @property
     def dimension(self) -> str:
-        return self._product.dimension
+        return self._product.cube.dimensions[0].code
 
     @property
     def area(self) -> str:
@@ -413,7 +261,7 @@ class WAPORRemoteVariable(object):
 
     @property
     def product_id(self) -> str:
-        return self._product.id
+        return self._product.cube.code
 
     @property
     def bbox(self):
@@ -434,19 +282,21 @@ class WAPORRemoteVariable(object):
     def time_element(self, value):
         self._time_element = value
 
-    def _set_start_end_date(self):
+    @property
+    def start_date(self):
+        return self._start_date
 
-        frequency = self._product.dimension
-        if self.time_element is None:
-            return
+    @start_date.setter
+    def start_date(self, value: datetime.date):
+        self._start_date = value
 
-        # not sure how this works
-        if frequency == 'DEKAD':
-            start_date, end_date = yearly_dekad_to_wapor_range(self.time_element)
-            self._start_date = start_date
-            self._end_date = end_date
-        else:
-            raise NotImplemented('not implemented start/end for this frequency')
+    @property
+    def end_date(self):
+        return self._end_date
+
+    @end_date.setter
+    def end_date(self, value: datetime.date):
+        self._end_date = value
 
     @property
     def ticket(self):
@@ -475,41 +325,40 @@ class WAPORRemoteVariable(object):
 
     def payload_factory(self) -> Dict:
         self._require_start_end_dates()
+        start_date = self.start_date
+        end_date = self.end_date + relativedelta(days=1)
         return {
             "type": "CropRaster",
             "params": {
                 "properties": {
-                    "outputFileName": "%s_clipped.tif" % self._product.id,
+                    "outputFileName": "%s_clipped.tif" % self._product.cube.code,
                     "cutline": True,
                     "tiled": True,
                     "compressed": True,
                     "overviews": True
                 },
                 "cube": {
-                    "code": self._product.id,
+                    "code": self._product.cube.code,
                     "workspaceCode": self._product.workspace.label,
                     "language": "en"
                 },
                 "dimensions": [
                     {
-                        "code": self._product.dimension,
+                        "code": self._product.cube.dimensions[0].code,
                         "values": [
-                            "[{start_date},{end_date})".format(
-                                start_date=self._start_date.date().isoformat(),
-                                end_date=self._end_date.date().isoformat()
-                            )
+                            f"[{start_date},{end_date})"
                         ]
                     }
                 ],
                 "measures": [
-                    self._product.measure
+                    self._product.cube.measure[0].code
                 ],
                 "shape": self.bbox.as_shape()
             }
         }
 
     def __str__(self):
-        return f'{self.__class__.__name__} - {self._product.id}'
+        return f'<{self.__class__.__name__}/{self._product.cube}>'
 
     def _require_start_end_dates(self):
         if self._start_date is None and self._end_date is None:
