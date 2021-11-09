@@ -17,7 +17,7 @@ from eo_engine.models import EOSourceGroupChoices
 # https://github.com/laserson/ftptree/blob/master/ftptree_crawler/spiders.py
 class FtpGlobalLandWB100m(FtpSpider):
     name = 'ftp-spider-wb100'
-    product_name = EOSourceGroupChoices.c_gls_WB100_v1_glob
+    product_name = EOSourceGroupChoices.C_GLS_WB_100M_V1_GLOB
     allowed_domains = ['ftp.globalland.cls.fr', ]
 
     ftp_root_url: str = 'ftp://ftp.globalland.cls.fr/home/glbland_ftp/Core/SIRS/dataset-sirs-wb-nrt-100m'
@@ -25,7 +25,7 @@ class FtpGlobalLandWB100m(FtpSpider):
 
 class FtpGlobalLandWB300m(FtpSpider):
     name = 'ftp-spider-wb300'
-    product_name = EOSourceGroupChoices.WB_300m_v2_GLOB
+    product_name = EOSourceGroupChoices.WB_300M_V2_GLOB
     allowed_domains = ['ftp.globalland.cls.fr', ]
 
     ftp_root_url: str = 'ftp://ftp.globalland.cls.fr/home/glbland_ftp/Core/SIRS/dataset-sirs-wb-nrt-300m'
@@ -33,7 +33,7 @@ class FtpGlobalLandWB300m(FtpSpider):
 
 class FtpFloodLightViiR(FtpSpider):
     name = 'ftp-floodlight-viir'
-    product_name = EOSourceGroupChoices.VIIRS_1day
+    product_name = EOSourceGroupChoices.VIIRS_1_DAY
     allowed_domain = ['floodlight.ssec.wisc.edu']
 
     ftp_root_url: str = 'ftp://floodlight.ssec.wisc.edu/composite'

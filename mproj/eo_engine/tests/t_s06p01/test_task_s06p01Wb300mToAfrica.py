@@ -28,7 +28,7 @@ class TaskS06P01Wb300mToAfricaTest(TransactionTestCase):
         TEST_MEDIA_ROOT.mkdir(exist_ok=True)
         cls.eo_source = EOSource.objects.create(
             state=EOSourceStateChoices.AvailableLocally,
-            group=EOSourceGroupChoices.WB_300m_v2_GLOB,
+            group=EOSourceGroupChoices.WB_300M_V2_GLOB,
             filename=TEST_FILE.name,
             domain='test-domain',
             datetime_seen=now(),

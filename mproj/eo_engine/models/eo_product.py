@@ -9,33 +9,33 @@ from django.dispatch import receiver
 
 class EOProductGroupChoices(models.TextChoices):
     # NDVI Products
-    a_agro_ndvi_1km_v3 = "agro_ndvi-1km-v3-afr", 'AUTH/AGRO/NDVI 1km, V3 Africa'
-    a_agro_ndvi_300m_v3 = "agro_ndvi-300m-v3-afr", 'AUTH/AGRO/NDVI 300m, V3 Africa'
+    AGRO_NDVI_1KM_V3_AFR = "AGRO_NDVI_1KM_V3_AFR", 'AUTH/AGRO/NDVI 1km, V3 Africa'
+    AGRO_NDVI_300M_V3_AFR = "AGRO_NDVI_300M_V3_AFR", 'AUTH/AGRO/NDVI 300m, V3 Africa'
 
     # VCI
-    a_agro_vci_1km_v2_afr = 'agro_vci-10km-v2-afr', 'AUTH/AGRO/VCI 1km, V2 Africa'
+    AGRO_VCI_1KM_V2_AFR = 'AGRO_VCI_1KM_V2_AFR', 'AUTH/AGRO/VCI 1km, V2 Africa'
 
     # LAI
-    a_agro_lai_300m_v1_afr = "agro_lai-300m-v1-afr", 'AUTH/AGRO/LAI 300m, V1 Africa'
-    a_agro_lai_1km_v2_afr = "agro_lai_1km-v2-afr", 'AUTH/AGRO/LAI 1km, V2 Africa'
+    AGRO_LAI_300M_V1_AFR = "AGRO_LAI_300M_V1_AFR", 'AUTH/AGRO/LAI 300m, V1 Africa'
+    AGRO_LAI_1KM_V2_AFR = "AGRO_LAI_1KM_V2_AFR", 'AUTH/AGRO/LAI 1km, V2 Africa'
 
     # WB Products
-    a_agro_wb_100m_eth = 'agro_wb-100m-eth'
-    a_agro_wb_100m_gha = 'agro_wb-100m-gha'
-    a_agro_wb_100m_ken = 'agro_wb-100m-ken'
-    a_agro_wb_100m_moz = 'agro_wb-100m-moz'
-    a_agro_wb_100m_ner = 'agro_wb-100m-ner'
-    a_agro_wb_100m_rwa = 'agro_wb-100m-rwa'
-    a_agro_wb_100m_tun = 'agro_wb-100m-tun'
-    a_agro_wb_100m_zaf = 'agro_wb-100m-zaf'
+    AGRO_WB_100M_ETH = 'AGRO_WB_100M_ETH', 'AGRO_WB_100_M_ETH'
+    AGRO_WB_100M_GHA = 'AGRO_WB_100M_GHA', 'AGRO_WB_100_M_GHA'
+    AGRO_WB_100M_KEN = 'AGRO_WB_100M_KEN', 'AGRO_WB_100_M_KEN'
+    AGRO_WB_100M_MOZ = 'AGRO_WB_100M_MOZ', 'AGRO_WB_100_M_MOZ'
+    AGRO_WB_100M_NER = 'AGRO_WB_100M_NER', 'AGRO_WB_100_M_NER'
+    AGRO_WB_100M_RWA = 'AGRO_WB_100M_RWA', 'AGRO_WB_100_M_RWA'
+    AGRO_WB_100M_TUN = 'AGRO_WB_100M_TUN', 'AGRO_WB_100_M_TUN'
+    AGRO_WB_100M_ZAF = 'AGRO_WB_100M_ZAF', 'AGRO_WB_100_M_ZAF'
 
-    agro_wb_300m_v2_afr = 'agro_wb_300m_v2_afr'
+    AGRO_WB_300M_V2_AFR = 'AGRO_WB_300M_V2_AFR'
 
     # LSA-SAF
-    MSG_3km_AFR = 'MSG-3km_AFR', 'LSA-SAF 3km Africa'
+    MSG_3KM_AFR = 'MSG_3KM_AFR', 'LSA-SAF 3km Africa'
 
     # VIIS-1Day for S04P03
-    VIIRS_1DAY_AFR = 'VIIRS-1day-AFR', 'VIIRS 1day AFR'
+    VIIRS_1DAY_AFR = 'VIIRS_1DAY_AFR', 'VIIRS 1day AFR'
 
 
 class EOProductStateChoices(models.TextChoices):
@@ -136,8 +136,8 @@ class EOProduct(models.Model):
 def eoproduct_post_save_handler(instance: EOProduct, **kwargs):
     if instance.state == EOProductStateChoices.Ready:
         if (
-                instance.group == EOProductGroupChoices.a_agro_ndvi_300m_v3 or
-                instance.group == EOProductGroupChoices.a_agro_ndvi_1km_v3
+                instance.group == EOProductGroupChoices.AGRO_NDVI_300M_V3_AFR or
+                instance.group == EOProductGroupChoices.AGRO_NDVI_1KM_V3_AFR
         ):
             from eo_engine.common import generate_products_from_source
             for product in generate_products_from_source(instance.filename):

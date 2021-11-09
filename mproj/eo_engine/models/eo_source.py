@@ -30,19 +30,20 @@ class EOSourceStateChoices(models.TextChoices):
     Defered = 'Defer', 'Download has been deferred for later'
 
 
+# USE SCREAMING_CASE
 class EOSourceGroupChoices(models.TextChoices):
     # add mode products here
-    c_gls_ndvi300_v2_glob = 'c_gsl_ndvi300-v2-glob', "Copernicus Global Land Service NDVI 300m v2"
-    c_gls_ndvi1km_v3_glob = 'c_gsl_ndvi1km-v3-glob', "Copernicus Global Land Service NDVI 1km v3"
-    a_agro_ndvi300_v3_glob = 'a_agro_ndvi300-v3-afr', "AuthAgro Service NDVI 1km v3"
-    c_gls_lai300_v1_glob = 'c_gsl_lai300-v1-glob', "Copernicus Global Land Service LAI 300m v1"
+    C_GSL_NDVI_300M_V2_GLOB = 'C_GSL_NDVI_300M_V2_GLOB', "Copernicus Global Land Service NDVI 300m v2"
+    C_GSL_NDVI_1KM_V3_GLOB = 'C_GSL_NDVI_1KM_V3_GLOB', "Copernicus Global Land Service NDVI 1km v3"
+    A_AGRO_NDVI_300M_V3_AFR = 'A_AGRO_NDVI_300M_V3_AFR', "AuthAgro Service NDVI 1km v3"
+    C_GSL_LAI_300M_V1_GLOB = 'C_GSL_LAI_300M_V1_GLOB', "Copernicus Global Land Service LAI 300m v1"
 
     # https://land.copernicus.eu/global/sites/cgls.vito.be/files/products/CGLOPS2_PUM_WB100m_V1_I1.10.pdf
-    c_gls_WB100_v1_glob = 'c_gls_wb100-v1-glob', "Copernicus Global Land Service Water Bodies Collection 100m Version 1"
-    WB_300m_v2_GLOB = 'WB_300m_v2_GLOB', "Copernicus Global Land Service Water Bodies Collection 300m Version 2"
+    C_GLS_WB_100M_V1_GLOB = 'C_GLS_WB_100M_V1_GLOB', "Copernicus Global Land Service Water Bodies Collection 100m Version 1"
+    WB_300M_V2_GLOB = 'WB_300M_V2_GLOB', "Copernicus Global Land Service Water Bodies Collection 300m Version 2"
 
     # LSASAF
-    MSG_3km_GLOB = 'MSG-3km_GLOB', 'LSA-SAF Global ET product 3Km'
+    MSG_3KM_GLOB = 'MSG_3KM_GLOB', 'LSA-SAF Global ET product 3Km'
 
     # WAPOR
     ## AFRICA
@@ -81,7 +82,7 @@ class EOSourceGroupChoices(models.TextChoices):
     WAPOR_L2_QUAL_NDVI_D_GHA = 'WAPOR_L2_QUAL_NDVI_GHA', 'WAPOR: L2_QUAL_NDVI_D_GHA'
 
     # VIIRS-1day-xxx
-    VIIRS_1day = 'VIIRS-1day', 'VIIRS-1day'
+    VIIRS_1_DAY = 'VIIRS_1_DAY', 'VIIRS-1day'
     # ndvi_300m_v1 = "ndvi-300m-v1", "ndvi 300m v1"
     # ndvi_300m_v2 = "ndvi-300m-v2", "ndvi 300m v2"
     # ndvi_1km_v3 = "ndvi-1km-v3", "ndvi 1km v3"
