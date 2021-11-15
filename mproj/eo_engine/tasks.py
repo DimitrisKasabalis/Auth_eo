@@ -2,6 +2,7 @@ import subprocess
 import tempfile
 from datetime import datetime
 from pathlib import Path
+from subprocess import run, CompletedProcess
 from typing import List, Union, Optional, Literal
 
 import more_itertools
@@ -309,7 +310,6 @@ def task_s02p02_c_gls_ndvi_300_clip(eo_product_pk: Union[int, EOProduct], aoi: L
 def task_s02p02_agro_nvdi_300_resample_to_1km(eo_product_pk):
     """" Resamples to 1km and cuts to AOI bbox """
 
-    import subprocess
     import os
     eo_product = EOProduct.objects.get(id=eo_product_pk)
 
@@ -502,9 +502,13 @@ def task_s02p02_lai_clip_lai300m_v1(eo_product_pk: int):
     eo_product = EOProduct.objects.get(pk=eo_product_pk)
     eo_source: EOSource = eo_product.eo_sources_inputs.first()
 
+    filename_in = eo_source.filename
+
     HashMap = snappy.jpy.get_type('java.util.HashMap')
     GPF.getDefaultInstance().getOperatorSpiRegistry().loadOperatorSpis()
     wkt = "POLYGON((-19.5848214278419448 37.738, 54.2276785724937156 37.738, 54.2276785724937156 -35.4776785714023148, -19.5848214278419448 -35.4776785714023148, -19.5848214278419448 37.738, -19.5848214278419448 37.738))"  # Africa by DK
+    rt = filename_in.split('-')[1][:3]
+    ver = filename_in.split('_V')[1][:5]
 
     def clip(data, out_file, geom):
         # Read the file
@@ -525,6 +529,15 @@ def task_s02p02_lai_clip_lai300m_v1(eo_product_pk: int):
         data = ProductIO.readProduct(eo_source.file.path)
         geom = WKTReader().read(wkt)
         clipped: Path = clip(data=data, out_file=temp_file.name, geom=geom)
+
+        cp: CompletedProcess = run(
+            ['ncatted',
+             '-a', 'Consolidation_period,LAI,o,c,' + rt,
+             '-a', 'LAI_version ,LAI,o,c,' + ver,
+             clipped.as_posix()])
+
+        if cp.returncode != 0:
+            raise Exception(f'EXIT CODE: {cp.returncode}, ERROR: {cp.stderr}')
 
         content = File(clipped.open('rb'))
         eo_product.file.save(name=eo_product.filename, content=content, save=False)
