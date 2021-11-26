@@ -1,4 +1,8 @@
+import functools
 from typing import List
+
+from eo_engine.common.tasks import is_process_task
+from eo_engine.errors import AfriCultuReSError
 
 
 def get_spider_loader():
@@ -25,3 +29,14 @@ def list_spiders() -> List[str]:
     spider_loader = get_spider_loader()
 
     return spider_loader.list()
+
+
+#  https://realpython.com/primer-on-python-decorators/#a-few-real-world-examples
+def check_params(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        if is_process_task(func.__name__) and 'eo_product_pk' not in kwargs.keys():
+            raise AfriCultuReSError('eo_product_pk param is missing from the task. Did you forget it? ')
+        return func(*args, **kwargs)
+
+    return wrapper

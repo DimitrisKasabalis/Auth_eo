@@ -1,10 +1,11 @@
 from copy import copy
 from pathlib import Path
-from tempfile import TemporaryFile, NamedTemporaryFile
 from typing import List
 
 from celery.utils.log import get_task_logger
 from django.core.files import File
+from django.core.files.temp import NamedTemporaryFile
+from django.db import connections
 
 from eo_engine.errors import AfriCultuReSRetriableError, AfriCultuReSError
 from eo_engine.models import EOSource, EOSourceStateChoices
@@ -27,23 +28,25 @@ def download_http_eosource(pk_eosource: int) -> str:
     response.raise_for_status()
     headers = response.headers
     FILE_LENGTH = headers.get('Content-Length', None)
+    logger.info(f'LOG:INFO: File length is {FILE_LENGTH} bytes')
 
     eo_source.set_status(EOSourceStateChoices.BeingDownloaded)
 
-    with TemporaryFile(mode='wb') as file_handle:
+    with NamedTemporaryFile() as file_handle:
         # TemporaryFile has noname, and will cease to exist when it is closed.
 
+        bytes_processed = 0
         for chunk in response.iter_content(chunk_size=2 * 1024):
             # eosource.refresh_from_db()  # ping to keep db connection alive
+            bytes_processed += 2 * 1024
+
             file_handle.write(chunk)
             file_handle.flush()
-
+        logger.info('LOG:INFO: Downloaded file as temporary.')
         content = File(file_handle)
 
-        # from django.db import connections
-        # for conn in connections.all():
-        #     conn.close_if_unusable_or_obsolete()
-        # eosource.refresh_from_db()
+        for conn in connections.all():
+            conn.close_if_unusable_or_obsolete()
         eosource = EOSource.objects.get(pk=pk_eosource)
         eosource.file.save(name=eosource.filename, content=content, save=False)
 
@@ -144,7 +147,7 @@ def download_wapor_eosource(pk_eosource: int) -> str:
             error_log.insert(0, f'--WAPOR ERROR LOG--\n{remoteJob.job_url()}')
             raise AfriCultuReSError('\n'.join(error_log))
         elif remoteJob.response_status == 200 and remoteJob.job_status == 'COMPLETED':
-            with TemporaryFile(mode='w+b') as file_handle:
+            with NamedTemporaryFile() as file_handle:
                 eo_source.set_status(EOSourceStateChoices.BeingDownloaded)
                 eo_source.save()
 

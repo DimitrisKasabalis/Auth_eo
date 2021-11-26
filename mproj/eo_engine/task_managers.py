@@ -86,6 +86,7 @@ class BaseTaskWithRetry(Task):
 
     def on_failure(self, exc, task_id, args, kwargs, einfo):
         """ This is run by the worker when the task fails."""
+        logger.info('Tasked Failed: Running hook')
         try:
             task = GeopTask.objects.get(task_id=task_id)
         except GeopTask.DoesNotExist:

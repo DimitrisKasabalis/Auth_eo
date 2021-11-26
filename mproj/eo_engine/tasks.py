@@ -1,3 +1,4 @@
+import os
 import subprocess
 import tempfile
 from datetime import datetime
@@ -14,6 +15,7 @@ from django.utils import timezone
 from more_itertools import collapse
 from pytz import utc
 
+from eo_engine.common.misc import check_params
 from eo_engine.common.tasks import get_task_ref_from_name
 from eo_engine.errors import AfriCultuReSRetriableError
 from eo_engine.models import EOProduct, EOProductStateChoices, FunctionalRules, Credentials
@@ -177,8 +179,7 @@ def task_download_file(self, eo_source_pk: int):
     url_parse = urlparse(eo_source.url)
     scheme = url_parse.scheme
 
-    logger.info(f'downloading file {eo_source.filename}')
-    logger.info(f'using scheme: {scheme}')
+    logger.info(f'LOG:INFO: Downloading file {eo_source.filename} using scheme: {scheme}')
 
     try:
         if scheme.startswith('ftp'):
@@ -186,7 +187,6 @@ def task_download_file(self, eo_source_pk: int):
 
         elif scheme.startswith('http'):
             return download_http_eosource(eo_source_pk)
-
         elif scheme.startswith('sftp'):
             return download_sftp_eosource(eo_source_pk)
         elif scheme.startswith('wapor'):
@@ -211,10 +211,15 @@ def task_download_file(self, eo_source_pk: int):
 # rules
 # tasks that make products must start with 'task_s??p??*
 
-
+###########
+# s02p02
+###########
 @shared_task
-def task_s02p02_c_gls_ndvi_300_clip(eo_product_pk: Union[int, EOProduct], aoi: List[int]):
-    # Preamble
+def task_s02p02_c_gls_ndvi_300_clip(
+        eo_product_pk: Union[int, EOProduct],
+        aoi: List[int]
+):
+
     if isinstance(eo_product_pk, EOProduct):
         eo_product = eo_product_pk
     else:
@@ -310,7 +315,6 @@ def task_s02p02_c_gls_ndvi_300_clip(eo_product_pk: Union[int, EOProduct], aoi: L
 def task_s02p02_agro_nvdi_300_resample_to_1km(eo_product_pk):
     """" Resamples to 1km and cuts to AOI bbox """
 
-    import os
     eo_product = EOProduct.objects.get(id=eo_product_pk)
 
     target_resolution = 0.0089285714286
@@ -546,8 +550,51 @@ def task_s02p02_lai_clip_lai300m_v1(eo_product_pk: int):
         eo_product.save()
 
 
-#####
-# s06p01 WB
+###########
+# s04p03
+##########
+@shared_task
+def task_s04p03_convert_to_tiff(eo_product_pk: int, tile: int):
+    from osgeo import gdal, gdalconst
+
+    eo_product = EOProduct.objects.get(pk=eo_product_pk)
+    eo_source: EOSource = eo_product.eo_sources_inputs.first()
+
+    eo_product.state = EOProductStateChoices.Generating
+    eo_product.save()
+
+    with tempfile.NamedTemporaryFile('wb') as file_handle:
+        ds = gdal.Open(eo_source.file.path)
+
+        optionsNC2 = gdal.TranslateOptions(
+            format='netCDF',
+            # using gdalconst.GDT_Unknown was the only way to avoid
+            # conversion to float and keep file size reasonable
+            outputType=gdalconst.GDT_Unknown,
+            noData=int(1), options=['COMPRESS=LZW'],
+            outputSRS="EPSG:4326")  # 1 is the nodata value
+        gdal.Translate(srcDS=ds, destName=file_handle.name, options=optionsNC2)
+
+        cp = subprocess.run(['ncrename',
+                             '-v', 'Band1,Flood',
+                             file_handle.name])
+        cp = subprocess.run(['ncatted',
+                             '-a', 'short_name,Flood,o,c,Flood_MR',
+                             '-a', "long_name,Flood,o,c,Flood map at medium resolution",
+                             '-a', "tile_number,Flood,o,c," + str(tile),
+                             '-a', "_FillValue,Flood,o,i,1",
+                             file_handle.name])
+
+        content = File(file_handle)
+        eo_product.file.save(name=eo_product.filename, content=content, save=False)
+        eo_product.state = EOProductStateChoices.Ready
+        eo_product.datetime_creation = now
+        eo_product.save()
+
+
+###########
+# s06p01
+##########
 @shared_task
 def task_s0601_wb_100m(eo_product_pk: int, wkt: str, iso: str):
     import os
@@ -650,33 +697,6 @@ def task_s06p01_clip_to_africa(eo_product_pk: int):
 ####
 # S06P03
 
-@shared_task
-def task_s04p03_convert_to_tiff(eo_product_pk: int, tile: int):
-    from osgeo import gdal, gdalconst
-
-    eo_product = EOProduct.objects.get(pk=eo_product_pk)
-    eo_source: EOSource = eo_product.eo_sources_inputs.first()
-    with tempfile.NamedTemporaryFile('wb') as file_handle:
-        ds = gdal.Open(eo_source.file.path)
-
-        optionsNC2 = gdal.TranslateOptions(
-            format='netCDF',
-            # using gdalconst.GDT_Unknown was the only way to avoid
-            # conversion to float and keep file size reasonable
-            outputType=gdalconst.GDT_Unknown,
-            noData=int(1), options=['COMPRESS=LZW'],
-            outputSRS="EPSG:4326")  # 1 is the nodata value
-        gdal.Translate(srcDS=ds, destName=file_handle.name, options=optionsNC2)
-
-        cp = subprocess.run(['ncrename',
-                             '-v', 'Band1,Flood',
-                             file_handle.name])
-        cp = subprocess.run(['ncatted',
-                             '-a', 'short_name,Flood,o,c,Flood_MR',
-                             '-a', "long_name,Flood,o,c,Flood map at medium resolution",
-                             '-a', "tile_number,Flood,o,c," + str(tile),
-                             '-a', "_FillValue,Flood,o,i,1",
-                             file_handle.name])
 
 
 ######
@@ -730,6 +750,70 @@ def task_s06p04_et_3km(eo_product_pk: int):
         eo_product.state = EOProductStateChoices.Ready
         eo_product.datetime_creation = now
         eo_product.save()
+
+
+@shared_task
+@check_params
+def task_s06p04_main_sse_bop_v5(eo_product_pk: int):
+    """
+    # Description of task:
+    The task consists in clipping the ET anomaly file(SSEBop v5) to Africa and changing the metadata.
+    Clipping is done with GDAL warp as proposed by Nikos.
+    Metadata is edited using NCO as proposed by Nikos.
+
+    # Data download
+    The dataset is available here for v5:
+    https://edcintl.cr.usgs.gov/downloads/sciweb1/shared/fews/web/global/monthly/etav5/anomaly/downloads
+
+    # Script execution
+    1. Main_SSEBopv5_1.py
+
+    # Contact Information:
+    **Contact**: icherif@yahoo.com
+    **Date creation:** 10-08-2021
+
+    """
+    from zipfile import ZipFile
+
+    def clip(file_in, file_out):
+        # Clip the file using GDAL
+        target_resolution = 0.009651999920606611424
+        xmin, ymin, xmax, ymax = -20.0084493160248371, -38.0030921809375428, 55.0068940669297461, 40.0043711774050763
+        cp = subprocess.run([
+            'gdalwarp',
+            '-r', 'average', '-overwrite',
+            '-tr', f'{target_resolution}', f'{target_resolution}',
+            '-te', f'{xmin}', f'{ymin}', f'{xmax}', f'{ymax}',
+            file_in, file_out], check=True)
+
+        eo_product = EOProduct.objects.get(eo_product_pk)
+        eo_source = eo_product.eo_sources_inputs.first()
+
+        with tempfile.TemporaryDirectory() as temp_dir, ZipFile(eo_source.file.path) as z:
+            f = eo_source.filename
+            z.extractall(temp_dir)
+            date = f[1:5]
+            month = f[5:7]
+            f_new_tif = temp_dir + "/" + "m" + date + month + "_modisSSEBopETv5_anomaly_pct.tif"
+            f_new_nc = temp_dir + "/" + "m" + date + month + "01_MOD_AFR_5600m_0030_ETanom_v5.nc"
+
+            clip(f_new_tif, f_new_nc)
+            cp = subprocess.run(['ncrename',
+                                 '-v', 'Band1,ETanom',
+                                 f_new_nc], check=True)
+            cp = subprocess.run(['ncatted',
+                                 '-a', "long_name,ETanom,o,c,Monthly_Evapotranspiration_Anomaly",
+                                 '-a', "Unit,ETanom,o,c,[%]",
+                                 f_new_nc], check=True)
+
+            with open(f_new_nc, 'rb') as file_handler:
+                content = File(file_handler)
+                eo_product.file.save(name=eo_product.filename, content=content, save=False)
+                eo_product.state = EOProductStateChoices.Ready
+                eo_product.datetime_creation = now
+                eo_product.save()
+
+        return '+++Finished+++'
 
 
 ######

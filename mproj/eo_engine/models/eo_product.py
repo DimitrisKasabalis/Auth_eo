@@ -135,26 +135,24 @@ class EOProduct(models.Model):
 @receiver(post_save, sender=EOProduct, weak=False, dispatch_uid='eoproduct_post_save_handler')
 def eoproduct_post_save_handler(instance: EOProduct, **kwargs):
     if instance.state == EOProductStateChoices.Ready:
-        if (
-                instance.group == EOProductGroupChoices.AGRO_NDVI_300M_V3_AFR or
-                instance.group == EOProductGroupChoices.AGRO_NDVI_1KM_V3_AFR
-        ):
-            from eo_engine.common import generate_products_from_source
-            for product in generate_products_from_source(instance.filename):
-                obj, created = EOProduct.objects.get_or_create(
-                    filename=product.filename,
-                    output_folder=product.output_folder,
-                    task_name=product.task_name,
-                    task_kwargs=product.task_kwargs,
-                    group=product.group
+        # have another pass at the generate_products_from_source functions.
+        # if it comes back with something,  process it
+        from eo_engine.common.products import generate_products_from_source
+        for product in generate_products_from_source(instance.filename):
+            obj, created = EOProduct.objects.get_or_create(
+                filename=product.filename,
+                output_folder=product.output_folder,
+                task_name=product.task_name,
+                task_kwargs=product.task_kwargs,
+                group=product.group
 
-                )
-                if created:
-                    # mark as available if this entry was just made now
-                    obj.state = EOProductStateChoices.Available
-                    # mark inputs
-                    obj.eo_products_inputs.set([instance, ])
-                    obj.save()
+            )
+            if created:
+                # mark as available if this entry was just made now
+                obj.state = EOProductStateChoices.Available
+                # mark inputs
+                obj.eo_products_inputs.set([instance, ])
+                obj.save()
 
 
 __all__ = [
