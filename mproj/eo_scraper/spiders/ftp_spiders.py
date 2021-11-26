@@ -25,7 +25,7 @@ class FtpGlobalLandWB100m(FtpSpider):
 
 class FtpGlobalLandWB300m(FtpSpider):
     name = 'ftp-spider-wb300'
-    product_name = EOSourceGroupChoices.WB_300M_V2_GLOB
+    product_name = EOSourceGroupChoices.C_GLS_NDVI_300M_V2_GLOB
     allowed_domains = ['ftp.globalland.cls.fr', ]
 
     ftp_root_url: str = 'ftp://ftp.globalland.cls.fr/home/glbland_ftp/Core/SIRS/dataset-sirs-wb-nrt-300m'
@@ -33,7 +33,7 @@ class FtpGlobalLandWB300m(FtpSpider):
 
 class FtpFloodLightViiR(FtpSpider):
     name = 'ftp-floodlight-viir'
-    product_name = EOSourceGroupChoices.VIIRS_1_DAY
+    product_name = EOSourceGroupChoices.FLOODLIGHT_VIIRS_1_DAY
     allowed_domain = ['floodlight.ssec.wisc.edu']
 
     ftp_root_url: str = 'ftp://floodlight.ssec.wisc.edu/composite'

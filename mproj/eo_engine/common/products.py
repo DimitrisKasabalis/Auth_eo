@@ -21,6 +21,7 @@ typeProductGroup = Union[EOProductGroupChoices, EOSourceGroupChoices]
 
 
 def filename_to_product(filename: str) -> Optional[List[typeProductGroup]]:
+    """ Check which products should come up form this filename. """
     filename = filename.lower()
 
     if fnmatch(filename, 'c_gls_ndvi300*.nc'.lower()):
@@ -80,17 +81,6 @@ def generate_products_from_source(filename: str) -> List[product_output]:
                            EOProductGroupChoices.AGRO_NDVI_1KM_V3_AFR,
                            'task_s02p02_agro_nvdi_300_resample_to_1km',
                            task_kwargs={})
-        ]
-
-    # g2_BIOPAR_VCI_??????_AFRI_OLCI_V2.0.nc
-    if fnmatch(filename.lower(), '????????_SE3_AFR_1000m_0010_NDVI.nc'.lower()):
-        date_str_YYYYMMDD = filename.split('_')[0]
-        return [
-            product_output('S2_P02/VCI/v2',
-                           f"g2_BIOPAR_VCI_{date_str_YYYYMMDD}_AFRI_OLCI_V2.0.nc",
-                           EOProductGroupChoices.AGRO_VCI_1KM_V2_AFR,
-                           'task_s02p02_compute_vci', {}
-                           )
         ]
 
     if fnmatch(filename.lower(), 'c_gls_LAI300-RT1*.nc'.lower()):
@@ -190,8 +180,19 @@ def generate_products_from_source(filename: str) -> List[product_output]:
 
         ]
 
-    # from here onwards we use the new logic:
+    # from here onwards I use a different logic:
     # 'if product.count' -> product is a list, and the subroutine checks in the list contains the parameter in it
+
+    # g2_BIOPAR_VCI_??????_AFRI_OLCI_V2.0.nc
+    if product and product.count(EOProductGroupChoices.AGRO_VCI_1KM_V2_AFR):
+        date_str_YYYYMMDD = filename.split('_')[0]
+        return [
+            product_output('S2_P02/VCI/v2',
+                           f"g2_BIOPAR_VCI_{date_str_YYYYMMDD}_AFRI_OLCI_V2.0.nc",
+                           EOProductGroupChoices.AGRO_VCI_1KM_V2_AFR,
+                           'task_s02p02_compute_vci', {}
+                           )
+        ]
 
     if product and product.count(EOProductGroupChoices.AGRO_WB_300M_V2_AFR):
         output_filenane_template = '{YYYYMMDD}_SE2_AFR_0300m_0030_WBMA.nc'

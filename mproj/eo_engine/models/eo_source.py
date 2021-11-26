@@ -33,14 +33,25 @@ class EOSourceStateChoices(models.TextChoices):
 # USE SCREAMING_CASE
 class EOSourceGroupChoices(models.TextChoices):
     # add mode products here
-    C_GSL_NDVI_300M_V2_GLOB = 'C_GSL_NDVI_300M_V2_GLOB', "Copernicus Global Land Service NDVI 300m v2"
-    C_GSL_NDVI_1KM_V3_GLOB = 'C_GSL_NDVI_1KM_V3_GLOB', "Copernicus Global Land Service NDVI 1km v3"
-    A_AGRO_NDVI_300M_V3_AFR = 'A_AGRO_NDVI_300M_V3_AFR', "AuthAgro Service NDVI 1km v3"
-    C_GSL_LAI_300M_V1_GLOB = 'C_GSL_LAI_300M_V1_GLOB', "Copernicus Global Land Service LAI 300m v1"
+
+    # AGRO = AUth
+    # C_GLS = Copernicus Global Land Service
+    # WB = Water bodies
+    #  ines... help me out!!
+
+    C_GLS_LAI_300M_V1_GLOB = 'C_GLS_LAI_300M_V1_GLOB', "Copernicus Global Land Service LAI 300m v1"
+    AGRO_LAI_300M_V1_AFR = 'AGRO_LAI_300M_V1_AFR', "AuthAgro LAI 300M V1"
+
+    C_GLS_NDVI_1KM_V3_GLOB = 'C_GlS_NDVI_1KM_V3_GLOB', "Copernicus Global Land Service NDVI 1km v3"
+    C_GLS_NDVI_300M_V2_GLOB = 'C_GLS_NDVI_300M_V2_GLOB', "Copernicus Global Land Service NDVI 300m v2"
+
+    # AGRO NDVI
+    A_AGRO_NDVI_300M_V3_AFR = 'A_AGRO_NDVI_300M_V3_AFR', "AuthAgro Service NDVI 300M v3"
+    A_AGRO_NDVI_1KM_V3_AFR = 'A_AGRO_NDVI_1KM_V3_AFR', "AuthAgro Service NDVU 1KM V3 Africa"
 
     # https://land.copernicus.eu/global/sites/cgls.vito.be/files/products/CGLOPS2_PUM_WB100m_V1_I1.10.pdf
     C_GLS_WB_100M_V1_GLOB = 'C_GLS_WB_100M_V1_GLOB', "Copernicus Global Land Service Water Bodies Collection 100m Version 1"
-    WB_300M_V2_GLOB = 'WB_300M_V2_GLOB', "Copernicus Global Land Service Water Bodies Collection 300m Version 2"
+    C_GLS_WB_300M_V2_GLOB = 'C_GLS_WB_300M_V2_GLOB', "Copernicus Global Land Service Water Bodies Collection 300m Version 2"
 
     # LSASAF
     MSG_3KM_GLOB = 'MSG_3KM_GLOB', 'LSA-SAF Global ET product 3Km'
@@ -82,19 +93,7 @@ class EOSourceGroupChoices(models.TextChoices):
     WAPOR_L2_QUAL_NDVI_D_GHA = 'WAPOR_L2_QUAL_NDVI_GHA', 'WAPOR: L2_QUAL_NDVI_D_GHA'
 
     # VIIRS-1day-xxx
-    VIIRS_1_DAY = 'VIIRS_1_DAY', 'VIIRS-1day'
-    # ndvi_300m_v1 = "ndvi-300m-v1", "ndvi 300m v1"
-    # ndvi_300m_v2 = "ndvi-300m-v2", "ndvi 300m v2"
-    # ndvi_1km_v3 = "ndvi-1km-v3", "ndvi 1km v3"
-    # ndvi_1km_v2 = "ndvi-1km-v2", "ndvi 1km v2"
-    # ndvi_1km_v1 = "ndvi-1km-v1", "ndvi 1km v1"
-    # lai_300m_v1 = "lai-300m-v1", "lai 300m v1"
-    # lai_1km_v1 = "lai-1km-v1", "lai 1km v1"
-    # lai_1km_v2 = "lai-1km-v2", "lai 1km v2"
-    # vc1_v1 = "vc1-v1", "vc1 v1"
-    # wb_africa_v1 = "wb-africa-v1", "wb africa V1"
-    # sirs_nrt_300 = "sirs-nrt-300", "SIRS WB NRT 300m"
-    # sirs_nrt_100 = "sirs-nrt-100", "SIRS WB NRT 100m"
+    FLOODLIGHT_VIIRS_1_DAY = 'FLOODLIGHT_VIIRS_1_DAY', 'VIIRS-1day'
 
 
 class EOSource(models.Model):
