@@ -37,7 +37,7 @@ db.sqlite3-journal
 .scrapy
 
 # Environments
-.env
+#.env
 .venv
 
 .pytest*
