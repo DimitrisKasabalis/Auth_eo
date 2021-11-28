@@ -64,7 +64,7 @@ RUN apt-get -qq update && \
 
 #### 28/09/2021 add s06p06 libs
 USER root
-RUN pip install tables pyproj rasterio pysftp
+RUN pip install tables  rasterio
 
 
 ##### END
