@@ -1,10 +1,10 @@
-from fnmatch import fnmatch
-
 from celery import Task
+from celery.states import SUCCESS, FAILURE, REVOKED
 from celery.utils.log import get_task_logger
 from django.utils import timezone
 
 from eo_engine.common.tasks import is_process_task
+from eo_engine.errors import AfriCultuReSError
 from eo_engine.models import GeopTask, EOProduct, EOProductStateChoices
 
 logger = get_task_logger(__name__)
@@ -37,6 +37,13 @@ class BaseTaskWithRetry(Task):
                 group_task.save()
             task.save()
 
+        return self.run(*args, **kwargs)
+
+    # requires celery 5.2
+    def before_start(self, task_id: str, args: tuple, kwargs: dict):
+        if is_process_task(self.name) and 'eo_product_pk' not in kwargs.keys():
+            raise AfriCultuReSError('eo_product_pk param is missing from the task. Did you forget it? ')
+
         if is_process_task(self.name):  # ie eo_engine.tasks.task_s02p02_c_gls_ndvi_300_clip
             # mark generating product as 'GENERATING'
             eo_product_pk = kwargs['eo_product_pk']
@@ -45,15 +52,32 @@ class BaseTaskWithRetry(Task):
             eo_product.state = EOProductStateChoices.Generating
             eo_product.save()
 
-        return self.run(*args, **kwargs)
+        return
 
     def after_return(self, status, retval, task_id, args, kwargs, einfo):
+        logger.info('INFO:TASK:AFTER_RETURN HOOK')
+        if is_process_task(self.name):
+            # we have already checked that eo_product_pk exists
+            eo_product_pk = kwargs['eo_product_pk']
+            eo_product = EOProduct.objects.get(pk=eo_product_pk)
+            if status == SUCCESS:
+                logger.info('INFO:TASK:AFTER_RETURN: Making as READY')
+                eo_product.state = EOProductStateChoices.Ready
+            if status == FAILURE:
+                logger.info('INFO:TASK:AFTER_RETURN: Making as Failed')
+                eo_product.state = EOProductStateChoices.Failed
+            if status == REVOKED:
+                logger.info('INFO:TASK:AFTER_RETURN: Making as Ignored')
+                eo_product.state = EOProductStateChoices.Ignore
+            eo_product.save()
         return
 
     def on_success(self, retval, task_id, args, kwargs):
+        logger.info('INFO:TASK:ON_SUCCESS HOOK')
         try:
             task = GeopTask.objects.get(task_id=task_id)
         except GeopTask.DoesNotExist:
+            logger.info('INFO: not task entry found.')
             return
         task.datetime_finished = timezone.now()
         try:
@@ -62,19 +86,11 @@ class BaseTaskWithRetry(Task):
         except:
             task.time_to_complete = None
         task.status = task.TaskTypeChoices.SUCCESS
-
-        # mark product available on success
-        if is_process_task(self.name):
-            # mark generating product as 'GENERATING'
-            eo_product_pk = kwargs['eo_product_pk']
-            eo_product = EOProduct.objects.get(pk=eo_product_pk)
-            eo_product.state = EOProductStateChoices.Ready
-            eo_product.save()
-
         task.save()
 
     def on_retry(self, exc, task_id, args, kwargs, einfo):
         """This is run by the worker when the task is to be retried."""
+        logger.info('INFO:TASK:ON_RETRY HOOK')
         try:
             task = GeopTask.objects.get(task_id=task_id)
         except GeopTask.DoesNotExist:
@@ -86,7 +102,9 @@ class BaseTaskWithRetry(Task):
 
     def on_failure(self, exc, task_id, args, kwargs, einfo):
         """ This is run by the worker when the task fails."""
-        logger.info('Tasked Failed: Running hook')
+        logger.info('INFO:TASK:ON_FAILURE HOOK')
+        logger.info('++Task Failed++')
+
         try:
             task = GeopTask.objects.get(task_id=task_id)
         except GeopTask.DoesNotExist:

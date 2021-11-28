@@ -15,7 +15,6 @@ from django.utils import timezone
 from more_itertools import collapse
 from pytz import utc
 
-from eo_engine.common.misc import check_params
 from eo_engine.common.tasks import get_task_ref_from_name
 from eo_engine.errors import AfriCultuReSRetriableError
 from eo_engine.models import EOProduct, EOProductStateChoices, FunctionalRules, Credentials
@@ -219,7 +218,6 @@ def task_s02p02_c_gls_ndvi_300_clip(
         eo_product_pk: Union[int, EOProduct],
         aoi: List[int]
 ):
-
     if isinstance(eo_product_pk, EOProduct):
         eo_product = eo_product_pk
     else:
@@ -698,7 +696,6 @@ def task_s06p01_clip_to_africa(eo_product_pk: int):
 # S06P03
 
 
-
 ######
 # S06P04
 
@@ -753,7 +750,6 @@ def task_s06p04_et_3km(eo_product_pk: int):
 
 
 @shared_task
-@check_params
 def task_s06p04_main_sse_bop_v5(eo_product_pk: int):
     """
     # Description of task:

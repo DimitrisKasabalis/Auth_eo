@@ -145,7 +145,6 @@ def eoproduct_post_save_handler(instance: EOProduct, **kwargs):
                 task_name=product.task_name,
                 task_kwargs=product.task_kwargs,
                 group=product.group
-
             )
             if created:
                 # mark as available if this entry was just made now
@@ -153,6 +152,7 @@ def eoproduct_post_save_handler(instance: EOProduct, **kwargs):
                 # mark inputs
                 obj.eo_products_inputs.set([instance, ])
                 obj.save()
+    return
 
 
 __all__ = [
