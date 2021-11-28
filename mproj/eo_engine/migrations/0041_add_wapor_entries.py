@@ -25,9 +25,9 @@ def forwards_func(apps, schema_editor):
             filename = f'{level.upper()}_{product_id.upper()}_{dimension_id.upper()}_{year_id.upper()}{yearly_dekad_id.upper()}_{area.upper()}.tif'
 
         try:
-            print(filename)
+            # print(filename)
             create_wapor_object(filename=filename)
-            print(f'--created entry: {filename}---')
+            # print(f'--created entry: {filename}---')
         except IntegrityError:
             pass
 
