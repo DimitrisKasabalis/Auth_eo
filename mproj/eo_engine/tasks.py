@@ -370,7 +370,14 @@ def task_s02p02_agro_nvdi_300_resample_to_1km(eo_product_pk):
 
 
 @shared_task
-def task_s02p02_compute_vci(eo_product_pk):
+def task_s02p02_cgls_compute_vci_1km_v2(eo_product_pk):
+    # Processing of the resampled NDVI 1km v3 (clipped to Africa) in order to retrieve VCI v2 for Africa
+    # version 1.0 - 16/04/2021
+    # Contact: icherif@yahoo.com
+    # -----------------------------
+
+    # Required aux data.
+
     import os
     import snappy
     from snappy import ProductIO, GPF, HashMap
@@ -469,7 +476,7 @@ def task_s02p02_compute_vci(eo_product_pk):
     output_obj = EOProduct.objects.get(pk=eo_product_pk)
     ndvi_1k_obj = output_obj.eo_products_inputs.first()
 
-    lts_dir = Path('/local_files_root/aux_files/NDVI_LTS')
+    lts_dir = Path('/aux_files/NDVI_LTS')
     ndvi_path = ndvi_1k_obj.file.path
 
     with tempfile.TemporaryDirectory() as tempdir:

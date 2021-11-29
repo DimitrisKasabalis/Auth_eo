@@ -12,7 +12,7 @@ def is_process_task(task_name: str) -> bool:
 
 
 def get_task_ref_from_name(token: Union[str, List[str]]):
-    """ get ref to runction/task by name. raises AttributeError exception if not found """
+    """ Return a ref to function/task by name. Raises AttributeError exception if not found """
     from eo_engine import tasks
     if isinstance(token, List):
         token = next(collapse(token))

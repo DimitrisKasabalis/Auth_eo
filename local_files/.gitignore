@@ -1,5 +1,5 @@
 /*
-!/local_files_root
-!/pg_data
+#!/local_files_root
+#!/pg_data
 !.gitignore
 !README.md

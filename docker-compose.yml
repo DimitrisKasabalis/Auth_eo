@@ -15,6 +15,7 @@ x-default-volumes:  &default-volumes
   volumes:
     - './docker-entrypoint.sh:/docker-entrypoint'
     - "./mproj:/src"
+    - "${AFRICULTURE_AUX_FILES:-./local_files/aux_files}:/aux_files"
     - "${AFRICULTURES_LOCAL_FILES_ROOT:-./local_files/local_files_root}:/local_files_root"
 
 x-default-build: &x-default-build

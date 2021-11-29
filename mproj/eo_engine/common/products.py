@@ -190,7 +190,7 @@ def generate_products_from_source(filename: str) -> List[product_output]:
             product_output('S2_P02/VCI/v2',
                            f"g2_BIOPAR_VCI_{date_str_YYYYMMDD}_AFRI_OLCI_V2.0.nc",
                            EOProductGroupChoices.AGRO_VCI_1KM_V2_AFR,
-                           'task_s02p02_compute_vci', {}
+                           'task_s02p02_cgls_compute_vci_1km_v2', {}
                            )
         ]
 
