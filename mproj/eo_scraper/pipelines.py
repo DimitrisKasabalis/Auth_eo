@@ -5,11 +5,12 @@
 
 # useful for handling different item types with a single interface
 from datetime import datetime
+from fnmatch import fnmatch
 
 from pytz import utc
 from scrapy.exceptions import DropItem
 
-from eo_engine.models import EOSource, Credentials, EOSourceStateChoices
+from eo_engine.models import EOSource, Credentials, EOSourceStateChoices, EOSourceGroupChoices
 from eo_scraper.items import RemoteSourceItem
 
 
@@ -26,6 +27,17 @@ class DefaultPipeline:
 
         domain = item['domain']
         filename = item['filename']
+
+        # special rules
+        # if this thing starts to bloat up, maybe consider spliting into different
+        # pipelines
+        if spider.product_name == EOSourceGroupChoices.C_GLS_LAI_300M_V1_GLOB:
+            # filenames: c_gls_LAI300-RT0_202012200000_GLOBE_OLCI_V1.1.1.nc
+            # Only process LAI300-RTx_202104300000_GLOBE_OLCI_V1.1.y.nc (x=2 or 6, y=1 or 2)
+            if fnmatch(filename, 'c_gls_LAI300-RT[2,6]_????????0000_GLOBE_OLCI_V1.1.[1,2].nc'):
+                pass
+            else:
+                raise DropItem()
 
         try:  # don't process (drop) duplicates
             EOSource.objects.get(filename=filename)

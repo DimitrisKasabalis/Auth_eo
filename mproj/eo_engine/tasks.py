@@ -1,6 +1,6 @@
 import os
 import subprocess
-import tempfile
+from tempfile import TemporaryDirectory
 from datetime import datetime
 from pathlib import Path
 from subprocess import run, CompletedProcess
@@ -11,6 +11,7 @@ from celery import group
 from celery.app import shared_task
 from celery.utils.log import get_task_logger
 from django.core.files import File
+from django.core.files.temp import NamedTemporaryFile
 from django.utils import timezone
 from more_itertools import collapse
 from pytz import utc
@@ -288,7 +289,7 @@ def task_s02p02_c_gls_ndvi_300_clip(
         name = param['product']  # 'NDVI'
         date_str = _date_extr(input.filename)
         # file_name = f'CGLS_{name}_{date}_300m_Africa.nc'
-        with tempfile.TemporaryDirectory() as tmp_dir:
+        with TemporaryDirectory() as tmp_dir:
             file = Path(tmp_dir) / f'tmp.nc'
             da.to_netcdf(file, encoding=prmts)  # hmm... maybe it will take too much time, and our conn will die?
             content = File(file.open('rb'))
@@ -324,7 +325,7 @@ def task_s02p02_agro_nvdi_300_resample_to_1km(eo_product_pk):
     # input file//eo_product
     input_obj: EOProduct = eo_product.eo_products_inputs.first()
 
-    with tempfile.TemporaryDirectory() as tmp_dir:
+    with TemporaryDirectory() as tmp_dir:
         output_temp_file = f"{tmp_dir}/tmp_file.nc"
         cp = subprocess.run([
             'gdalwarp',
@@ -479,7 +480,7 @@ def task_s02p02_cgls_compute_vci_1km_v2(eo_product_pk):
     lts_dir = Path('/aux_files/NDVI_LTS')
     ndvi_path = ndvi_1k_obj.file.path
 
-    with tempfile.TemporaryDirectory() as tempdir:
+    with TemporaryDirectory() as tempdir:
         outfile = process(ndvi_path, lts_dir.as_posix(), tempdir)
         # set outfile (VCI) metadata
         # ncatted is for nc attribute editor
@@ -504,7 +505,7 @@ def task_s02p02_cgls_compute_vci_1km_v2(eo_product_pk):
 
 
 @shared_task
-def task_s02p02_lai_clip_lai300m_v1(eo_product_pk: int):
+def task_s0p02_clip_lai300m_v1_afr(eo_product_pk: int):
     import snappy
     from snappy import ProductIO, GPF, HashMap, WKTReader
 
@@ -532,27 +533,35 @@ def task_s02p02_lai_clip_lai300m_v1(eo_product_pk: int):
         clipped = GPF.createProduct('Subset', params, data)
 
         ProductIO.writeProduct(clipped, out_file, 'NetCDF4-CF')  # 'GeoTIFF'
-        return Path(str(clipped.getFileLocation()))
+        return_path = Path(str(clipped.getFileLocation()))
+        print(return_path)
+        return return_path
 
-    with tempfile.NamedTemporaryFile(prefix='task_s02p02_lai_clip_lai300m_v1_') as temp_file:
+    with TemporaryDirectory(prefix='task_s0p02_clip_lai300m_v1_afr_') as temp_dir:
         data = ProductIO.readProduct(eo_source.file.path)
         geom = WKTReader().read(wkt)
-        clipped: Path = clip(data=data, out_file=temp_file.name, geom=geom)
+        out_file = Path(temp_dir) / eo_product.filename
+        clipped: Path = clip(data=data, out_file=out_file.as_posix(), geom=geom)
 
-        cp: CompletedProcess = run(
-            ['ncatted',
-             '-a', 'Consolidation_period,LAI,o,c,' + rt,
-             '-a', 'LAI_version ,LAI,o,c,' + ver,
-             clipped.as_posix()])
+        try:
+            cp: CompletedProcess = run(
+                ['ncatted',
+                 '-a', f'Consolidation_period,LAI,o,c,{rt}',
+                 '-a', f'LAI_version,LAI,o,c,{ver}',
+                 clipped.as_posix()], check=True)
+        except subprocess.CalledProcessError as e:
 
-        if cp.returncode != 0:
-            raise Exception(f'EXIT CODE: {cp.returncode}, ERROR: {cp.stderr}')
+            logger.info(f'EXIT CODE: {e.returncode}')
+            logger.info(f'EXIT CODE: {e.stderr}')
+            logger.info(f'EXIT CODE: {e.stdout}')
+            raise e
 
         content = File(clipped.open('rb'))
         eo_product.file.save(name=eo_product.filename, content=content, save=False)
         eo_product.state = EOProductStateChoices.Ready
         eo_product.datetime_creation = now
         eo_product.save()
+    return
 
 
 ###########
@@ -568,7 +577,7 @@ def task_s04p03_convert_to_tiff(eo_product_pk: int, tile: int):
     eo_product.state = EOProductStateChoices.Generating
     eo_product.save()
 
-    with tempfile.NamedTemporaryFile('wb') as file_handle:
+    with NamedTemporaryFile('wb') as file_handle:
         ds = gdal.Open(eo_source.file.path)
 
         optionsNC2 = gdal.TranslateOptions(
@@ -637,7 +646,7 @@ def task_s0601_wb_100m(eo_product_pk: int, wkt: str, iso: str):
     # order is TUN, RWA, ETH, MOZ, ZAF, GHA, NER, KEN
 
     # product_list defined in the outer scope
-    with tempfile.TemporaryDirectory(prefix='task_s0601_wb_100m_') as temp_dir:
+    with TemporaryDirectory(prefix='task_s0601_wb_100m_') as temp_dir:
         data = ProductIO.readProduct(eo_source.file.path)
         geom = WKTReader().read(wkt)
         cnt = iso.upper()
@@ -685,7 +694,7 @@ def task_s06p01_clip_to_africa(eo_product_pk: int):
         ProductIO.writeProduct(clipped, file_out.as_posix(), 'NetCDF4-CF')
         return Path(str(clipped.getFileLocation()))
 
-    with tempfile.TemporaryDirectory(prefix='task_s06p01_clip_to_africa_') as temp_dir:
+    with TemporaryDirectory(prefix='task_s06p01_clip_to_africa_') as temp_dir:
         date = eo_source.filename.split('_')[3][:8]
         f_out = date + '_SE2_AFR_0300m_0030_WBMA.nc'
         clipped = clip(eo_source.file.path, Path(temp_dir).joinpath(f_out), WKTReader().read(wkt))
@@ -715,8 +724,8 @@ def task_s06p04_et_3km(eo_product_pk: int):
     # only has one input
     eo_source_input: EOSource = eo_product.eo_sources_inputs.first()
     hdf5File = eo_source_input.file.path
-    with tempfile.NamedTemporaryFile() as dest, \
-            tempfile.NamedTemporaryFile() as final_file:
+    with NamedTemporaryFile() as dest, \
+            NamedTemporaryFile() as final_file:
         logger.info('Processing file: %s' % hdf5File)
 
         dest.write(bz2.decompress(eo_source_input.file.read()))
@@ -792,7 +801,7 @@ def task_s06p04_main_sse_bop_v5(eo_product_pk: int):
         eo_product = EOProduct.objects.get(eo_product_pk)
         eo_source = eo_product.eo_sources_inputs.first()
 
-        with tempfile.TemporaryDirectory() as temp_dir, ZipFile(eo_source.file.path) as z:
+        with TemporaryDirectory() as temp_dir, ZipFile(eo_source.file.path) as z:
             f = eo_source.filename
             z.extractall(temp_dir)
             date = f[1:5]

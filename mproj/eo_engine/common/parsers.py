@@ -9,6 +9,7 @@ from dateutil.parser import parse
 from eo_engine.common.copernicus import copernicus_name_elements
 
 punctuation_chars = re.escape(string.punctuation)
+ascii_letters = string.ascii_letters
 
 # https://land.copernicus.eu/global/sites/cgls.vito.be/files/products/CGLOPS1_PUM_LAI1km-VGT-V1_I1.20.pdf
 COPERNICUS_REGEX = re.compile(
@@ -29,24 +30,13 @@ def copernicus_parse_dt(token) -> datetime:
 
 @cache
 def parse_dt_from_generic_string(timestr: str) -> datetime:
-    """ Tries clean a string and then parse it as datetime element """
-    timestr = timestr.lower()  # its a copy
+    """ Tries tries to parse to dt from the longest string-digit"""
 
-    # The final path component, without a suffix if any:
-    timestr = Path(timestr).stem
+    token = max(
+        re.sub(r'[' + punctuation_chars + ascii_letters + ']', ' ', timestr).split(),
+        key=len)
 
-    # remove toxic sub-strings
-    TOXIC_WORDS = [
-        'hdf5',
-    ]
-    # convert punctuation_chars to whitespaces
-    timestr = re.sub(r'[' + punctuation_chars + ']', ' ', timestr)
-
-    # delete any TOXIC words
-    for word in TOXIC_WORDS:
-        timestr = timestr.replace(word, '')
-
-    return parse(timestr, fuzzy=True)
+    return parse(token, fuzzy=True)
 
 
 def parse_copernicus_name(filename: str) -> copernicus_name_elements:

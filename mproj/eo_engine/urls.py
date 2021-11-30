@@ -12,7 +12,7 @@ urlpatterns = [
     path('eoproducts/<str:product_group>', views.list_eoproducts, name='list-eoproducts'),
     path('trigger/spider_crawl/<str:spider_name>', views.trigger_spider, name='trigger-spider'),
     path('trigger/download_eosource/<int:eo_source_pk>', views.trigger_download_eosource, name='trigger-dl-eosource'),
-    path('trigger/eoproduct_genenration/<str:filename>', views.trigger_generate_eoproduct,
+    path('trigger/eoproduct_generation/<str:filename>', views.trigger_generate_eoproduct,
          name='trigger-eoproduct_generation'),
     path('delete_file/<str:resource_type>/<int:pk>', views.delete_file, name='delete-file'),
     path('tasks/revoke/<str:task_id>', views.view_revoke_task, name='revoke-task'),

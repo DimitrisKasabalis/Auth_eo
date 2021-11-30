@@ -2,7 +2,7 @@ import re
 from fnmatch import fnmatch
 from typing import NamedTuple, Dict, Any, List, Union, Tuple, Optional
 
-from eo_engine.common.parsers import parse_copernicus_name
+from eo_engine.common.parsers import parse_copernicus_name, parse_dt_from_generic_string
 from eo_engine.models import EOProductGroupChoices, EOSourceGroupChoices
 from eo_engine import tasks as eo_tasks
 from celery.utils.log import get_task_logger
@@ -33,9 +33,8 @@ def filename_to_product(filename: str) -> Optional[List[typeProductGroup]]:
     if fnmatch(filename, '????????_SE3_AFR_1000m_0010_NDVI.nc'.lower()):
         return [EOProductGroupChoices.AGRO_VCI_1KM_V2_AFR, ]
 
-    if fnmatch(filename, 'c_gls_LAI300-RT1*.nc'.lower()):
-        return [EOProductGroupChoices.AGRO_LAI_300M_V1_AFR,
-                EOProductGroupChoices.AGRO_LAI_1KM_V2_AFR]
+    if fnmatch(filename, 'c_gls_LAI300-RT[2,6]_????????0000_GLOBE_OLCI_V1.1.[1,2].nc'.lower()):
+        return [EOProductGroupChoices.AGRO_LAI_300M_V1_AFR, ]
 
     if fnmatch(filename, 'hdf5_lsasaf_msg_dmet_msg-disk_????????????.bz2'.lower()):
         return [EOProductGroupChoices.MSG_3KM_AFR, ]
@@ -47,7 +46,7 @@ def filename_to_product(filename: str) -> Optional[List[typeProductGroup]]:
     if fnmatch(filename, r'RIVER-FLDglobal-composite1_????????_*.part???.tif'):
         return [EOProductGroupChoices.VIIRS_1DAY_AFR, ]
 
-    logger.warn(f'No rule for +{filename}+')
+    logger.warn(f'No rule for derivative products for +{filename}+')
     return None
 
 
@@ -83,16 +82,15 @@ def generate_products_from_source(filename: str) -> List[product_output]:
                            task_kwargs={})
         ]
 
-    if fnmatch(filename.lower(), 'c_gls_LAI300-RT1*.nc'.lower()):
-        name_elements = parse_copernicus_name(filename)
-        date_str_YYYYMMDD = name_elements.datetime.date().strftime('%Y%m%d')
+    if product and product.count(EOProductGroupChoices.AGRO_LAI_300M_V1_AFR):
+        name_elements = parse_dt_from_generic_string(filename)
+        date_str_YYYYMMDD = name_elements.strftime('%Y%m%d')
         return [
-            product_output('S2_P02/LAI_300', f"{date_str_YYYYMMDD}_SE3_AFR_0300m_0010_LAI.nc",
+            product_output('S2_P02/LAI_300',
+                           f"{date_str_YYYYMMDD}_SE3_AFR_0300m_0010_LAI.nc",
                            EOProductGroupChoices.AGRO_LAI_300M_V1_AFR,
-                           'task_MISSING', {}),
-            product_output('S2_P02/LAI_1km', f"{date_str_YYYYMMDD}_SE3_AFR_1000m_0010_LAI.nc",
-                           EOProductGroupChoices.AGRO_LAI_1KM_V2_AFR,
-                           'task_MISSING', {}),
+                           'task_s0p02_clip_lai300m_v1_afr', {}
+                           ),
         ]
 
     if fnmatch(filename, 'c_gls_WB100*V1.0.1.nc'):

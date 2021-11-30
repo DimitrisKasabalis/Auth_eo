@@ -153,7 +153,9 @@ def trigger_generate_eoproduct(request, filename):
                     'param': eo_product.task_kwargs,
                     'job_id': job.task_id
                     },
-               'previous_page': {'url': reverse('eo_engine:list-eoproducts'), 'label': 'Products List'},
+               'previous_page': {'url': reverse('eo_engine:list-eoproducts',
+                                                kwargs={'product_group': 4}),
+                                 'label': 'Products List'},
                'main_page': {'url': reverse('eo_engine:main-page'), 'label': "Main Page"}
 
                }
