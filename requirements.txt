@@ -42,6 +42,8 @@ click==8.0.3
     #   click-didyoumean
     #   click-plugins
     #   click-repl
+    #   geomet
+    #   sentinelsat
 click-didyoumean==0.3.0
     # via celery
 click-plugins==1.1.1
@@ -66,12 +68,18 @@ django-celery-results==2.2.0
     # via -r requirements.in
 ftputil==5.0.2
     # via -r requirements.in
+geojson==2.5.0
+    # via sentinelsat
+geomet==0.3.0
+    # via sentinelsat
 h2==3.2.0
     # via
     #   scrapy
     #   twisted
 hpack==3.0.0
     # via h2
+html2text==2020.1.16
+    # via sentinelsat
 hyperframe==5.2.0
     # via h2
 hyperlink==21.0.0
@@ -158,11 +166,14 @@ requests==2.26.0
     # via
     #   -r requirements.in
     #   responses
+    #   sentinelsat
 responses==0.16.0
     # via -r requirements.in
 scipy==1.7.3
     # via -r requirements.in
 scrapy==2.5.1
+    # via -r requirements.in
+sentinelsat==1.1.0
     # via -r requirements.in
 service-identity==21.1.0
     # via scrapy
@@ -171,6 +182,7 @@ six==1.16.0
     #   automat
     #   bcrypt
     #   click-repl
+    #   geomet
     #   parsel
     #   protego
     #   pynacl
@@ -181,6 +193,8 @@ six==1.16.0
     #   w3lib
 sqlparse==0.4.2
     # via django
+tqdm==4.62.3
+    # via sentinelsat
 twisted[http2]==21.7.0
     # via scrapy
 typing-extensions==4.0.0
