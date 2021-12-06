@@ -1,6 +1,6 @@
 version: "3.8"
 
-x-default-env:  &default-env
+x-default-env: &default-env
   environment:
     DATABASE_NAME: "${DATABASE_NAME:-africultures}"  # database name
     DATABASE_USERNAME: "${DATABASE_USERNAME:-postgres}" # default username
@@ -11,7 +11,7 @@ x-default-env:  &default-env
     RABBIT_PASSWORD: carrot
     DEBUG: 'False'
 
-x-default-volumes:  &default-volumes
+x-default-volumes: &default-volumes
   volumes:
     - './docker-entrypoint.sh:/docker-entrypoint'
     - "./mproj:/src"
@@ -19,10 +19,10 @@ x-default-volumes:  &default-volumes
     - "${AFRICULTURES_LOCAL_FILES_ROOT:-./local_files/local_files_root}:/local_files_root"
 
 x-default-build: &x-default-build
-    image: "vesnikos/eo_engine:latest"
-    build:
-      context: .
-      dockerfile: "docker/worker/Dockerfile"
+  image: "vesnikos/eo_engine:latest"
+  build:
+    context: .
+    dockerfile: "docker/worker/Dockerfile"
 
 services:
 

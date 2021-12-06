@@ -11,6 +11,7 @@ from pytz import utc
 from scrapy.exceptions import DropItem
 
 from eo_engine.models import EOSource, Credentials, EOSourceStateChoices, EOSourceGroupChoices
+from eo_engine.models.other import EOSourceMeta
 from eo_scraper.items import RemoteSourceItem
 
 
@@ -48,17 +49,21 @@ class DefaultPipeline:
                 cred_obj = Credentials.objects.get(domain=domain)
             except Credentials.DoesNotExist:
                 cred_obj = None
+
+            rules_obj = EOSourceMeta.objects.get(group=spider.product_name)
+
             EOSource.objects.create(
                 state=EOSourceStateChoices.AvailableRemotely,
                 group=spider.product_name,
                 file=None,
-                filename=filename,  # unique acts as id
+                filename=filename,  # unique, acts as id
                 domain=domain,
                 datetime_reference=None,
                 filesize_reported=item.get('size'),
                 datetime_seen=item.get('datetime_seen', datetime.utcnow().replace(tzinfo=utc)),
                 url=item.get('url'),
-                credentials=cred_obj
+                credentials=cred_obj,
+                rule=rules_obj
             )
 
             return item

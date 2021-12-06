@@ -2,7 +2,7 @@ import json
 import os
 import re
 from datetime import datetime
-from typing import List, Pattern, Callable, Optional
+from typing import List, Pattern, Optional
 from urllib.parse import urlsplit, urlparse
 
 from django.core.exceptions import ObjectDoesNotExist

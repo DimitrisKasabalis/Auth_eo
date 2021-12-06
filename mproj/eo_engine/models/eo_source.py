@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Optional, Tuple
 from urllib.parse import urlsplit
 
 from django.core.validators import MinValueValidator
@@ -95,6 +96,16 @@ class EOSourceGroupChoices(models.TextChoices):
     # VIIRS-1day-xxx
     FLOODLIGHT_VIIRS_1_DAY = 'FLOODLIGHT_VIIRS_1_DAY', 'VIIRS-1day'
 
+    # NDVI_ANOM
+    GMOD09Q1_NDVI_ANOM_TUN = 'GMOD09Q1_NDVI_ANOM_TUN', 'GMOD09Q1_NDVI_ANOM_TUN'
+    GMOD09Q1_NDVI_ANOM_RWA = 'GMOD09Q1_NDVI_ANOM_RWA', 'GMOD09Q1_NDVI_ANOM_RWA'
+    GMOD09Q1_NDVI_ANOM_ETH = 'GMOD09Q1_NDVI_ANOM_ETH', 'GMOD09Q1_NDVI_ANOM_ETH'
+    GMOD09Q1_NDVI_ANOM_ZAF = 'GMOD09Q1_NDVI_ANOM_ZAF', 'GMOD09Q1_NDVI_ANOM_ZAF'
+    GMOD09Q1_NDVI_ANOM_NER = 'GMOD09Q1_NDVI_ANOM_NER', 'GMOD09Q1_NDVI_ANOM_NER'
+    GMOD09Q1_NDVI_ANOM_GHA = 'GMOD09Q1_NDVI_ANOM_GHA', 'GMOD09Q1_NDVI_ANOM_GHA'
+    GMOD09Q1_NDVI_ANOM_MOZ = 'GMOD09Q1_NDVI_ANOM_MOZ', 'GMOD09Q1_NDVI_ANOM_MOZ'
+    GMOD09Q1_NDVI_ANOM_KEN = 'GMOD09Q1_NDVI_ANOM_KEN', 'GMOD09Q1_NDVI_ANOM_KEN'
+
 
 class EOSource(models.Model):
     # EO-Inputs
@@ -127,6 +138,7 @@ class EOSource(models.Model):
     url = models.URLField(help_text="Resource URL")
     # username/password of resource
     credentials = models.ForeignKey("Credentials", on_delete=models.SET_NULL, null=True)
+    rule = models.ForeignKey(to='EOSourceMeta', on_delete=models.DO_NOTHING, null=True)
 
     class Meta:
         ordering = ["group", "-datetime_reference"]
@@ -148,9 +160,12 @@ class EOSource(models.Model):
         return self.local_path.is_file()
 
     @property
-    def get_credentials(self) -> (str, str):
+    def get_credentials(self) -> Optional[Tuple[str, str]]:
         """ Returns credentials to download this file."""
-        return self.credentials.username, self.credentials.password
+        try:
+            return self.credentials.username, self.credentials.password
+        except AttributeError:
+            return None
 
     def set_status(self, status: str):
         self.state = status

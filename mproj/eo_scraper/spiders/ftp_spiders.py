@@ -16,7 +16,7 @@ from eo_engine.models import EOSourceGroupChoices
 
 # https://github.com/laserson/ftptree/blob/master/ftptree_crawler/spiders.py
 class FtpGlobalLandWB100m(FtpSpider):
-    name = 'ftp-spider-wb100'
+    name = EOSourceGroupChoices.C_GLS_WB_100M_V1_GLOB
     product_name = EOSourceGroupChoices.C_GLS_WB_100M_V1_GLOB
     allowed_domains = ['ftp.globalland.cls.fr', ]
 
@@ -24,7 +24,7 @@ class FtpGlobalLandWB100m(FtpSpider):
 
 
 class FtpGlobalLandWB300m(FtpSpider):
-    name = 'ftp-spider-wb300'
+    name = EOSourceGroupChoices.C_GLS_NDVI_300M_V2_GLOB
     product_name = EOSourceGroupChoices.C_GLS_NDVI_300M_V2_GLOB
     allowed_domains = ['ftp.globalland.cls.fr', ]
 
@@ -32,7 +32,7 @@ class FtpGlobalLandWB300m(FtpSpider):
 
 
 class FtpFloodLightViiR(FtpSpider):
-    name = 'ftp-floodlight-viir'
+    name = EOSourceGroupChoices.FLOODLIGHT_VIIRS_1_DAY
     product_name = EOSourceGroupChoices.FLOODLIGHT_VIIRS_1_DAY
     allowed_domain = ['floodlight.ssec.wisc.edu']
 

@@ -6,6 +6,7 @@ from django.forms import TextInput, JSONField, CharField
 
 from eo_engine.common.contrib.waporv2 import well_known_bboxes
 from .models import Credentials
+from .models.other import EOSourceMeta
 
 
 class CredentialsUsernamePassowordForm(forms.ModelForm):
@@ -66,4 +67,13 @@ class WaporNdviForm(forms.Form):
         level = cleaned_data.get('level')
         area = cleaned_data.get('area')
         if area == 'africa' and level == 'L2':
-            self.add_error('level',"You can only select Level-1 if Africa is selected")
+            self.add_error('level', "You can only select Level-1 if Africa is selected")
+
+
+class EOSourceMetaForm(forms.ModelForm):
+    class Meta:
+        model = EOSourceMeta
+        fields = ['enabled', 'from_date', ]
+        widgets = {
+            'from_date': forms.DateInput(attrs={'type': 'date'})
+        }

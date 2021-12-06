@@ -18,7 +18,7 @@ class NDVISpider(CopernicusVgtDatapool):
 
 
 class NDVI300mV2Spider(NDVISpider):
-    name = "c_gsl_ndvi300-v2-glob-spider"
+    name = EOSourceGroupChoices.C_GLS_NDVI_300M_V2_GLOB
     product_name = EOSourceGroupChoices.C_GLS_NDVI_300M_V2_GLOB
     start_urls = [
         f"https://land.copernicus.vgt.vito.be/PDF/datapool/Vegetation/Indicators/NDVI_300m_V2/"
@@ -26,7 +26,7 @@ class NDVI300mV2Spider(NDVISpider):
 
 
 class NDVI1kmV3Spider(NDVISpider):
-    name = "ndvi-1km-v3-spider"
+    name = EOSourceGroupChoices.C_GLS_NDVI_1KM_V3_GLOB
     product_name = EOSourceGroupChoices.C_GLS_NDVI_1KM_V3_GLOB
     start_urls = [
         f"https://land.copernicus.vgt.vito.be/PDF/datapool/Vegetation/Indicators/NDVI_1km_V3/"

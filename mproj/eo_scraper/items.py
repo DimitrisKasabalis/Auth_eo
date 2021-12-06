@@ -6,12 +6,15 @@ import re
 from urllib.parse import urlsplit
 
 import scrapy
+from celery.utils.log import get_task_logger
 from itemloaders.processors import Join, MapCompose, TakeFirst
 
 units = {"B": 1, "KB": 2 ** 10, "MB": 2 ** 20, "GB": 2 ** 30, "TB": 2 ** 40}
 
+logger = get_task_logger(__name__)
 
-def parse_size(size):
+
+def parse_size(str_token: str):
     """
 
     ('1024b', 1024)
@@ -29,19 +32,24 @@ def parse_size(size):
     ('343.1mb', 359766425)
     """
     try:
-        return int(size)
+        return int(str_token)
     except ValueError:
         pass
     try:
-        return float(size)
+        return float(str_token)
     except ValueError:
         pass
 
-    size = size.upper()
+    str_token = str_token.upper()
     # print("parsing size ", size)
-    if not re.match(r' ', size):
-        size = re.sub(r'([KMGT]?B)', r' \1', size)
-    number, unit = [string.strip() for string in size.split()]
+    try:
+        if not re.match(r' ', str_token):
+            str_token = re.sub(r'([KMGT]?B)', r' \1', str_token)
+        number, unit = [string.strip() for string in str_token.split()]
+    except ValueError:
+        # couldn't parse the value
+        logger.warning('SCRAPER:ITEM-PROCESSING:parse_size Could not parse string to bytes.')
+        return -1
     return int(float(number) * units[unit])
 
 
@@ -56,12 +64,6 @@ def get_domain_of_url(value: str):
 
 def drop_query_from_url(value: str):
     return value.split('?')[0]
-
-
-def parse_datetime_str(value: str):
-    from dateutil.parser import parse
-
-    return parse(value)
 
 
 class RemoteSourceItem(scrapy.Item):

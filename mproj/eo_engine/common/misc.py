@@ -1,4 +1,5 @@
 import functools
+from collections import defaultdict
 from typing import List
 
 from eo_engine.common.tasks import is_process_task
@@ -29,3 +30,9 @@ def list_spiders() -> List[str]:
     spider_loader = get_spider_loader()
 
     return spider_loader.list()
+
+
+# recursive default_dict
+# x = rec_dd()
+# x['a']['b'] = {a:{b:{}}
+rec_dd = defaultdict(lambda: rec_dd)

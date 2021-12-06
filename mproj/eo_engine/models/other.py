@@ -1,5 +1,8 @@
 from django.db import models
 
+from eo_engine.common.misc import rec_dd
+from eo_engine.models.eo_source import EOSourceGroupChoices
+
 
 class Credentials(models.Model):
     class CredentialsTypeChoices(models.TextChoices):
@@ -18,3 +21,18 @@ class Credentials(models.Model):
 class FunctionalRules(models.Model):
     domain = models.CharField(max_length=100)
     rules = models.JSONField(default=dict)
+
+
+class RuleMixin(models.Model):
+    enabled = models.BooleanField(default=True)
+    timestamp = models.DateTimeField(auto_now_add=True, editable=False)
+    last_modified = models.DateTimeField(auto_now=True, editable=False)
+    from_date = models.DateField()  # date where scan should begin from. assume 00:00
+    notes = models.TextField(default='')
+
+    class Meta:
+        abstract = True
+
+
+class EOSourceMeta(RuleMixin):
+    group = models.TextField(choices=EOSourceGroupChoices.choices, unique=True)

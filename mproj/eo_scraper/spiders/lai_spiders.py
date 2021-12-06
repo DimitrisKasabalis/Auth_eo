@@ -8,7 +8,7 @@ class LAISpider(CopernicusVgtDatapool):
 
 
 class LAI300mV1Spider(LAISpider):
-    name = "lai-300m-v1-spider"
+    name = EOSourceGroupChoices.C_GLS_LAI_300M_V1_GLOB
     product_name = EOSourceGroupChoices.C_GLS_LAI_300M_V1_GLOB
     start_urls = [
         f"https://land.copernicus.vgt.vito.be/PDF/datapool/Vegetation/Properties/LAI_300m_V1/"
