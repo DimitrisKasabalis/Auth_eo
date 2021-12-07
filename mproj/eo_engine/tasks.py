@@ -1,5 +1,8 @@
+import tempfile
+
 import os
 import subprocess
+from osgeo import gdal
 from tempfile import TemporaryDirectory
 from datetime import datetime
 from pathlib import Path
@@ -17,7 +20,7 @@ from more_itertools import collapse
 from pytz import utc
 
 from eo_engine.common.tasks import get_task_ref_from_name
-from eo_engine.errors import AfriCultuReSRetriableError
+from eo_engine.errors import AfriCultuReSRetriableError, AfriCultuReSError
 from eo_engine.models import EOProduct, EOProductStateChoices, FunctionalRules, Credentials
 from eo_engine.models import EOSource, EOSourceStateChoices
 
@@ -564,6 +567,121 @@ def task_s0p02_clip_lai300m_v1_afr(eo_product_pk: int):
     return
 
 
+@shared_task
+def task_s02p02_process_ndvia(eo_product_pk: int, iso: str):
+    # raise NotImplementedError()
+    import rasterio
+    from rasterio.merge import merge as rio_merge
+
+    def mosaic_f(in_files: List[Path], outfile: Path) -> Path:
+        # prepend vsigzip if filename ends in .gz
+
+        datasets = ['/vsigzip/' + x.as_posix() if x.suffix.endswith('gz') else x.as_posix() for x in in_files]
+        logger.info(f'task_s02p02_process_ndvia:mosaic_f:datasets:{datasets}')
+        mosaic, out_trans = rio_merge(
+            datasets=datasets,
+            nodata=0,
+            method='max')
+
+        # Update the metadata
+        # get the meta from the first input
+        src = rasterio.open(datasets[0])
+        out_meta = src.meta.copy()
+        out_meta.update({
+            "driver": "GTiff",
+            "height": mosaic.shape[1],
+            "width": mosaic.shape[2], "transform": out_trans,
+            "crs": "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs",
+            "tiled": True,
+            'compress': 'LZW',
+            "dtype": 'uint8',
+        })
+        with rasterio.open(outfile, "w", **out_meta) as dest:
+            dest.write(mosaic)
+
+        return Path(outfile)
+
+    def clip(file_in: Path, file_out_path: Path, shp_file_path: Path) -> Path:
+        # clip using the shapefile ot a netcdf format
+        print("\nClipping file: %s" % file_in)
+
+        warpOptions = gdal.WarpOptions(
+            cutlineDSName=shp_file_path.as_posix(), cropToCutline=True,
+            dstSRS="EPSG:4326",
+            format='netCDF',
+            outputType=gdal.GDT_UInt16, options=['COMPRESS=LZW'])
+        gdal.Warp(
+            srcDSOrSrcDSTab=file_in.as_posix(),
+            destNameOrDestDS=file_out_path.as_posix(),
+            options=warpOptions)
+        return Path(file_out_path)
+
+    def add_metadata(file_in: Path, file_out: Path) -> Path:
+        import xarray as xr
+        # Load the dataset
+        ds = xr.open_dataset(file_in)
+
+        # select parameters according to the product.
+        da = ds.Band1
+
+        # Output write
+        try:
+            da.name = 'NDVIA'
+            da.attrs['short_name'] = 'NDVI anomaly'
+            da.attrs['long_name'] = 'Normalized Difference Vegetation Index (NDVI) anomaly'
+            da.attrs['_FillValue'] = 0
+            da.attrs['scale_factor'] = 0.008
+            da.attrs['add_offset'] = -1
+            prmts = dict({'NDVIA': {'dtype': 'f4', 'zlib': 'True', 'complevel': 4}})
+            da.to_netcdf(file_out, encoding=prmts)
+        except Exception as ex:
+            template = "An exception of type {0} occurred while resampling. Arguments:\n{1!r}"
+            message = template.format(type(ex).__name__, ex.args)
+            logger.err(message)
+            raise AfriCultuReSError(message)
+        return Path(file_out)
+
+    eo_product = EOProduct.objects.get(pk=eo_product_pk)
+    if iso == 'ZAF':
+        f_shp = '/aux_files/Border_shp/Country_SAfr_main.shp'
+    elif iso == 'MOZ':
+        f_shp = '/aux_files/Border_shp/MOZ_adm0.shp'
+    elif iso == 'TUN':
+        f_shp = '/aux_files/Border_shp/TN_envelope.shp'
+    elif iso == 'KEN':
+        f_shp = '/aux_files/Border_shp/KEN_adm0.shp'
+    elif iso == 'GHA':
+        f_shp = '/aux_files/Border_shp/GHA_adm0.shp'
+    elif iso == 'RWA':
+        f_shp = '/aux_files/Border_shp/RWA_adm0.shp'
+    elif iso == 'ETH':
+        f_shp = '/aux_files/Border_shp/ETH_adm0.shp'
+    elif iso == 'NER':
+        f_shp = '/aux_files/Border_shp/NER_adm0.shp'
+    else:
+        raise AfriCultuReSError(f'no valid iso: {iso}')
+
+    f_shp_path = Path(f_shp)
+    if not f_shp_path.exists():
+        raise AfriCultuReSError(f'Shapefile {f_shp_path.as_posix()} does not exist')
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        input_files_qs = eo_product.eo_sources_inputs.all()
+        input_files_path: List[Path] = [Path(x.file.path) for x in input_files_qs]
+        temp_dir_path = Path(temp_dir)
+
+        mosaic_f_path = mosaic_f(input_files_path, temp_dir_path / 'mosaic.tif')
+        clipped_f_path = clip(mosaic_f_path, file_out_path=temp_dir_path / 'clipped.nc', shp_file_path=f_shp_path)
+        final_raster_path = add_metadata(file_in=clipped_f_path, file_out=temp_dir_path / 'final_file.nc')
+
+        content = File(final_raster_path.open('rb'))
+        eo_product.file.save(name=eo_product.filename, content=content, save=False)
+        eo_product.state = EOProductStateChoices.Ready
+        eo_product.datetime_creation = now
+        eo_product.save()
+    return eo_product.file.path
+
+
 ###########
 # s04p03
 ##########
@@ -747,16 +865,18 @@ def task_s06p04_et_3km(eo_product_pk: int):
                 logger.info("\nConverting to netcdf...")
                 # file_nc = "" + outDirName + "/" + file[5:-8] + ".nc"
                 netcdf_file = h5g.to_netcdf(Path(final_file.name))
-
-        cp = subprocess.run(['ncatted',
-                             '-a', 'short_name,Band1,o,c,Daily_ET',
-                             '-a', "long_name,Band1,o,c,Daily_Evapotranspiration_3km",
-                             '-a', "ET_UNITS,Band1,o,c,[mm/day]",
-                             '-a', "ET_SCALING_FACTOR,Band1,o,d,1000",
-                             '-a', "ET_OFFSET,Band1,o,d,0",
-                             '-a', "ET_MISSING_VALUE,Band1,o,d,-1",
-                             '-a', "_FillValue,Band1,o,d, -0.001",
-                             final_file.name])
+        try:
+            cp = subprocess.run(['ncatted',
+                                 '-a', 'short_name,Band1,o,c,Daily_ET',
+                                 '-a', "long_name,Band1,o,c,Daily_Evapotranspiration_3km",
+                                 '-a', "ET_UNITS,Band1,o,c,[mm/day]",
+                                 '-a', "ET_SCALING_FACTOR,Band1,o,d,1000",
+                                 '-a', "ET_OFFSET,Band1,o,d,0",
+                                 '-a', "ET_MISSING_VALUE,Band1,o,d,-1",
+                                 '-a', "_FillValue,Band1,o,d,-0.001",
+                                 final_file.name], check=True)
+        except Exception as e:
+            raise e
 
         content = File(final_file)
         eo_product.file.save(name=eo_product.filename, content=content, save=False)

@@ -91,7 +91,7 @@ def list_eosources(request, product_group=None):
     # default order [product, date]
     qs = EOSource.objects.all().prefetch_related('task')
     if product_group:
-        qs = qs.filter(group=product_group)
+        qs = qs.filter(group=product_group).order_by('filename')
 
     def build_eo_structure(qs):
         if not qs.exists():

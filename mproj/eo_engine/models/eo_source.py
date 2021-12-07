@@ -179,27 +179,36 @@ def eosource_post_save_handler(instance: EOSource, **kwargs):
     from eo_engine.models import EOProduct, EOProductStateChoices
     eo_source = instance
     # if asset is local
-    if eo_source.state == EOSourceStateChoices.AvailableLocally:
+    if eo_source.state != EOSourceStateChoices.AvailableLocally:
+        return
         # pass
-        products = generate_products_from_source(eo_source.filename)
+    products = generate_products_from_source(eo_source.filename)
 
-        for product in products:
+    for product in products:
 
-            prod, created = EOProduct.objects.get_or_create(
-                filename=product.filename,
-                output_folder=product.output_folder,
-                group=product.group,
-                task_name=product.task_name,
-                task_kwargs=product.task_kwargs
-            )
-            # mark if the scheduler should Ignore it
-            if prod.is_ignored():
-                print('this entry is marked as ignored.')
-                prod.state = EOProductStateChoices.Ignore
+        prod, created = EOProduct.objects.get_or_create(
+            filename=product.filename,
+            output_folder=product.output_folder,
+            group=product.group,
+            task_name=product.task_name,
+            task_kwargs=product.task_kwargs
+        )
 
-            # mark it's inputs
-            prod.eo_sources_inputs.set([eo_source, ])
-            prod.save()
+        if eo_source.group.startswith('GMOD09Q1_NDVI_ANOM'):
+            from eo_engine.common.s02p04 import is_GMOD09Q1_batch_complete
+            if is_GMOD09Q1_batch_complete(eo_source):
+                prod.state = EOProductStateChoices.Available
+            else:
+                prod.state = EOProductStateChoices.MISSING_SOURCE
+
+        # mark if the scheduler should Ignore it
+        if prod.is_ignored():
+            print('this entry is marked as ignored.')
+            prod.state = EOProductStateChoices.Ignore
+
+        # mark it's inputs
+        prod.eo_sources_inputs.add(eo_source)
+        prod.save()
 
 
 __all__ = [

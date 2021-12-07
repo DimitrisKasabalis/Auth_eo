@@ -37,6 +37,16 @@ class EOProductGroupChoices(models.TextChoices):
     # VIIS-1Day for S04P03
     VIIRS_1DAY_AFR = 'VIIRS_1DAY_AFR', 'VIIRS 1day AFR'
 
+    # NDVIA Anomaly
+    AGRO_NDVIA_TUN = 'AGRO_NDVIA_TUN', 'AGRO_NDVIA_TUN'
+    AGRO_NDVIA_RWA = 'AGRO_NDVIA_RWA', 'AGRO_NDVIA_RWA'
+    AGRO_NDVIA_ETH = 'AGRO_NDVIA_ETH', 'AGRO_NDVIA_ETH'
+    AGRO_NDVIA_ZAF = 'AGRO_NDVIA_ZAF', 'AGRO_NDVIA_ZAF'
+    AGRO_NDVIA_NER = 'AGRO_NDVIA_NER', 'AGRO_NDVIA_NER'
+    AGRO_NDVIA_GHA = 'AGRO_NDVIA_GHA', 'AGRO_NDVIA_GHA'
+    AGRO_NDVIA_MOZ = 'AGRO_NDVIA_MOZ', 'AGRO_NDVIA_MOZ'
+    AGRO_NDVIA_KEN = 'AGRO_NDVIA_KEN', 'AGRO_NDVIA_KEN'
+
 
 class EOProductStateChoices(models.TextChoices):
     Available = 'Available', "AVAILABLE for generation."
@@ -45,6 +55,7 @@ class EOProductStateChoices(models.TextChoices):
     Generating = 'Generating', "GENERATING..."
     Ignore = 'Ignore', "Skip generation (Ignored) ."
     Ready = 'Ready', "Product is READY."
+    MISSING_SOURCE = 'MISSING_SOURCE', "Some or all EOSouce(s) Are Not Available"
 
 
 def _upload_to(instance: 'EOProduct', filename):

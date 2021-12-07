@@ -1,11 +1,15 @@
 import re
+from dateutil.relativedelta import relativedelta
+from datetime import date as dt_date
 from fnmatch import fnmatch
-from typing import NamedTuple, Dict, Any, List, Union, Tuple, Optional
+from typing import NamedTuple, Dict, Any, List, Union, Optional
 
-from eo_engine.common.parsers import parse_copernicus_name, parse_dt_from_generic_string
-from eo_engine.models import EOProductGroupChoices, EOSourceGroupChoices
-from eo_engine import tasks as eo_tasks
 from celery.utils.log import get_task_logger
+
+from eo_engine import tasks as eo_tasks
+from eo_engine.common.parsers import parse_copernicus_name, parse_dt_from_generic_string
+from eo_engine.common.patterns import GMOD09Q1_DATE_PATTERN, RIVER_FLD_GLOBAL, GMOD09Q1_FILE_REGEX
+from eo_engine.models import EOProductGroupChoices, EOSourceGroupChoices
 
 logger = get_task_logger('eo_engine.products')
 
@@ -43,8 +47,39 @@ def filename_to_product(filename: str) -> Optional[List[typeProductGroup]]:
     if fnmatch(filename, 'c_gls_WB300_????????0000_GLOBE_S2_V2.0.1.nc'.lower()):
         return [EOProductGroupChoices.AGRO_WB_300M_V2_AFR, ]
 
-    if fnmatch(filename, r'RIVER-FLDglobal-composite1_????????_*.part???.tif'):
+    if fnmatch(filename, r'RIVER-FLDglobal-composite1_????????_*.part???.tif'.lower()):
         return [EOProductGroupChoices.VIIRS_1DAY_AFR, ]
+
+    if fnmatch(filename, r'GMOD09Q1.A???????.08d.latlon.x??y??.6v1.NDVI_anom_S2001-2015.tif.gz'.lower()):
+        pat = GMOD09Q1_FILE_REGEX.match(filename)
+        if pat is None:
+            logger.err(f'Unrecognized pattern match for {filename}')
+            raise Exception(f'Unrecognized pattern match for {filename}')
+        tile = pat.groupdict()['tile']
+        tiles_zaf = ["x21y13", "x22y12", "x22y13", "x23y12", "x23y13"]
+        tiles_moz = ["x23y11", "x23y12", "x24y11", "x24y12"]
+        tiles_tun = ["x20y05", "x20y06", "x21y05", "x21y06"]
+        tiles_ken = ["x23y09", "x23y10", "x24y09", "x24y10"]
+        tiles_gha = ["x23y08", "x23y09", "x24y08", "x24y09", "x25y09"]
+        tiles_rwa = ["x23y10"]
+        tiles_eth = ["x23y08", "x23y09", "x24y08", "x24y09", "x25y09"]
+        tiles_ner = ["x19y08", "x19y09", "x20y07", "x20y08", "x20y09", "x21y07", "x21y08"]
+        if tile in tiles_zaf:
+            return [EOProductGroupChoices.AGRO_NDVIA_ZAF, ]
+        elif tile in tiles_moz:
+            return [EOProductGroupChoices.AGRO_NDVIA_MOZ, ]
+        elif tile in tiles_tun:
+            return [EOProductGroupChoices.AGRO_NDVIA_TUN, ]
+        elif tile in tiles_ken:
+            return [EOProductGroupChoices.AGRO_NDVIA_KEN, ]
+        elif tile in tiles_gha:
+            return [EOProductGroupChoices.AGRO_NDVIA_GHA, ]
+        elif tile in tiles_rwa:
+            return [EOProductGroupChoices.AGRO_NDVIA_RWA, ]
+        elif tile in tiles_eth:
+            return [EOProductGroupChoices.AGRO_NDVIA_ETH, ]
+        elif tile in tiles_ner:
+            return [EOProductGroupChoices.AGRO_NDVIA_NER, ]
 
     logger.warn(f'No rule for derivative products for +{filename}+')
     return None
@@ -80,6 +115,160 @@ def generate_products_from_source(filename: str) -> List[product_output]:
                            EOProductGroupChoices.AGRO_NDVI_1KM_V3_AFR,
                            'task_s02p02_agro_nvdi_300_resample_to_1km',
                            task_kwargs={})
+        ]
+
+    # NDVI Anomaly
+    # eg filename: GMOD09Q1.A2020001.08d.latlon.x23y10.6v1.NDVI_anom_S2001-2015.tif.gz
+    if product and product.count(EOProductGroupChoices.AGRO_NDVIA_ZAF):
+        iso = 'ZAF'
+        match = GMOD09Q1_DATE_PATTERN.match(filename)
+        group_dict = match.groupdict()
+        year = int(group_dict['year'])
+        doy = int(group_dict['doy'])
+        date = dt_date(year, 1, 1) + relativedelta(days=doy - 1)
+        return [
+            product_output(
+                output_folder='S2_P02/NDVI_anom',
+                filename='{YYYYMMDD}_MOD_{ISOCODE}_0250m_0008_NDVI_anom.nc'.format(
+                    ISOCODE=iso,
+                    YYYYMMDD=date.strftime('%Y%m%d')),
+                group=EOProductGroupChoices.AGRO_NDVIA_ZAF,
+                task_name='task_s02p02_process_ndvia',
+                task_kwargs={'iso': iso}
+            )
+        ]
+
+    if product and product.count(EOProductGroupChoices.AGRO_NDVIA_MOZ):
+        iso = 'MOZ'
+        match = GMOD09Q1_DATE_PATTERN.match(filename)
+        group_dict = match.groupdict()
+        year = int(group_dict['year'])
+        doy = int(group_dict['doy'])
+        date = dt_date(year, 1, 1) + relativedelta(days=doy - 1)
+        return [
+            product_output(
+                output_folder='S2_P02/NDVI_anom',
+                filename='{YYYYMMDD}_MOD_{ISOCODE}_0250m_0008_NDVI_anom.nc'.format(
+                    ISOCODE=iso,
+                    YYYYMMDD=date.strftime('%Y%m%d')),
+                group=EOProductGroupChoices.AGRO_NDVIA_MOZ,
+                task_name='task_s02p02_process_ndvia',
+                task_kwargs={'iso': iso}
+            )
+        ]
+
+    if product and product.count(EOProductGroupChoices.AGRO_NDVIA_TUN):
+        iso = 'TUN'
+        match = GMOD09Q1_DATE_PATTERN.match(filename)
+        group_dict = match.groupdict()
+        year = int(group_dict['year'])
+        doy = int(group_dict['doy'])
+        date = dt_date(year, 1, 1) + relativedelta(days=doy - 1)
+        return [
+            product_output(
+                output_folder='S2_P02/NDVI_anom',
+                filename='{YYYYMMDD}_MOD_{ISOCODE}_0250m_0008_NDVI_anom.nc'.format(
+                    ISOCODE=iso,
+                    YYYYMMDD=date.strftime('%Y%m%d')),
+                group=EOProductGroupChoices.AGRO_NDVIA_TUN,
+                task_name='task_s02p02_process_ndvia',
+                task_kwargs={'iso': iso}
+            )
+        ]
+
+    if product and product.count(EOProductGroupChoices.AGRO_NDVIA_KEN):
+        iso = 'KEN'
+        match = GMOD09Q1_DATE_PATTERN.match(filename)
+        group_dict = match.groupdict()
+        year = int(group_dict['year'])
+        doy = int(group_dict['doy'])
+        date = dt_date(year, 1, 1) + relativedelta(days=doy - 1)
+        return [
+            product_output(
+                output_folder='S2_P02/NDVI_anom',
+                filename='{YYYYMMDD}_MOD_{ISOCODE}_0250m_0008_NDVI_anom.nc'.format(
+                    ISOCODE=iso,
+                    YYYYMMDD=date.strftime('%Y%m%d')),
+                group=EOProductGroupChoices.AGRO_NDVIA_KEN,
+                task_name='task_s02p02_process_ndvia',
+                task_kwargs={'iso': iso}
+            )
+        ]
+
+    if product and product.count(EOProductGroupChoices.AGRO_NDVIA_GHA):
+        iso = 'GHA'
+        match = GMOD09Q1_DATE_PATTERN.match(filename)
+        group_dict = match.groupdict()
+        year = int(group_dict['year'])
+        doy = int(group_dict['doy'])
+        date = dt_date(year, 1, 1) + relativedelta(days=doy - 1)
+        return [
+            product_output(
+                output_folder='S2_P02/NDVI_anom',
+                filename='{YYYYMMDD}_MOD_{ISOCODE}_0250m_0008_NDVI_anom.nc'.format(
+                    ISOCODE=iso,
+                    YYYYMMDD=date.strftime('%Y%m%d')),
+                group=EOProductGroupChoices.AGRO_NDVIA_GHA,
+                task_name='task_s02p02_process_ndvia',
+                task_kwargs={'iso': iso}
+            )
+        ]
+
+    if product and product.count(EOProductGroupChoices.AGRO_NDVIA_RWA):
+        iso = 'RWA'
+        match = GMOD09Q1_DATE_PATTERN.match(filename)
+        group_dict = match.groupdict()
+        year = int(group_dict['year'])
+        doy = int(group_dict['doy'])
+        date = dt_date(year, 1, 1) + relativedelta(days=doy - 1)
+        return [
+            product_output(
+                output_folder='S2_P02/NDVI_anom',
+                filename='{YYYYMMDD}_MOD_{ISOCODE}_0250m_0008_NDVI_anom.nc'.format(
+                    ISOCODE=iso,
+                    YYYYMMDD=date.strftime('%Y%m%d')),
+                group=EOProductGroupChoices.AGRO_NDVIA_RWA,
+                task_name='task_s02p02_process_ndvia',
+                task_kwargs={'iso': iso}
+            )
+        ]
+
+    if product and product.count(EOProductGroupChoices.AGRO_NDVIA_ETH):
+        iso = 'ETH'
+        match = GMOD09Q1_DATE_PATTERN.match(filename)
+        group_dict = match.groupdict()
+        year = int(group_dict['year'])
+        doy = int(group_dict['doy'])
+        date = dt_date(year, 1, 1) + relativedelta(days=doy - 1)
+        return [
+            product_output(
+                output_folder='S2_P02/NDVI_anom',
+                filename='{YYYYMMDD}_MOD_{ISOCODE}_0250m_0008_NDVI_anom.nc'.format(
+                    ISOCODE=iso,
+                    YYYYMMDD=date.strftime('%Y%m%d')),
+                group=EOProductGroupChoices.AGRO_NDVIA_ETH,
+                task_name='task_s02p02_process_ndvia',
+                task_kwargs={'iso': iso}
+            )
+        ]
+
+    if product and product.count(EOProductGroupChoices.AGRO_NDVIA_NER):
+        iso = 'NER'
+        match = GMOD09Q1_DATE_PATTERN.match(filename)
+        group_dict = match.groupdict()
+        year = int(group_dict['year'])
+        doy = int(group_dict['doy'])
+        date = dt_date(year, 1, 1) + relativedelta(days=doy - 1)
+        return [
+            product_output(
+                output_folder='S2_P02/NDVI_anom',
+                filename='{YYYYMMDD}_MOD_{ISOCODE}_0250m_0008_NDVI_anom.nc'.format(
+                    ISOCODE=iso,
+                    YYYYMMDD=date.strftime('%Y%m%d')),
+                group=EOProductGroupChoices.AGRO_NDVIA_NER,
+                task_name='task_s02p02_process_ndvia',
+                task_kwargs={'iso': iso}
+            )
         ]
 
     if product and product.count(EOProductGroupChoices.AGRO_LAI_300M_V1_AFR):

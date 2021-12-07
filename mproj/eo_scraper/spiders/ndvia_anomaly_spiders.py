@@ -7,7 +7,9 @@ from itemloaders import ItemLoader
 from scrapy import Selector
 from scrapy.http import Response
 from scrapy.linkextractors import LinkExtractor, IGNORED_EXTENSIONS as DEFAULT_IGNORED_EXTENSIONS
-from scrapy.spiders import CrawlSpider, Rule
+from scrapy.spiders import CrawlSpider, Rule, Spider
+
+from eo_engine.common.patterns import GMOD09Q1_FILE_REGEX
 from eo_engine.models import EOSourceGroupChoices
 from eo_engine.models.other import EOSourceMeta
 from eo_scraper.items import RemoteSourceItem
@@ -17,18 +19,16 @@ IGNORED_EXTENSIONS = DEFAULT_IGNORED_EXTENSIONS + ['tif.gz', ]
 
 # matches https://gimms.gsfc.nasa.gov/MODIS/std/GMOD09Q1/...
 page_regex = re.compile(r'https://.*/GMOD09Q1/.*/$')
-page_regex = re.compile(r'https://.*/GMOD09Q1/tif/NDVI_anom_S2001-2015(/(?P<year>\d{4})?(/(?P<doy>\d{3}))?)?/$')
+page_regex = re.compile(r'^https://gimms\.gsfc\.nasa\.gov/MODIS/std/GMOD09Q1/tif/NDVI_anom_S2001-2015(/(?P<year>\d{4})?(/(?P<doy>\d{3}))?)?/$')
 
 # matches https://gimms.gsfc.nasa.gov/MODIS/std/GMOD09Q1/tif/NDVI_anom_S2001-2015/2001/073/
 # which is the catalog page
 catalog_page_regex = re.compile(r'https://.*/GMOD09Q1/.*/(?P<year>\d{4})/(?P<date>\d{3})/$')
 
-GMOD09Q1_FILE_REGEX = re.compile(r'.*\.(?P<tile>(x\d{1,2}y\d{1,2})).*\.tif\.gz')
-
 logger = get_task_logger(__name__)
 
 
-class NDVIAnomaly(CrawlSpider):
+class NDVIAnomaly(Spider):
     tiles: List[str]
     start_urls = [
         f"https://gimms.gsfc.nasa.gov/MODIS/std/GMOD09Q1/tif/NDVI_anom_S2001-2015/"
@@ -37,10 +37,10 @@ class NDVIAnomaly(CrawlSpider):
     def get_group(self):
         raise NotImplementedError()
 
-    rules: List[Rule] = (
-        Rule(LinkExtractor(allow=(page_regex,), deny=(catalog_page_regex,)), callback='parse'),
-        # Rule(LinkExtractor(allow=(catalog_page_regex,)), callback='parse_catalog', follow=False)
-    )
+    # rules: List[Rule] = (
+    #     Rule(LinkExtractor(allow=(page_regex,), deny=(catalog_page_regex,)), callback='parse'),
+    #     # Rule(LinkExtractor(allow=(catalog_page_regex,)), callback='parse_catalog', follow=False)
+    # )
 
     def __init__(self, *args, **kwargs):
         super(NDVIAnomaly, self).__init__(*args, **kwargs)
@@ -49,16 +49,23 @@ class NDVIAnomaly(CrawlSpider):
         return self.tiles
 
     def parse(self, response: Response, **kwargs):
+        print(f'hello from response: {response.url}')
         params = EOSourceMeta.objects.get(group=self.get_group())
         start_date = params.from_date
         min_year = start_date.year
         min_doy = int(start_date.strftime('%j'))
-        url = response.url
-        href_gen = response.xpath('//a/@href').getall()
-        for href in href_gen:
-            target_url = response.urljoin(href)
+        all_hrefs = list(response.copy().xpath('//a/@href').getall())
+        print(f"all_ahrefs: {all_hrefs}")
+
+        href: str
+        for href in all_hrefs:
+            target_url = response.url + href
+            logger.warn(href)
+            logger.warn(f'+++target_url+++ {target_url}')
             match = page_regex.match(target_url)
+            logger.warn(match)
             if match:
+                logger.warn(f'target_url (After match gt10): {target_url}')
                 group_dict = match.groupdict()
                 try:
                     resp_year = int(group_dict['year'])
@@ -68,14 +75,19 @@ class NDVIAnomaly(CrawlSpider):
                     resp_doy = int(group_dict['doy'])
                 except TypeError:
                     resp_doy = None
-                logger.warn(resp_year)
-                logger.warn(resp_doy)
+                logger.warn(
+                    f'\ntarget_url:{target_url}\nresp_year: {resp_year},min_year: {min_year}\nresp_doy: {resp_doy}, min_doy: {min_doy}')
+
                 if resp_year is None:
-                    pass
-                elif resp_year >= min_year and resp_doy is None:
-                    return response.follow(target_url, callback=self.parse)
-                elif resp_year >= min_year and resp_doy >= min_doy:
-                    return response.follow(target_url, self.parse_catalog)
+                    return None
+
+                # year page
+                if resp_year >= min_year:
+                    if resp_doy is None:
+                        yield response.follow(href, callback=self.parse)
+                    elif resp_doy >= min_doy:
+                        # catalog page, that has all the links to the files
+                        yield response.follow(target_url, callback=self.parse_catalog)
 
     def parse_catalog(self, response, **kwargs):
         # parse catalog page
@@ -112,7 +124,7 @@ class NDVIAnomaly(CrawlSpider):
 
 # South Africa
 class NDVIAnomalyZAF(NDVIAnomaly):
-    tiles = ["x21y13", "x22y12", "x22y13", "x23y12", "x23y13"]
+    tiles = tiles_zaf = ["x21y13", "x22y12", "x22y13", "x23y12", "x23y13"]
     name = EOSourceGroupChoices.GMOD09Q1_NDVI_ANOM_ZAF
     product_name = EOSourceGroupChoices.GMOD09Q1_NDVI_ANOM_ZAF
 
