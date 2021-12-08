@@ -15,6 +15,7 @@ ftputil
 pyproj
 pysftp
 sentinelsat
+pyyaml
 
 # for testing
 responses

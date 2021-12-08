@@ -160,6 +160,8 @@ pytz==2021.3
     #   celery
     #   django
     #   pandas
+pyyaml==6.0
+    # via -r requirements.in
 queuelib==1.6.2
     # via scrapy
 requests==2.26.0

@@ -1,6 +1,5 @@
 from django.db import models
 
-from eo_engine.common.misc import rec_dd
 from eo_engine.models.eo_source import EOSourceGroupChoices
 
 
@@ -16,11 +15,6 @@ class Credentials(models.Model):
     type = models.CharField(db_column='type', max_length=255,
                             choices=CredentialsTypeChoices.choices,
                             default=CredentialsTypeChoices.USERNAME_PASSWORD)
-
-
-class FunctionalRules(models.Model):
-    domain = models.CharField(max_length=100)
-    rules = models.JSONField(default=dict)
 
 
 class RuleMixin(models.Model):

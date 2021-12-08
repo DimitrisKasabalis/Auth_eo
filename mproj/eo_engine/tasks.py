@@ -1,27 +1,26 @@
-import tempfile
-
+import more_itertools
 import os
 import subprocess
-from osgeo import gdal
-from tempfile import TemporaryDirectory
-from datetime import datetime
-from pathlib import Path
-from subprocess import run, CompletedProcess
-from typing import List, Union, Optional, Literal
-
-import more_itertools
+import tempfile
 from celery import group
 from celery.app import shared_task
 from celery.utils.log import get_task_logger
+from datetime import datetime
 from django.core.files import File
 from django.core.files.temp import NamedTemporaryFile
 from django.utils import timezone
 from more_itertools import collapse
+from osgeo import gdal
+from pathlib import Path
 from pytz import utc
+from subprocess import run, CompletedProcess
+from tempfile import TemporaryDirectory
+from typing import List, Union, Optional, Literal
 
 from eo_engine.common.tasks import get_task_ref_from_name
 from eo_engine.errors import AfriCultuReSRetriableError, AfriCultuReSError
-from eo_engine.models import EOProduct, EOProductStateChoices, FunctionalRules, Credentials
+from eo_engine.models import Credentials, EOSourceMeta
+from eo_engine.models import EOProduct, EOProductStateChoices
 from eo_engine.models import EOSource, EOSourceStateChoices
 
 logger = get_task_logger(__name__)
@@ -122,28 +121,25 @@ def task_sftp_parse_remote_dir(remote_dir: Union[str, List[str]]):
         add_to_db(entry, product_group=product_group[0])
 
 
-@shared_task(bind=True)
-def task_schedule_download_eosource(self):
-    # Entry point for downloading products.
-    #
-    # check the rules entry on FunctionalRules Table
-
-    qs = EOSource.objects.none()
-
-    # rules: eg, start_date for this prod group
-    download_rules = FunctionalRules.objects.get(domain='download_rules').rules
-
-    for rule in download_rules['rules']:
-        for prod, start_date in more_itertools.chunked(rule.values(), 2):  # two elements in every rule entry
-            qs |= EOSource.objects.filter(status=EOSourceStateChoices.AvailableRemotely,
-                                          product=prod,
-                                          datetime_reference__gte=datetime.strptime(start_date, '%d/%m/%Y').replace(
-                                              tzinfo=utc))
-
-    if qs.exists():
-        job = group(task_download_file.s(filename=eo_source.filename) for eo_source in qs)
-        qs.update(status=EOSourceStateChoices.ScheduledForDownload)
-        return job.apply_async()
+# @shared_task(bind=True)
+# def task_schedule_download_eosource(self):
+#     # Entry point for downloading products.
+#     #
+#     # check the rules entry on FunctionalRules Table
+#
+#     qs = EOSource.objects.filter(status=EOSourceStateChoices.AvailableRemotely)
+#
+#     for rule in download_rules['rules']:
+#         for prod, start_date in more_itertools.chunked(rule.values(), 2):  # two elements in every rule entry
+#             qs |= EOSource.objects.filter(status=EOSourceStateChoices.AvailableRemotely,
+#                                           product=prod,
+#                                           datetime_reference__gte=datetime.strptime(start_date, '%d/%m/%Y').replace(
+#                                               tzinfo=utc))
+#
+#     if qs.exists():
+#         job = group(task_download_file.s(filename=eo_source.filename) for eo_source in qs)
+#         qs.update(status=EOSourceStateChoices.ScheduledForDownload)
+#         return job.apply_async()
 
 
 # noinspection SpellCheckingInspection

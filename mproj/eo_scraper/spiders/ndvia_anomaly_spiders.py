@@ -1,4 +1,3 @@
-import re
 from datetime import datetime
 from typing import List, Match
 
@@ -6,24 +5,16 @@ from celery.utils.log import get_task_logger
 from itemloaders import ItemLoader
 from scrapy import Selector
 from scrapy.http import Response
-from scrapy.linkextractors import LinkExtractor, IGNORED_EXTENSIONS as DEFAULT_IGNORED_EXTENSIONS
-from scrapy.spiders import CrawlSpider, Rule, Spider
+from scrapy.linkextractors import IGNORED_EXTENSIONS as DEFAULT_IGNORED_EXTENSIONS
+from scrapy.spiders import Spider
 
-from eo_engine.common.patterns import GMOD09Q1_FILE_REGEX
+from eo_engine.common.patterns import GMOD09Q1_FILE_REGEX, GMOD09Q1_PAGE_PATTERN
 from eo_engine.models import EOSourceGroupChoices
 from eo_engine.models.other import EOSourceMeta
 from eo_scraper.items import RemoteSourceItem
 
 # We don't want to 'download' the file
 IGNORED_EXTENSIONS = DEFAULT_IGNORED_EXTENSIONS + ['tif.gz', ]
-
-# matches https://gimms.gsfc.nasa.gov/MODIS/std/GMOD09Q1/...
-page_regex = re.compile(r'https://.*/GMOD09Q1/.*/$')
-page_regex = re.compile(r'^https://gimms\.gsfc\.nasa\.gov/MODIS/std/GMOD09Q1/tif/NDVI_anom_S2001-2015(/(?P<year>\d{4})?(/(?P<doy>\d{3}))?)?/$')
-
-# matches https://gimms.gsfc.nasa.gov/MODIS/std/GMOD09Q1/tif/NDVI_anom_S2001-2015/2001/073/
-# which is the catalog page
-catalog_page_regex = re.compile(r'https://.*/GMOD09Q1/.*/(?P<year>\d{4})/(?P<date>\d{3})/$')
 
 logger = get_task_logger(__name__)
 
@@ -62,7 +53,7 @@ class NDVIAnomaly(Spider):
             target_url = response.url + href
             logger.warn(href)
             logger.warn(f'+++target_url+++ {target_url}')
-            match = page_regex.match(target_url)
+            match = GMOD09Q1_PAGE_PATTERN.match(target_url)
             logger.warn(match)
             if match:
                 logger.warn(f'target_url (After match gt10): {target_url}')
