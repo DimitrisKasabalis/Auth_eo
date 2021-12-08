@@ -6,9 +6,12 @@ CONCURRENCY=${WORKERS_PER_INSTANCE:-1}
 #conda activate base
 
 if [[ -n "$1" ]]; then
-  #  echo "dsf"
+  if [ "$1" = "loaddata" ]; then
+    echo "loaddata:" "${@:2}"
+    python /src/manage.py loaddata "${@:2}"
+    exit
   # if we start with a params assume we want to run that
-  if [ "$1" = "migrate" ]; then
+  elif [ "$1" = "migrate" ]; then
     echo "migrate"
     python /src/manage.py migrate
     exit
