@@ -1,25 +1,23 @@
-import more_itertools
 import os
 import subprocess
 import tempfile
 from celery import group
 from celery.app import shared_task
 from celery.utils.log import get_task_logger
-from datetime import datetime
 from django.core.files import File
 from django.core.files.temp import NamedTemporaryFile
 from django.utils import timezone
 from more_itertools import collapse
 from osgeo import gdal
 from pathlib import Path
-from pytz import utc
+from scrapy import Spider
 from subprocess import run, CompletedProcess
 from tempfile import TemporaryDirectory
 from typing import List, Union, Optional, Literal
 
 from eo_engine.common.tasks import get_task_ref_from_name
 from eo_engine.errors import AfriCultuReSRetriableError, AfriCultuReSError
-from eo_engine.models import Credentials, EOSourceMeta
+from eo_engine.models import Credentials
 from eo_engine.models import EOProduct, EOProductStateChoices
 from eo_engine.models import EOSource, EOSourceStateChoices
 
@@ -52,8 +50,21 @@ def task_init_spider(spider_name):
     # # scrapy_settings = get_project_settings()
     # # spider_loader = SpiderLoader.from_settings(scrapy_settings)
     spider_loader = get_spider_loader()
-    spider = spider_loader.load(spider_name)
+    spider: Spider = spider_loader.load(spider_name)
     # print(scrapy_settings)
+
+    # check if this spider is enabled:
+    from eo_engine.models.other import CrawlerConfiguration
+    rule_qs = CrawlerConfiguration.objects.filter(group=spider.name)
+    if not rule_qs.exists():
+        msg = 'This spider is not configured. Please Configured it using the web gui'
+        logger.err(msg)
+        raise AfriCultuReSError(msg)
+    rule = rule_qs.get()
+    if not rule.enabled:
+        msg = 'This spider is not enabled. Exiting without an error'
+        logger.info(msg)
+        return
 
     process = get_crawler_process()
     process.crawl(spider)
@@ -91,12 +102,6 @@ def create_wapor_entry(self, level_id: Literal['L1', 'L2'], product_id: Literal[
     return
 
 
-# WAPFOR
-@shared_task
-def task_wapfor_scan_product():
-    pass
-
-
 # SFTP
 @shared_task
 def task_sftp_parse_remote_dir(remote_dir: Union[str, List[str]]):
@@ -122,24 +127,12 @@ def task_sftp_parse_remote_dir(remote_dir: Union[str, List[str]]):
 
 
 # @shared_task(bind=True)
-# def task_schedule_download_eosource(self):
-#     # Entry point for downloading products.
-#     #
-#     # check the rules entry on FunctionalRules Table
-#
-#     qs = EOSource.objects.filter(status=EOSourceStateChoices.AvailableRemotely)
-#
-#     for rule in download_rules['rules']:
-#         for prod, start_date in more_itertools.chunked(rule.values(), 2):  # two elements in every rule entry
-#             qs |= EOSource.objects.filter(status=EOSourceStateChoices.AvailableRemotely,
-#                                           product=prod,
-#                                           datetime_reference__gte=datetime.strptime(start_date, '%d/%m/%Y').replace(
-#                                               tzinfo=utc))
-#
-#     if qs.exists():
-#         job = group(task_download_file.s(filename=eo_source.filename) for eo_source in qs)
-#         qs.update(status=EOSourceStateChoices.ScheduledForDownload)
-#         return job.apply_async()
+def task_schedule_download_eosource(self):
+    qs = EOSource.objects.filter(status=EOSourceStateChoices.AvailableRemotely)
+    if qs.exists():
+        qs.update(status=EOSourceStateChoices.ScheduledForDownload)
+        job = group(task_download_file.s(eo_source_pk=eo_source.pk) for eo_source in qs.only('pk'))
+        return job.apply_async()
 
 
 # noinspection SpellCheckingInspection
@@ -183,7 +176,6 @@ def task_download_file(self, eo_source_pk: int):
     try:
         if scheme.startswith('ftp'):
             return download_ftp_eosource(eo_source_pk)
-
         elif scheme.startswith('http'):
             return download_http_eosource(eo_source_pk)
         elif scheme.startswith('sftp'):

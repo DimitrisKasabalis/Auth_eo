@@ -14,7 +14,7 @@ from more_itertools import collapse
 from eo_engine.common.tasks import get_task_ref_from_name
 from eo_engine.models import EOSource, EOProduct
 from eo_engine.models.factories import create_wapor_object
-from eo_engine.models.other import EOSourceMeta
+from eo_engine.models.other import CrawlerConfiguration
 
 logger = logging.getLogger('eo_engine.frontend_ops')
 url_template = '{base_url}?{querystring}'
@@ -32,8 +32,9 @@ def querystring_factory(**kwargs) -> str:
 
 
 def homepage(request):
-    submit_task_url = reverse("eo_engine:submit-task")
     from eo_engine.common.misc import list_spiders
+
+    submit_task_url = reverse("eo_engine:submit-task")
     from eo_engine.tasks import (task_init_spider,
                                  task_sftp_parse_remote_dir)
 
@@ -42,43 +43,84 @@ def homepage(request):
     from eo_engine.models import EOProductGroupChoices
     from eo_engine.models import EOSourceGroupChoices
     context = {
-        'eo_products_grps_value_label': EOProductGroupChoices.choices,
-        'eo_sources_grps_value_label': EOSourceGroupChoices.choices,
-    }
-
-    scrappers = {}
-    spider_list = list_spiders()
-    for spider in spider_list:
-        query_dictionary = QueryDict('', mutable=True)
-        query_dictionary.update(
-            task_name=task_init_spider_name,
-            spider_name=spider
-        )
-        url = url_template.format(
-            base_url=submit_task_url,
-            querystring=query_dictionary.urlencode()
-        )
-        scrappers[spider] = {
-            'url': url,
-            'is_configured': EOSourceMeta.objects.filter(group=spider).exists()
+        "sections": {
+            "1": {
+                "name": 'Tools',
+                "section_elements": {
+                    "1": {'name': 'Refresh Database',
+                          'description': 'Refresh the database and trigger the '
+                                         'marking of any derivative products that not there yet',
+                          'urls': {"1": {'label': 'Refresh', 'url_str': reverse('eo_engine:refresh-rows')}}},
+                    '2': {'name': 'Run Download-Available Task',
+                          'description': 'Trigger a task that would download all the known remote available file asynchronously',
+                          'urls': {"1": {'label': 'Refresh', 'url_str': 'url_str'}}},
+                    '3': {
+                        'name': 'Credential Manager',
+                        'descrition': 'Add View or remove credentials that are used by the system when fetchin remote sources.',
+                        'urls': {"1": {'label': 'Refresh', 'url_str': 'url_str'}}},
+                    '4': {'name': 'Retrieve/Crawl AETI WaPOR Products',
+                          'urls': {"1": {'label': 'Refresh', 'url_str': 'url_str'}}}
+                },
+                # "files": {'name': 'files'},
+                # "crawlers": {'name': 'Spiders'},
+                # "others": {'name': 'Latest Tasks'}
+            },
+            "2": {
+                "name": "S02P02",
+                "section_elements": {
+                    '1': {'name': EOProductGroupChoices.AGRO_NDVI_300M_V3_AFR.label,
+                          'description': f'AGRO/Auth NDVI 300 metres version 3 made from Copernicus it is used for input for the "{EOProductGroupChoices.AGRO_NDVI_1KM_V3_AFR.label}" product',
+                          'urls': {
+                              "1": {'label': 'Crawler', 'url_str': reverse('eo_engine:configure-crawler', kwargs={
+                                  'group_name': EOSourceGroupChoices.C_GLS_NDVI_300M_V2_GLOB})},
+                              "2": {'label': 'EO-Sources', 'url_str': reverse('eo_engine:list-eosources', kwargs={
+                                  'product_group': EOSourceGroupChoices.C_GLS_NDVI_300M_V2_GLOB})},
+                              "3": {'label': 'EO-Products', 'url_str': reverse('eo_engine:list-eoproducts', kwargs={
+                                  'product_group': EOProductGroupChoices.AGRO_NDVI_300M_V3_AFR})}
+                          }
+                          }
+                }
+            }
         }
-
-    # extra scrappers
-    # scrappers[LABEL] = {url: url, is_configured: T/F}
-    q = QueryDict('', mutable=True)
-    q.update(
-        task_name=task_sftp_parse_remote_dir.name,
-        remote_dir='sftp://safmil.ipma.pt/home/safpt/OperationalChain/LSASAF_Products/DMET'
-    )
-    scrappers['LSAF'] = {
-        'url': url_template.format(
-            base_url=reverse("eo_engine:submit-task"),
-            querystring=q.urlencode()),
-        'is_configured': EOSourceMeta.objects.filter(group='LSAF').exists()
     }
-
-    context.update(scrappers=scrappers)
-    return render(request, "homepage.html", context=context)
+    # context = {
+    #     'eo_products_grps_value_label': EOProductGroupChoices.choices,
+    #     'eo_sources_grps_value_label': EOSourceGroupChoices.choices,
+    # }
+    #
+    # scrappers = {}
+    # spider_list = list_spiders()
+    # for spider in spider_list:
+    #     query_dictionary = QueryDict('', mutable=True)
+    #     query_dictionary.update(
+    #         task_name=task_init_spider_name,
+    #         spider_name=spider
+    #     )
+    #     url = url_template.format(
+    #         base_url=submit_task_url,
+    #         querystring=query_dictionary.urlencode()
+    #     )
+    #     scrappers[spider] = {
+    #         'url': url,
+    #         'is_configured': EOSourceMeta.objects.filter(group=spider).exists()
+    #     }
+    #
+    # # extra scrappers
+    # # scrappers[LABEL] = {url: url, is_configured: T/F}
+    # q = QueryDict('', mutable=True)
+    # q.update(
+    #     task_name=task_sftp_parse_remote_dir.name,
+    #     remote_dir='sftp://safmil.ipma.pt/home/safpt/OperationalChain/LSASAF_Products/DMET'
+    # )
+    # scrappers['LSAF'] = {
+    #     'url': url_template.format(
+    #         base_url=reverse("eo_engine:submit-task"),
+    #         querystring=q.urlencode()),
+    #     'is_configured': EOSourceMeta.objects.filter(group='LSAF').exists()
+    # }
+    #
+    # context.update(scrappers=scrappers)
+    return render(request, "homepage2.html", context=context)
 
 
 def list_eosources(request, product_group=None):
@@ -211,7 +253,7 @@ def list_crawelers(request):
 
 
 def submit_task(request):
-    # ../submit?task_name=task_name&next_page=/smething&task_kw
+    # ../submit?task_name=task_name&next_page=/something&task_kw
     task_name: Optional[str] = None
     task_kwargs: Dict[str, Union[str, int, float]] = {}
     next_page: Optional[str] = None
@@ -329,7 +371,7 @@ def utilities_view_post_credentials(request):
 
 
 def create_wapor_entry(request, product: str):
-    from eo_engine.common.time import monthly_dekad_to_yearly_dekad
+    from eo_engine.common.time import month_dekad_to_running_decad
     from .forms import WaporNdviForm
     product = product.lower()
     context = {
@@ -352,7 +394,13 @@ def create_wapor_entry(request, product: str):
             if isinstance(form, WaporNdviForm):
                 dimension = form.dimension
                 level = data['level'].upper()
-                time_element = f'{data["year"][2:]}{monthly_dekad_to_yearly_dekad(data["dekad"], data["month"])}'
+                year = int(data['year'])
+                year_str = str(year)
+                month = int(data["month"])
+                dekad = int(data["dekad"])
+                yearly_dekad = month_dekad_to_running_decad(month=month, dekad=dekad)
+                # 2101 -- year/year-dekad
+                time_element = f'{data["year"][2:]}{yearly_dekad}'
                 area = None if data['area'].lower() == 'africa' else data['area'].upper()
             else:
                 raise
@@ -374,15 +422,27 @@ def create_wapor_entry(request, product: str):
         return redirect(reverse('eo_engine:create-wapor', kwargs={'product': product}))
 
 
-def configure_eosourcemeta(request, group_name: str):
+def configure_crawler(request, group_name: str):
     from .forms import EOSourceMetaForm
     context = {}
-    instance, created = EOSourceMeta.objects.get_or_create(group=group_name, defaults={'from_date': date(2017, 1, 1)})
+    instance, created = CrawlerConfiguration.objects.get_or_create(group=group_name,
+                                                                   defaults={'from_date': date(2017, 1, 1)})
     if request.method == 'GET':
         form = EOSourceMetaForm(instance=instance)
         context.update(form=form)
-        return render(request, 'configure/eo_source_meta.html', context=context)
+        return render(request, 'configure/crawler.html', context=context)
     if request.method == 'POST':
+        if 'cancel' in request.POST:
+            return redirect(reverse("eo_engine:main-page"))
+
         f = EOSourceMetaForm(request.POST, instance=instance)
         f.save()
+        if 'save_and_run' in request.POST:
+            from eo_engine.tasks import task_init_spider
+            task = task_init_spider.s(spider_name=group_name)
+            job = task.apply_async()
+            messages.add_message(
+                request=request, level=messages.SUCCESS,
+                message=f'Task {task.name} with task id: {job} successfully submitted')
+
         return redirect(reverse("eo_engine:main-page"))

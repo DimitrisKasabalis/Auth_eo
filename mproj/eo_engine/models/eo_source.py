@@ -138,7 +138,6 @@ class EOSource(models.Model):
     url = models.URLField(help_text="Resource URL")
     # username/password of resource
     credentials = models.ForeignKey("Credentials", on_delete=models.SET_NULL, null=True)
-    rule = models.ForeignKey(to='EOSourceMeta', on_delete=models.DO_NOTHING, null=True)
 
     class Meta:
         ordering = ["group", "-datetime_reference"]
@@ -200,11 +199,6 @@ def eosource_post_save_handler(instance: EOSource, **kwargs):
                 prod.state = EOProductStateChoices.Available
             else:
                 prod.state = EOProductStateChoices.MISSING_SOURCE
-
-        # mark if the scheduler should Ignore it
-        if prod.is_ignored():
-            print('this entry is marked as ignored.')
-            prod.state = EOProductStateChoices.Ignore
 
         # mark it's inputs
         prod.eo_sources_inputs.add(eo_source)

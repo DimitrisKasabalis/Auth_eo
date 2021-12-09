@@ -52,6 +52,7 @@
                     <div class="card-header"><h3>Utilities</h3></div>
                     <div class="card-body text-primary">
                         <p><a href="{% url "eo_engine:refresh-rows" %}">Refresh Database</a></p>
+                        <p><a href="{% url "eo_engine:submit-task"%}?task_name=task_schedule_download_eosource">Run Download-Available Task</a></p>
                         <p><a href="{% url "eo_engine:credentials" %}">Credential Manager</a></p>
                         <p><a href="{% url "eo_engine:create-wapor" product='ndvi' %}">Retrieve/Crawl AETI WaPOR
                             Products</a></p>
@@ -67,7 +68,7 @@
                         {% for key,values in scrappers.items %}
                             <p>
                                 {{ key| title }} -
-                                <a class="{{ values.is_configured|yesno:'btn,btn disabled,f' }}" href="{{ values.url }}">Trigger</a>
+                                <a class="{{ values.is_configured|yesno:'btn,btn disabled' }}" href="{{ values.url }}">Trigger</a>
                                 <a class="btn" href="{% url "eo_engine:configure-eosource-meta" key %}">Configure</a>
                             </p>
                         {% endfor %}

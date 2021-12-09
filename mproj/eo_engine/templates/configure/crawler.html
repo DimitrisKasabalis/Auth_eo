@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block Title %}Main Page{% endblock %}
+{% block header %}AfriCultuRes{% endblock %}
+{% block body %}
+    <form method="post">
+        {% csrf_token %}
+        {{ form }}
+        <p>
+        <input type="submit" value="Save and run" name="save_and_run">
+        <input type="submit" value="Save and go back" name=save_and_go_back">
+        <input type="submit" value="Cancel" name="cancel">
+    </p>
+    </form>
+{% endblock %}

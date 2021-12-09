@@ -6,7 +6,7 @@ from django.forms import TextInput, JSONField, CharField
 
 from eo_engine.common.contrib.waporv2 import well_known_bboxes
 from .models import Credentials
-from .models.other import EOSourceMeta
+from .models.other import CrawlerConfiguration
 
 
 class CredentialsUsernamePassowordForm(forms.ModelForm):
@@ -72,7 +72,7 @@ class WaporNdviForm(forms.Form):
 
 class EOSourceMetaForm(forms.ModelForm):
     class Meta:
-        model = EOSourceMeta
+        model = CrawlerConfiguration
         fields = ['enabled', 'from_date', ]
         widgets = {
             'from_date': forms.DateInput(attrs={'type': 'date'})

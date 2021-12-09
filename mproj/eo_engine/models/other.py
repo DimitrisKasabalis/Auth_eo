@@ -17,16 +17,16 @@ class Credentials(models.Model):
                             default=CredentialsTypeChoices.USERNAME_PASSWORD)
 
 
+# general template of rules
 class RuleMixin(models.Model):
     enabled = models.BooleanField(default=True)
     timestamp = models.DateTimeField(auto_now_add=True, editable=False)
     last_modified = models.DateTimeField(auto_now=True, editable=False)
-    from_date = models.DateField()  # date where scan should begin from. assume 00:00
-    notes = models.TextField(default='')
 
     class Meta:
         abstract = True
 
 
-class EOSourceMeta(RuleMixin):
+class CrawlerConfiguration(RuleMixin):
     group = models.TextField(choices=EOSourceGroupChoices.choices, unique=True)
+    from_date = models.DateField()  # date where scan should begin from. assume 00:00

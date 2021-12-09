@@ -3,11 +3,12 @@
 # See documentation in:
 # https://docs.scrapy.org/en/latest/topics/items.html
 import re
-from urllib.parse import urlsplit
-
 import scrapy
 from celery.utils.log import get_task_logger
+from datetime import datetime
 from itemloaders.processors import Join, MapCompose, TakeFirst
+from typing import Optional
+from urllib.parse import urlsplit
 
 units = {"B": 1, "KB": 2 ** 10, "MB": 2 ** 20, "GB": 2 ** 30, "TB": 2 ** 40}
 
@@ -76,6 +77,7 @@ class RemoteSourceItem(scrapy.Item):
     domain: str = scrapy.Field(
         input_processor=MapCompose(get_domain_of_url),
         output_processor=TakeFirst())
+    datetime_reference: Optional[datetime] = scrapy.Field(output_processor=TakeFirst())
     datetime_seen: str = scrapy.Field(output_processor=TakeFirst())
     url: str = scrapy.Field(
         input_processor=MapCompose(drop_query_from_url),

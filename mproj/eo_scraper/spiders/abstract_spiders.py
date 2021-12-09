@@ -1,7 +1,10 @@
 import json
 import os
 import re
-from datetime import datetime
+from celery.utils.log import get_logger, get_task_logger
+from datetime import datetime, date as dt_date
+from scrapy.http import Response
+from scrapy.selector.unified import Selector
 from typing import List, Pattern, Optional
 from urllib.parse import urlsplit, urlparse
 
@@ -16,6 +19,8 @@ from scrapy.spiders.init import InitSpider
 
 from eo_scraper.items import RemoteSourceItem
 from eo_scraper.utils import get_credentials, credentials
+
+logger = get_task_logger(__name__)
 
 '''
 https://docs.scrapy.org/en/latest/topics/spiders.html
@@ -69,6 +74,13 @@ class CopernicusVgtDatapool(InitSpider, CrawlSpider):
 
     def __init__(self, *args, **kwargs):
         super(CopernicusVgtDatapool, self).__init__(*args, **kwargs)  # default init binds kwargs to self
+        from eo_engine.models.other import CrawlerConfiguration
+        try:
+            configuration = CrawlerConfiguration.objects.filter(group=self.name).get()
+            self.from_date = configuration.from_date
+        except:
+            logger.warn('WARNING:Configuration for this craweler does not exist. Defaulting to defaults')
+            self.from_date = dt_date(2017, 1, 1)
 
     def init_request(self):
         print("init_request")
@@ -100,17 +112,26 @@ class CopernicusVgtDatapool(InitSpider, CrawlSpider):
         # self.logger.info('A response from %s just arrived!' % response.url)
         pass
 
-    def parse_catalog(self, response):
-        self.logger.info('PARSE_CATALOG: A response from %s just arrived!' % response.url)
-        for idx, tableRow in enumerate(response.xpath('//tr[count(td)=4]')):
-            loader = ItemLoader(item=RemoteSourceItem(),
-                                selector=tableRow)
+    def pre_parse_check(self, response: Response) -> bool:
+        """if false, the request will not be processed"""
+        return True
 
-            # loader.add_value('product_name', self.product_name)
-            loader.add_xpath('filename', 'td[position()=1]/text()', pos=1)
-            # loader.add_xpath('extension', 'td[position()=1]/text()', pos=1)
+    def datetime_reference_from_filename(self, filename) -> Optional[datetime]:
+        raise NotImplementedError()
+
+    def parse_catalog(self, response):
+        if not self.pre_parse_check(response):
+            yield
+        tableRow: Selector
+        for idx, tableRow in enumerate(response.xpath('//tr[count(td)=4]')):
+            filename = str(tableRow.xpath('.//td[1]/text()').get()).strip()
+            dt_reference = self.datetime_reference_from_filename(filename)
+            loader = ItemLoader(item=RemoteSourceItem(), selector=tableRow)
+
             loader.add_xpath('size', 'td[position()=2]/text()', pos=2)
-            # loader.add_xpath('datetime_uploaded', 'td[position()=3]/text()', pos=3)
+
+            loader.add_value('datetime_reference', dt_reference)
+            loader.add_value('filename', filename)
             loader.add_value('datetime_seen', datetime.utcnow())
             loader.add_value('domain', response.url)
             loader.add_value('url', response.url)

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block Title %}Main Page{% endblock %}
+{% block header %}AfriCultuRes{% endblock %}
+{% block body %}
+    <div class="container-fluid">  <!-- container -->
+        {% for k,section in sections.items %}
+            <div class="row"> <!-- Main row-->
+                <div class="card">
+                    <div class="card-header">
+                        {{ section.name }}
+                    </div>
+                    <div class="card-body">
+                        {% for k,section_element in section.section_elements.items %}
+                            <!-- item -->
+                            {% if forloop.counter|divisibleby:'2' == False and section.section_elements.items|length > 2 %}
+                                <div class="row">
+                            {% endif %}
+                        <div class="col-sm-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ section_element.name }}</h5>
+                                    <p class="card-text">{{ section_element.description }}</p>
+                                    {% for id,url in section_element.urls.items %}
+                                        <a href="{{ url.url_str }}" class="btn btn-primary">{{ url.label }}</a>
+                                    {% endfor %}
+
+                                </div>
+                            </div>
+                        </div>
+                        {% if forloop.counter|divisibleby:'2' == True and section.section_elements.items|length > 2 %}
+                            </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div> <!-- end main row-->
+        {% endfor %}
+    </div> <!--end  container -->
+{% endblock %}

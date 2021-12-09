@@ -1,16 +1,15 @@
-from datetime import datetime
-from typing import List, Match
-
 from celery.utils.log import get_task_logger
+from datetime import datetime
 from itemloaders import ItemLoader
 from scrapy import Selector
 from scrapy.http import Response
 from scrapy.linkextractors import IGNORED_EXTENSIONS as DEFAULT_IGNORED_EXTENSIONS
 from scrapy.spiders import Spider
+from typing import List, Match
 
 from eo_engine.common.patterns import GMOD09Q1_FILE_REGEX, GMOD09Q1_PAGE_PATTERN
 from eo_engine.models import EOSourceGroupChoices
-from eo_engine.models.other import EOSourceMeta
+from eo_engine.models.other import CrawlerConfiguration
 from eo_scraper.items import RemoteSourceItem
 
 # We don't want to 'download' the file
@@ -41,7 +40,7 @@ class NDVIAnomaly(Spider):
 
     def parse(self, response: Response, **kwargs):
         print(f'hello from response: {response.url}')
-        params = EOSourceMeta.objects.get(group=self.get_group())
+        params = CrawlerConfiguration.objects.get(group=self.get_group())
         start_date = params.from_date
         min_year = start_date.year
         min_doy = int(start_date.strftime('%j'))

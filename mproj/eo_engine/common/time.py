@@ -17,7 +17,17 @@ from dateutil.relativedelta import relativedelta
 # 3: day 21-last
 # """
 
-def dekad_end_date(date: dt_date):
+def month_dekad_to_running_decad(month: int, dekad: int) -> str:
+    """ Return the yearly running dekad, as 2 string zero padded: .
+    eg: m1, d2 -> 3 * (1-1) + 2 = 02
+    m5, d3 -> 3 * (5-1) + 3 = 15
+    m7, d1 -> 3 * (7-1) + 1 = 21
+    """
+
+    return str(3 * (month - 1) + dekad).zfill(2)
+
+
+def dekad_end_date(date: dt_date) -> dt_date:
     """Checks the dekad of a date and returns the dekad date.
     Parameters
     ----------
@@ -41,7 +51,7 @@ def dekad_end_date(date: dt_date):
     return new_date
 
 
-def dekad_startdate(dt_in: dt_date):
+def dekad_startdate(dt_in: dt_date) -> dt_date:
     """
     dekadal startdate that a date falls in
     Parameters
@@ -124,7 +134,7 @@ def day2dekad(day):
 
     if day < 11:
         dekad = 1
-    elif day > 10 and day < 21:
+    elif 11 <= day < 21:
         dekad = 2
     else:
         dekad = 3

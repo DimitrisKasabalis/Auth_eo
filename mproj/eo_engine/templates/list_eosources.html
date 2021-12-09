@@ -26,7 +26,7 @@
             <tr>
                 <td>{{ eo_source.filename }}</td>
                 <td>{{ eo_source.datetime_reference | date:"D d M Y" }}</td>
-                <td>{{ eo_source.get_product_display }}</td>
+                <td>{{ eo_source.get_group_display }}</td>
                 <td>
                     {{ eo_source.get_state_display }}
                     {{ eo_source.task.latest.state }}
