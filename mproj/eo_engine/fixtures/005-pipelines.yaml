@@ -1,0 +1,203 @@
+- model: eo_engine.Pipeline
+  pk: null
+  fields:
+    name: "NDVI pre-processing (V2 to V3)"
+    description: "NDVI Preprocessing from C_GSL v2 to v3. The output is used as another 
+    input to another process. The inputs are discovered by a crawler with root_url: https://land.copernicus.vgt.vito.be/PDF/datapool/Vegetation/Indicators/NDVI_300m_V2/ 
+    Usual file size is about 2GB."
+    package: 'S02P02'
+    timestamp: 2021-12-10T19:10:20Z
+    last_modified: 2021-12-10T19:10:20Z
+    input_group: 36
+    output_group: 1
+    output_filename_template: '{YYYYMMDD}_SE3_AFR_0300m_0010_NDVI.nc'
+    output_folder: 'S2_P02/NDVI_300'
+    task_name: 'task_s02p02_ndvi300m_v2'
+    task_kwargs: { "AOI": [ -30, 40, 60, -40 ] }
+- model: eo_engine.Pipeline
+  pk: null
+  fields:
+    name: "NDVI pre-processing 2 (resampling)"
+    description: "NDVI Preprocessing and resampling from 300m to 1km. 
+    The inputs are coming from another pipelines, and the outputs are used for another pipeline"
+    package: 'S02P02'
+    timestamp: 2021-12-10T19:10:20Z
+    last_modified: 2021-12-10T19:10:20Z
+    input_group: 1
+    output_group: 2
+    output_folder: 'S2_P02/NDVI_1km'
+    output_filename_template: '{YYYYMMDD}_SE3_AFR_1000m_0010_NDVI.nc'
+    task_name: 'task_s02p02_nvdi1km_v3'
+    task_kwargs: { }
+- model: eo_engine.Pipeline
+  pk: null
+  fields:
+    name: "VCI Computation"
+    description: "Computation of VCIndex as final output. The inputs are sourced from a another pipeline."
+    package: 'S02P02'
+    timestamp: 2021-12-10T19:10:20Z
+    last_modified: 2021-12-10T19:10:20Z
+    input_group: 2
+    output_group: 3
+    output_folder: 'S2_P02/VCI/v2'
+    output_filename_template: 'g2_BIOPAR_VCI_{YYYYMMDD}_AFRI_OLCI_V2.0.nc'
+    task_name: 'task_s02p02_vci1km_v2'
+    task_kwargs: { }
+- model: eo_engine.Pipeline
+  pk: null
+  fields:
+    name: "LAI clipping"
+    description: 'Clipping of Global LAI 300m to Africa Extends.
+    The discovery of inputs are discovered by a spider with a root_url: https://land.copernicus.vgt.vito.be/PDF/datapool/Vegetation/Properties/LAI_300m_V1/"'
+    package: 'S02P02'
+    timestamp: 2021-12-10T19:10:20Z
+    last_modified: 2021-12-10T19:10:20Z
+    input_group: 37
+    output_group: 4
+    output_folder: 'S2_P02/LAI_300'
+    output_filename_template: '{YYYYMMDD}_SE3_AFR_0300m_0010_LAI.nc'
+    task_name: 'task_s02p02_lai300m_v1'
+    task_kwargs: { }
+- model: eo_engine.Pipeline
+  pk: null
+  fields:
+    name: "LAI Afr 300m Processing"
+    enabled: False
+    description: 'Not implemented yet!!!'
+    package: 'S02P02'
+    timestamp: 2021-12-10T19:10:20Z
+    last_modified: 2021-12-10T19:10:20Z
+    input_group: 4
+    output_group: 5
+    output_filename_template: '{YYYYMMDD}_SE3_AFR_1000m_0010_LAI.nc'
+    output_folder: 'S2_P02/LAI_1km'
+    task_name: '-'
+    task_kwargs: { }
+- model: eo_engine.Pipeline
+  pk: null
+  fields:
+    name: "NDVI Anomaly (TUN)"
+    description: 'Mosaic Generation for NDVI anomaly from individual tiles for TUN. 
+    The sourcing of inputs are discovered by a spider 
+    with root_url: https://gimms.gsfc.nasa.gov/MODIS/std/GMOD09Q1/tif/NDVI_anom_S2001-2015/'
+    package: 'S02P02'
+    timestamp: 2021-12-10T19:10:20Z
+    last_modified: 2021-12-10T19:10:20Z
+    input_group: 38
+    output_group: 6
+    output_folder: 'S2_P02/NDVI_anom'
+    output_filename_template: '{YYYYMMDD}_MOD_TUN_0250m_0008_NDVI_anom.nc'
+    task_name: 'task_s02p02_ndvianom250m'
+    task_kwargs: { "iso": "TUN" }
+- model: eo_engine.Pipeline
+  pk: null
+  fields:
+    name: "NDVI Anomaly (RWA)"
+    description: 'Mosaic Generation for NDVI anomaly from individual tiles for RWA. 
+    The sourcing of inputs are discovered by a spider 
+    with root_url: https://gimms.gsfc.nasa.gov/MODIS/std/GMOD09Q1/tif/NDVI_anom_S2001-2015/'
+    package: 'S02P02'
+    timestamp: 2021-12-10T19:10:20Z
+    last_modified: 2021-12-10T19:10:20Z
+    input_group: 39
+    output_group: 7
+    output_folder: 'S2_P02/NDVI_anom'
+    output_filename_template: '{YYYYMMDD}_MOD_RWA_0250m_0008_NDVI_anom.nc'
+    task_name: 'task_s02p02_ndvianom250m'
+    task_kwargs: { "iso": "RWA" }
+- model: eo_engine.Pipeline
+  pk: null
+  fields:
+    package: 'S02P02'
+    name: "NDVI Anomaly (ETH)"
+    description: 'Mosaic Generation for NDVI anomaly from individual tiles for ETH. 
+    The sourcing of inputs are discovered by a spider 
+    with root_url: https://gimms.gsfc.nasa.gov/MODIS/std/GMOD09Q1/tif/NDVI_anom_S2001-2015/'
+    timestamp: 2021-12-10T19:10:20Z
+    last_modified: 2021-12-10T19:10:20Z
+    input_group: 40
+    output_group: 8
+    output_folder: 'S2_P02/NDVI_anom'
+    output_filename_template: '{YYYYMMDD}_MOD_ETH_0250m_0008_NDVI_anom.nc'
+    task_name: 'task_s02p02_ndvianom250m'
+    task_kwargs: { "iso": "ETH" }
+- model: eo_engine.Pipeline
+  pk: null
+  fields:
+    package: 'S02P02'
+    name: "NDVI Anomaly (ZAF)"
+    description: 'Mosaic Generation for NDVI anomaly from individual tiles for ZAF. 
+    The sourcing of inputs are discovered by a spider 
+    with root_url: https://gimms.gsfc.nasa.gov/MODIS/std/GMOD09Q1/tif/NDVI_anom_S2001-2015/'
+    timestamp: 2021-12-10T19:10:20Z
+    last_modified: 2021-12-10T19:10:20Z
+    input_group: 41
+    output_group: 9
+    output_folder: 'S2_P02/NDVI_anom'
+    output_filename_template: '{YYYYMMDD}_MOD_ZAF_0250m_0008_NDVI_anom.nc'
+    task_name: 'task_s02p02_ndvianom250m'
+    task_kwargs: { "iso": "ZAF" }
+- model: eo_engine.Pipeline
+  pk: null
+  fields:
+    package: 'S02P02'
+    name: "NDVI Anomaly (NER)"
+    description: 'Mosaic Generation for NDVI anomaly from individual tiles for NER. 
+    The sourcing of inputs are discovered by a spider 
+    with root_url: https://gimms.gsfc.nasa.gov/MODIS/std/GMOD09Q1/tif/NDVI_anom_S2001-2015/'
+    timestamp: 2021-12-10T19:10:20Z
+    last_modified: 2021-12-10T19:10:20Z
+    input_group: 42
+    output_group: 10
+    output_folder: 'S2_P02/NDVI_anom'
+    output_filename_template: '{YYYYMMDD}_MOD_NER_0250m_0008_NDVI_anom.nc'
+    task_name: 'task_s02p02_ndvianom250m'
+    task_kwargs: { "iso": "NER" }
+- model: eo_engine.Pipeline
+  pk: null
+  fields:
+    name: "NDVI Anomaly (GAH)"
+    description: 'Mosaic Generation for NDVI anomaly from individual tiles for GAH. 
+    The sourcing of inputs are discovered by a spider 
+    with root_url: https://gimms.gsfc.nasa.gov/MODIS/std/GMOD09Q1/tif/NDVI_anom_S2001-2015/'
+    package: 'S02P02'
+    timestamp: 2021-12-10T19:10:20Z
+    last_modified: 2021-12-10T19:10:20Z
+    input_group: 43
+    output_group: 11
+    output_folder: 'S2_P02/NDVI_anom'
+    output_filename_template: '{YYYYMMDD}_MOD_GAH_0250m_0008_NDVI_anom.nc'
+    task_name: 'task_s02p02_ndvianom250m'
+    task_kwargs: { "iso": "GHA" }
+- model: eo_engine.Pipeline
+  pk: null
+  fields:
+    package: 'S02P02'
+    name: "NDVI Anomaly (MOZ)"
+    description: 'Mosaic Generation for NDVI anomaly from individual tiles for MOZ. 
+    The sourcing of inputs are discovered by a spider 
+    with root_url: https://gimms.gsfc.nasa.gov/MODIS/std/GMOD09Q1/tif/NDVI_anom_S2001-2015/'
+    timestamp: 2021-12-10T19:10:20Z
+    last_modified: 2021-12-10T19:10:20Z
+    input_group: 44
+    output_group: 12
+    output_folder: 'S2_P02/NDVI_anom'
+    output_filename_template: '{YYYYMMDD}_MOD_MOZ_0250m_0008_NDVI_anom.nc'
+    task_name: 'task_s02p02_ndvianom250m'
+    task_kwargs: { "iso": "MOZ" }
+- model: eo_engine.Pipeline
+  pk: null
+  fields:
+    name: "NDVI Anomaly (KEN)"
+    package: 'S02P02'
+    description: 'Mosaic Generation for NDVI anomaly from individual tiles for KEN. 
+    The sourcing of inputs are discovered by a spider 
+    with root_url: https://gimms.gsfc.nasa.gov/MODIS/std/GMOD09Q1/tif/NDVI_anom_S2001-2015/'
+    timestamp: 2021-12-10T19:10:20Z
+    last_modified: 2021-12-10T19:10:20Z
+    input_group: 45
+    output_group: 13
+    output_folder: 'S2_P02/NDVI_anom'
+    output_filename_template: '{YYYYMMDD}_MOD_KEN_0250m_0008_NDVI_anom.nc'
+    task_name: 'task_s02p02_ndvianom250m'
+    task_kwargs: { "iso": "KEN" }

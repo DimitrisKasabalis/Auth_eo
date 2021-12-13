@@ -1,11 +1,17 @@
-from pathlib import Path
-from typing import Optional, Tuple
-from urllib.parse import urlsplit
-
+import os
+from celery.utils.log import get_task_logger
+from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from pathlib import Path
+from typing import Optional, Tuple
+from urllib.parse import urlsplit
+
+from eo_engine.models.eo_group import EOSourceGroupChoices
+
+logger = get_task_logger(__name__)
 
 
 def _file_storage_path(instance: 'EOSource', filename: str):
@@ -15,96 +21,25 @@ def _file_storage_path(instance: 'EOSource', filename: str):
         var = wapor_from_filename(filename)
         product_id = var.product_id
         # wapor/<product_id>/<filename>
-        return f"{o.scheme}/{product_id}/{filename}"
+        full_path = f"{o.scheme}/{product_id}/{filename}"
+    else:
+        full_path = f'{instance.domain}/{o.path[1:] if o.path.startswith(r"/") else o.path}'
 
-    local_path = o.path[1:] if o.path.startswith(r'/') else o.path
-    return f"{instance.domain}/{local_path}"
+        final_path = os.path.join(settings.MEDIA_ROOT, full_path)
+        if os.path.exists(final_path):
+            os.remove(final_path)
+
+        return full_path
 
 
 class EOSourceStateChoices(models.TextChoices):
-    AvailableRemotely = "availableRemotely", 'Available on the Remote Server'
-    ScheduledForDownload = "ScheduledForDownload", "Scheduled For Download"
-    AvailableLocally = "availableLocally", 'File is Available Locally'
-    BeingDownloaded = 'BeingDownloaded', 'Downloading File...'
-    FailedToDownload = 'FailedToDownload', 'Failed to Download'
-    Ignore = "Ignore", 'Action on this file has been canceled (Ignored/Revoked Action)'
-    Defered = 'Defer', 'Download has been deferred for later'
-
-
-# USE SCREAMING_CASE
-class EOSourceGroupChoices(models.TextChoices):
-    # add mode products here
-
-    # AGRO = AUth
-    # C_GLS = Copernicus Global Land Service
-    # WB = Water bodies
-    #  ines... help me out!!
-
-    C_GLS_LAI_300M_V1_GLOB = 'C_GLS_LAI_300M_V1_GLOB', "Copernicus Global Land Service LAI 300m v1"
-    AGRO_LAI_300M_V1_AFR = 'AGRO_LAI_300M_V1_AFR', "AuthAgro LAI 300M V1"
-
-    C_GLS_NDVI_1KM_V3_GLOB = 'C_GlS_NDVI_1KM_V3_GLOB', "Copernicus Global Land Service NDVI 1km v3"
-    C_GLS_NDVI_300M_V2_GLOB = 'C_GLS_NDVI_300M_V2_GLOB', "Copernicus Global Land Service NDVI 300m v2"
-
-    # AGRO NDVI
-    A_AGRO_NDVI_300M_V3_AFR = 'A_AGRO_NDVI_300M_V3_AFR', "AuthAgro Service NDVI 300M v3"
-    A_AGRO_NDVI_1KM_V3_AFR = 'A_AGRO_NDVI_1KM_V3_AFR', "AuthAgro Service NDVU 1KM V3 Africa"
-
-    # https://land.copernicus.eu/global/sites/cgls.vito.be/files/products/CGLOPS2_PUM_WB100m_V1_I1.10.pdf
-    C_GLS_WB_100M_V1_GLOB = 'C_GLS_WB_100M_V1_GLOB', "Copernicus Global Land Service Water Bodies Collection 100m Version 1"
-    C_GLS_WB_300M_V2_GLOB = 'C_GLS_WB_300M_V2_GLOB', "Copernicus Global Land Service Water Bodies Collection 300m Version 2"
-
-    # LSASAF
-    MSG_3KM_GLOB = 'MSG_3KM_GLOB', 'LSA-SAF Global ET product 3Km'
-
-    # WAPOR
-    ## AFRICA
-    WAPOR_L1_AETI_D_AFRICA = 'WAPOR_L1_AETI_D_AFRICA', 'WAPOR: L1 AETI D AFRICA'
-    WAPOR_L1_QUAL_LST_D_AFRICA = 'WAPOR_L1_QUAL_LST_D_AFRICA', 'WAPOR: L1_QUAL_LST_D_AFRICA'
-    WAPOR_L1_QUAL_NDVI_D_AFRICA = 'WAPOR_L1_QUAL_NDVI_D_AFRICA', 'WAPOR: L1_QUAL_NDVI_D_AFRICA'
-
-    ## TUN
-    WAPOR_L2_AETI_D_TUN = 'WAPOR_L2_AETI_D_TUN', 'WAPOR: L2_AETI_D_TUN'
-    WAPOR_L2_QUAL_LST_D_TUN = 'WAPOR_L2_QUAL_LST_D_TUN', 'WAPOR: L2_QUAL_LST_D_TUN'
-    WAPOR_L2_QUAL_NDVI_D_TUN = 'WAPOR_L2_QUAL_NDVI_D_TUN', 'WAPOR: L2_QUAL_NDVI_D_TUN'
-
-    ## KEN
-    WAPOR_L2_AETI_D_KEN = 'WAPOR_L2_AETI_D_KEN', 'WAPOR: L2_AETI_D_KEN'
-    WAPOR_L2_QUAL_LST_D_KEN = 'WAPOR_L2_QUAL_LST_D_KEN', 'WAPOR: L2_QUAL_LST_D_KEN'
-    WAPOR_L2_QUAL_NDVI_D_KEN = 'WAPOR_L2_QUAL_NDVI_D_KEN', 'WAPOR: L2_QUAL_NDVI_D_KEN'
-
-    ## MOZ
-    WAPOR_L2_AETI_D_MOZ = 'WAPOR_L2_AETI_D_MOZ', 'WAPOR: L2_AETI_D_MOZ'
-    WAPOR_L2_QUAL_LST_D_MOZ = 'WAPOR_L2_QUAL_LST_D_MOZ', 'WAPOR: L2_QUAL_LST_D_MOZ'
-    WAPOR_L2_QUAL_NDVI_D_MOZ = 'WAPOR_L2_QUAL_NDVI_D_MOZ', 'WAPOR: L2_QUAL_NDVI_D_MOZ'
-
-    ## RWA
-    WAPOR_L2_AETI_D_RWA = 'WAPOR_L2_AETI_D_RWA', 'WAPOR: L2_AETI_D_DRWA'
-    WAPOR_L2_QUAL_LST_D_RWA = 'WAPOR_L2_QUAL_LST_D_RWA', 'WAPOR: L2_QUAL_LST_D_RWA'
-    WAPOR_L2_QUAL_NDVI_D_RWA = 'WAPOR_L2_QUAL_NDVI_D_RWA', 'WAPOR: L2_QUAL_NDVI_D_RWA'
-
-    ## ETH
-    WAPOR_L2_AETI_D_ETH = 'WAPOR_L2_AETI_D_ETH', 'WAPOR: WAPOR_L2_AETI_D_ETH'
-    WAPOR_L2_QUAL_LST_D_ETH = 'WAPOR_L2_QUAL_LST_D_ETH', 'WAPOR: L2_QUAL_LST_D_ETH'
-    WAPOR_L2_QUAL_NDVI_D_ETH = 'WAPOR_L2_QUAL_NDVI_D_ETH', 'WAPOR: L2_QUAL_NDVI_D_ETH'
-
-    ## GHA
-    WAPOR_L2_AETI_D_GHA = 'WAPOR_L2_AETI_D_GHA', 'WAPOR: L2_AETI_GHA'
-    WAPOR_L2_QUAL_LST_D_GHA = 'WAPOR_L2_QUAL_LST_D_GHA', 'WAPOR: L2_QUAL_LST_D_GHA'
-    WAPOR_L2_QUAL_NDVI_D_GHA = 'WAPOR_L2_QUAL_NDVI_GHA', 'WAPOR: L2_QUAL_NDVI_D_GHA'
-
-    # VIIRS-1day-xxx
-    FLOODLIGHT_VIIRS_1_DAY = 'FLOODLIGHT_VIIRS_1_DAY', 'VIIRS-1day'
-
-    # NDVI_ANOM
-    GMOD09Q1_NDVI_ANOM_TUN = 'GMOD09Q1_NDVI_ANOM_TUN', 'GMOD09Q1_NDVI_ANOM_TUN'
-    GMOD09Q1_NDVI_ANOM_RWA = 'GMOD09Q1_NDVI_ANOM_RWA', 'GMOD09Q1_NDVI_ANOM_RWA'
-    GMOD09Q1_NDVI_ANOM_ETH = 'GMOD09Q1_NDVI_ANOM_ETH', 'GMOD09Q1_NDVI_ANOM_ETH'
-    GMOD09Q1_NDVI_ANOM_ZAF = 'GMOD09Q1_NDVI_ANOM_ZAF', 'GMOD09Q1_NDVI_ANOM_ZAF'
-    GMOD09Q1_NDVI_ANOM_NER = 'GMOD09Q1_NDVI_ANOM_NER', 'GMOD09Q1_NDVI_ANOM_NER'
-    GMOD09Q1_NDVI_ANOM_GHA = 'GMOD09Q1_NDVI_ANOM_GHA', 'GMOD09Q1_NDVI_ANOM_GHA'
-    GMOD09Q1_NDVI_ANOM_MOZ = 'GMOD09Q1_NDVI_ANOM_MOZ', 'GMOD09Q1_NDVI_ANOM_MOZ'
-    GMOD09Q1_NDVI_ANOM_KEN = 'GMOD09Q1_NDVI_ANOM_KEN', 'GMOD09Q1_NDVI_ANOM_KEN'
+    AVAILABLE_REMOTELY = "AVAILABLE_REMOTELY", 'Available on the Remote Server'
+    SCHEDULED_FOR_DOWNLOAD = "SCHEDULED_FOR_DOWNLOAD", "Scheduled For Download"
+    AVAILABLE_LOCALLY = "AVAILABLE_LOCALLY", 'File is Available Locally'
+    DOWNLOADING = 'DOWNLOADING', 'Downloading File...'
+    DOWNLOAD_FAILED = 'DOWNLOAD_FAILED', 'Download Failed'
+    IGNORE = "IGNORE", 'Action on this file has been canceled (Ignored/Revoked Action)'
+    DEFERRED = 'DEFERRED', 'Download has been deferred for later'  # it's a file on request, and it's being made
 
 
 class EOSource(models.Model):
@@ -114,10 +49,9 @@ class EOSource(models.Model):
     # status of file.
     state = models.CharField(max_length=255,
                              choices=EOSourceStateChoices.choices,
-                             default=EOSourceStateChoices.AvailableRemotely)
+                             default=EOSourceStateChoices.AVAILABLE_REMOTELY)
 
-    # what product is it?
-    group = models.CharField(max_length=255, choices=EOSourceGroupChoices.choices)
+    group = models.ForeignKey('EOSourceGroup', on_delete=models.DO_NOTHING)
     # physical file. Read about DJANGO media files
     file = models.FileField(upload_to=_file_storage_path,
                             editable=False,
@@ -130,8 +64,8 @@ class EOSource(models.Model):
     # reported filesize, bytes?
     filesize_reported = models.BigIntegerField(validators=(MinValueValidator(0),))
     # product reference datetime
-    datetime_reference = models.DateTimeField(null=True, help_text="product reference datetime ")
-    # when did we see it?
+    reference_date = models.DateField(null=True, help_text="product reference date")
+    # when did we see it?, change to date
     datetime_seen = models.DateTimeField(auto_created=True, help_text="datetime of when it was seen")
     # full url to resource.
     #  eg ftp://ftp.globalland.cls.fr/path/filename.nc
@@ -140,7 +74,7 @@ class EOSource(models.Model):
     credentials = models.ForeignKey("Credentials", on_delete=models.SET_NULL, null=True)
 
     class Meta:
-        ordering = ["group", "-datetime_reference"]
+        ordering = ["group", "-reference_date"]
 
     def __str__(self):
         return f"{self.__class__.__name__}/{self.filename}/{self.state}/{self.id}"
@@ -174,39 +108,53 @@ class EOSource(models.Model):
 @receiver(post_save, sender=EOSource, weak=False, dispatch_uid='eosource_post_save_handler')
 def eosource_post_save_handler(instance: EOSource, **kwargs):
     """ Post save logic goes here. ie an asset is now available locally, are there products that can be made?"""
-    from eo_engine.common.products import generate_products_from_source
-    from eo_engine.models import EOProduct, EOProductStateChoices
+    from eo_engine.common.s02p04 import is_gmod09q1_batch_complete
+    from eo_engine.models import Pipeline
+    from eo_engine.models import EOProduct, EOProductStateChoices, EOProductGroup
+
     eo_source = instance
-    # if asset is local
-    if eo_source.state != EOSourceStateChoices.AvailableLocally:
+    # if asset is not local, ignore
+    if eo_source.state != EOSourceStateChoices.AVAILABLE_LOCALLY:
         return
         # pass
-    products = generate_products_from_source(eo_source.filename)
 
-    for product in products:
+    # it's used for the output filenames
+    yyyymmdd = eo_source.reference_date.strftime('%Y%m%d')
+
+    # pipelines that are using this source as input:
+    pipelines = eo_source.group.pipelines_from_input.all()
+
+    for pipeline in pipelines:
+        # a pipeline should have one output group
+        output_group = EOProductGroup.objects.get(pipelines_from_output=pipeline)
+
+        output_filename = pipeline.output_filename(YYYYMMDD=yyyymmdd)
 
         prod, created = EOProduct.objects.get_or_create(
-            filename=product.filename,
-            output_folder=product.output_folder,
-            group=product.group,
-            task_name=product.task_name,
-            task_kwargs=product.task_kwargs
+            filename=output_filename,
+            group=output_group,
+            reference_date=eo_source.reference_date
         )
+        if created:
+            prod.state = EOProductStateChoices.AVAILABLE
 
-        if eo_source.group.startswith('GMOD09Q1_NDVI_ANOM'):
-            from eo_engine.common.s02p04 import is_GMOD09Q1_batch_complete
-            if is_GMOD09Q1_batch_complete(eo_source):
-                prod.state = EOProductStateChoices.Available
+        # these bellow, are a batch, multiple inputs create one
+        if [EOSourceGroupChoices.S02P02_NDVIA_250M_ETH_GMOD, EOSourceGroupChoices.S02P02_NDVIA_250M_GHA_GMOD,
+            EOSourceGroupChoices.S02P02_NDVIA_250M_KEN_GMOD, EOSourceGroupChoices.S02P02_NDVIA_250M_MOZ_GMOD,
+            EOSourceGroupChoices.S02P02_NDVIA_250M_NER_GMOD, EOSourceGroupChoices.S02P02_NDVIA_250M_RWA_GMOD,
+            EOSourceGroupChoices.S02P02_NDVIA_250M_TUN_GMOD, EOSourceGroupChoices.S02P02_NDVIA_250M_ZAF_GMOD
+            ].count(eo_source.group.name):
+            if is_gmod09q1_batch_complete(eo_source):
+                prod.state = EOProductStateChoices.AVAILABLE
             else:
                 prod.state = EOProductStateChoices.MISSING_SOURCE
 
-        # mark it's inputs
-        prod.eo_sources_inputs.add(eo_source)
+        # # mark it's inputs
+        # prod.eo_sources_inputs.add(eo_source)
         prod.save()
 
 
 __all__ = [
     "EOSource",
-    "EOSourceGroupChoices",
     "EOSourceStateChoices"
 ]

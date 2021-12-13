@@ -1,0 +1,258 @@
+- model: eo_engine.EOGroup
+  pk: 1
+  fields:
+    description: "S02P02_NDVI_300M_V3_AFR"
+- model: eo_engine.EOGroup
+  pk: 2
+  fields:
+    description: 'S02P02_NDVI_1KM_V3_AFR'
+- model: eo_engine.EOGroup
+  pk: 3
+  fields:
+    description: 'S02P02_VCI_1KM_V2_AFR'
+- model: eo_engine.EOGroup
+  pk: 4
+  fields:
+    description: 'S02P02_LAI_300M_V1_AFR'
+- model: eo_engine.EOGroup
+  pk: 5
+  fields:
+    description: 'S02P02_LAI_1KM_V2_AFR'
+- model: eo_engine.EOGroup
+  pk: 6
+  fields:
+    description: 'S02P02_NDVIA_250M_TUN'
+- model: eo_engine.EOGroup
+  pk: 7
+  fields:
+    description: 'S02P02_NDVIA_250M_RWA'
+- model: eo_engine.EOGroup
+  pk: 8
+  fields:
+    description: 'S02P02_NDVIA_250M_ETH'
+- model: eo_engine.EOGroup
+  pk: 9
+  fields:
+    description: 'S02P02_NDVIA_250M_ZAF'
+- model: eo_engine.EOGroup
+  pk: 10
+  fields:
+    description: 'S02P02_NDVIA_250M_NER'
+- model: eo_engine.EOGroup
+  pk: 11
+  fields:
+    description: 'S02P02_NDVIA_250M_GHA'
+- model: eo_engine.EOGroup
+  pk: 12
+  fields:
+    description: 'S02P02_NDVIA_250M_MOZ'
+- model: eo_engine.EOGroup
+  pk: 13
+  fields:
+    description: 'S02P02_NDVIA_250M_KEN'
+- model: eo_engine.EOGroup
+  pk: 14
+  fields:
+    description: 'S04P03_FLD_375M_1D_AFR'
+- model: eo_engine.EOGroup
+  pk: 15
+  fields:
+    description: 'S04P03_FLD_10m_BAG'
+- model: eo_engine.EOGroup
+  pk: 16
+  fields:
+    description: 'S06P01_WB_300M_V2_AFR'
+- model: eo_engine.EOGroup
+  pk: 17
+  fields:
+    description: 'S06P01_WB_100M_V1_TUN'
+- model: eo_engine.EOGroup
+  pk: 18
+  fields:
+    description: 'S06P01_WB_100M_V1_RWA'
+- model: eo_engine.EOGroup
+  pk: 19
+  fields:
+    description: 'S06P01_WB_100M_V1_ETH'
+- model: eo_engine.EOGroup
+  pk: 20
+  fields:
+    description: 'S06P01_WB_100M_V1_MOZ'
+- model: eo_engine.EOGroup
+  pk: 21
+  fields:
+    description: 'S06P01_WB_100M_V1_ZAF'
+- model: eo_engine.EOGroup
+  pk: 22
+  fields:
+    description: 'S06P01_WB_100M_V1_GHA'
+- model: eo_engine.EOGroup
+  pk: 23
+  fields:
+    description: 'S06P01_WB_100M_V1_NER'
+- model: eo_engine.EOGroup
+  pk: 24
+  fields:
+    description: 'S06P01_WB_100M_V1_KEN'
+- model: eo_engine.EOGroup
+  pk: 25
+  fields:
+    description: 'S06P01_WB_10M_KZN'
+- model: eo_engine.EOGroup
+  pk: 26
+  fields:
+    description: 'S06P01_WB_10M_BAG'
+- model: eo_engine.EOGroup
+  pk: 27
+  fields:
+    description: 'S06P04_ET_3KM_AFR'
+- model: eo_engine.EOGroup
+  pk: 28
+  fields:
+    description: 'S06P04_ETAnom_5KM_M_AFR'
+- model: eo_engine.EOGroup
+  pk: 29
+  fields:
+    description: 'S06P04_AETI_250M_D_AFR'
+- model: eo_engine.EOGroup
+  pk: 30
+  fields:
+    description: 'S06P04_AETI_100M_D_TUN'
+- model: eo_engine.EOGroup
+  pk: 31
+  fields:
+    description: 'S06P04_AETI_100M_D_KEN'
+- model: eo_engine.EOGroup
+  pk: 32
+  fields:
+    description: 'S06P04_AETI_100M_D_MOZ'
+- model: eo_engine.EOGroup
+  pk: 33
+  fields:
+    description: 'S06P04_AETI_100M_D_RWA'
+- model: eo_engine.EOGroup
+  pk: 34
+  fields:
+    description: 'S06P04_AETI_100M_D_ETH'
+- model: eo_engine.EOGroup
+  pk: 35
+  fields:
+    description: 'S06P04_L1_AETI_D_GHA'
+- model: eo_engine.EOGroup
+  pk: 36
+  fields:
+    description: 'S02P02_NDVI_300M_V2_GLOB_CGLS'
+- model: eo_engine.EOGroup
+  pk: 37
+  fields:
+    description: 'S02P02_LAI_300M_V1_GLOB_CGLS'
+- model: eo_engine.EOGroup
+  pk: 38
+  fields:
+    description: 'S02P02_NDVIA_250M_TUN_GMOD'
+- model: eo_engine.EOGroup
+  pk: 39
+  fields:
+    description: 'S02P02_NDVIA_250M_RWA_GMOD'
+- model: eo_engine.EOGroup
+  pk: 40
+  fields:
+    description: 'S02P02_NDVIA_250M_ETH_GMOD'
+- model: eo_engine.EOGroup
+  pk: 41
+  fields:
+    description: 'S02P02_NDVIA_250M_ZAF_GMOD'
+- model: eo_engine.EOGroup
+  pk: 42
+  fields:
+    description: 'S02P02_NDVIA_250M_NER_GMOD'
+- model: eo_engine.EOGroup
+  pk: 43
+  fields: { }
+- model: eo_engine.EOGroup
+  pk: 44
+  fields: { }
+- model: eo_engine.EOGroup
+  pk: 45
+  fields: { }
+- model: eo_engine.EOGroup
+  pk: 46
+  fields: { }
+- model: eo_engine.EOGroup
+  pk: 47
+  fields: { }
+- model: eo_engine.EOGroup
+  pk: 48
+  fields: { }
+- model: eo_engine.EOGroup
+  pk: 49
+  fields: { }
+- model: eo_engine.EOGroup
+  pk: 50
+  fields: { }
+- model: eo_engine.EOGroup
+  pk: 51
+  fields: { }
+- model: eo_engine.EOGroup
+  pk: 52
+  fields: { }
+- model: eo_engine.EOGroup
+  pk: 53
+  fields: { }
+- model: eo_engine.EOGroup
+  pk: 54
+  fields: { }
+- model: eo_engine.EOGroup
+  pk: 55
+  fields: { }
+- model: eo_engine.EOGroup
+  pk: 56
+  fields: { }
+- model: eo_engine.EOGroup
+  pk: 57
+  fields: { }
+- model: eo_engine.EOGroup
+  pk: 58
+  fields: { }
+- model: eo_engine.EOGroup
+  pk: 59
+  fields: { }
+- model: eo_engine.EOGroup
+  pk: 60
+  fields: { }
+- model: eo_engine.EOGroup
+  pk: 61
+  fields: { }
+- model: eo_engine.EOGroup
+  pk: 62
+  fields: { }
+- model: eo_engine.EOGroup
+  pk: 63
+  fields: { }
+- model: eo_engine.EOGroup
+  pk: 64
+  fields: { }
+- model: eo_engine.EOGroup
+  pk: 65
+  fields: { }
+- model: eo_engine.EOGroup
+  pk: 66
+  fields: { }
+- model: eo_engine.EOGroup
+  pk: 67
+  fields: { }
+- model: eo_engine.EOGroup
+  pk: 68
+  fields: { }
+- model: eo_engine.EOGroup
+  pk: 69
+  fields: { }
+- model: eo_engine.EOGroup
+  pk: 70
+  fields: { }
+- model: eo_engine.EOGroup
+  pk: 71
+  fields: { }
+- model: eo_engine.EOGroup
+  pk: 72
+  fields: { }

@@ -36,7 +36,7 @@ class TestUnit(BaseTest):
         self.eo_sourse = EOSource.objects.create(
             domain='land.copernicus.vgt.vito.be',
             filename='c_gls_NDVI300_202103210000_GLOBE_OLCI_V2.0.1.nc',
-            status=EOSourceStateChoices.AvailableRemotely,
+            status=EOSourceStateChoices.AVAILABLE_REMOTELY,
             url=self.target_url,
             credentials=Credentials.objects.first(),
             product=EOSourceGroupChoices.ndvi_300m_v2,
@@ -50,14 +50,14 @@ class TestUnit(BaseTest):
 
     def test_download_file_stand_alone(self):
         from eo_engine.common import download_asset
-        self.assertEqual(self.eo_sourse.state, EOSourceStateChoices.AvailableRemotely)
+        self.assertEqual(self.eo_sourse.state, EOSourceStateChoices.AVAILABLE_REMOTELY)
         r = download_asset(self.eo_sourse)
-        self.assertEqual(self.eo_sourse.state, EOSourceStateChoices.AvailableLocally)
+        self.assertEqual(self.eo_sourse.state, EOSourceStateChoices.AVAILABLE_LOCALLY)
 
     def test_download_file_fro_object(self):
-        self.assertEqual(self.eo_sourse.state, EOSourceStateChoices.AvailableRemotely)
+        self.assertEqual(self.eo_sourse.state, EOSourceStateChoices.AVAILABLE_REMOTELY)
         self.eo_sourse.download()
-        self.assertEqual(self.eo_sourse.state, EOSourceStateChoices.AvailableLocally)
+        self.assertEqual(self.eo_sourse.state, EOSourceStateChoices.AVAILABLE_LOCALLY)
         self.assertEqual(EOProduct.objects.all().count(), 1)
         p = EOProduct.objects.first()
         self.assertEqual(p.inputs.count(), 1)

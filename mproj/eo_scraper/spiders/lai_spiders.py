@@ -1,15 +1,22 @@
 from eo_engine.models import EOSourceGroupChoices
 from eo_scraper.spiders.abstract_spiders import CopernicusVgtDatapool
 
+# special rules
+# if this thing starts to bloat up, maybe consider spliting into different
+# pipelines
 
-class LAISpider(CopernicusVgtDatapool):
-    pass
-    # product_group = EOSourceProductGroupChoices.LAI
+
+class CGLS_LAISpider(CopernicusVgtDatapool):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
 
-class LAI300mV1Spider(LAISpider):
-    name = EOSourceGroupChoices.C_GLS_LAI_300M_V1_GLOB
-    product_name = EOSourceGroupChoices.C_GLS_LAI_300M_V1_GLOB
+class LAI300mV1Spider(CGLS_LAISpider):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    name = EOSourceGroupChoices.S02P02_LAI_300M_V1_GLOB_CGLS
     start_urls = [
         f"https://land.copernicus.vgt.vito.be/PDF/datapool/Vegetation/Properties/LAI_300m_V1/"
     ]

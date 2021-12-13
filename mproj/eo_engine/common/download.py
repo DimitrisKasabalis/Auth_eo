@@ -30,7 +30,7 @@ def download_http_eosource(pk_eosource: int) -> str:
     FILE_LENGTH = headers.get('Content-Length', None)
     logger.info(f'LOG:INFO: File length is {FILE_LENGTH} bytes')
 
-    eo_source.set_status(EOSourceStateChoices.BeingDownloaded)
+    eo_source.set_status(EOSourceStateChoices.DOWNLOADING)
 
     with NamedTemporaryFile() as file_handle:
         # TemporaryFile has noname, and will cease to exist when it is closed.
@@ -51,7 +51,7 @@ def download_http_eosource(pk_eosource: int) -> str:
         eosource.file.save(name=eosource.filename, content=content, save=False)
 
         eosource.filesize = eosource.file.size
-        eosource.state = EOSourceStateChoices.AvailableLocally
+        eosource.state = EOSourceStateChoices.AVAILABLE_LOCALLY
         eosource.save()
 
     return eosource.file.name
@@ -81,7 +81,7 @@ def download_ftp_eosource(pk_eosource: int) -> str:
         eo_source = EOSource.objects.get(pk=pk_eosource)
         eo_source.file.save(name=eo_source.filename, content=content, save=False)
         eo_source.filesize = eo_source.file.size
-        eo_source.set_status(EOSourceStateChoices.AvailableLocally)
+        eo_source.set_status(EOSourceStateChoices.AVAILABLE_LOCALLY)
 
         eo_source.save()
 
@@ -103,7 +103,7 @@ def download_sftp_eosource(pk_eosource: int) -> str:
         content = File(temp_file)
         eo_source.file.save(name=eo_source.filename, content=content, save=False)
         eo_source.filesize = eo_source.file.size
-        eo_source.set_status(EOSourceStateChoices.AvailableLocally)
+        eo_source.set_status(EOSourceStateChoices.AVAILABLE_LOCALLY)
 
         eo_source.save()
 
@@ -148,7 +148,7 @@ def download_wapor_eosource(pk_eosource: int) -> str:
             raise AfriCultuReSError('\n'.join(error_log))
         elif remoteJob.response_status == 200 and remoteJob.job_status == 'COMPLETED':
             with NamedTemporaryFile() as file_handle:
-                eo_source.set_status(EOSourceStateChoices.BeingDownloaded)
+                eo_source.set_status(EOSourceStateChoices.DOWNLOADING)
                 eo_source.save()
 
                 url = remoteJob.download_url()
@@ -163,7 +163,7 @@ def download_wapor_eosource(pk_eosource: int) -> str:
                 eosource.file.save(name=eosource.filename, content=content, save=False)
 
                 eosource.filesize = eosource.file.size
-                eosource.state = EOSourceStateChoices.AvailableLocally
+                eosource.state = EOSourceStateChoices.AVAILABLE_LOCALLY
                 eosource.save()
 
                 return eo_source.file.name

@@ -1,9 +1,8 @@
-import functools
 from collections import defaultdict
-from typing import List
 
-from eo_engine.common.tasks import is_process_task
-from eo_engine.errors import AfriCultuReSError
+import re
+from datetime import datetime, date as dt_date
+from typing import List
 
 
 def get_spider_loader():
@@ -36,3 +35,33 @@ def list_spiders() -> List[str]:
 # x = rec_dd()
 # x['a']['b'] = {a:{b:{}}
 rec_dd = defaultdict(lambda: rec_dd)
+
+
+def str_to_date(token: str, regex_string: str, re_flags=re.IGNORECASE) -> dt_date:
+    from eo_engine.errors import AfriCultuReSError
+    pat = re.compile(regex_string, re_flags)
+    try:
+        match = pat.match(token)
+        groupdict = match.groupdict()
+        YYMMDD_str = groupdict.get('YYMMDD', None)
+        YYYYMMDD_str = groupdict.get('YYYYMMDD', None)
+        YYKK_str = groupdict.get('YYKK', None)
+        YYYYDOY_str = groupdict.get('YYYYDOY')
+        if len(list(filter(lambda x: x is not None, [YYMMDD_str, YYYYMMDD_str, YYKK_str, YYYYDOY_str]))) > 1:
+            raise AfriCultuReSError(
+                'More than one date token was captured, please change the regEx to only capture one.')
+        if YYYYMMDD_str:
+            return datetime.strptime(YYYYMMDD_str, '%Y%m%d').date()
+        if YYMMDD_str:
+            return datetime.strptime(YYYYMMDD_str, '%y%m%d').date()
+        if YYKK_str:
+            from eo_engine.common.time import runningdekad2date
+            year = int(YYKK_str[2:])
+            rdekad = int(YYKK_str[:2])
+            return runningdekad2date(year, rdekad)[0]
+        if YYYYDOY_str:
+            return datetime.strptime(YYYYDOY_str, '%Y%j')
+        raise AfriCultuReSError()
+    except (AfriCultuReSError, AttributeError) as e:
+        raise AfriCultuReSError(
+            f'BUG_REPORT:SHOULD_NOT_END_HERE:No date tokens found in string {token} and regEx string +{regex_string}+.')

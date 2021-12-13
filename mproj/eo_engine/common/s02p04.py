@@ -1,33 +1,31 @@
 # Django functions for S02P04 work package
-from eo_engine.models import EOSource, EOSourceGroupChoices
-from .patterns import GMOD09Q1_DATE_PATTERN
+from eo_engine.models import EOSource, EOSourceGroupChoices, EOSourceStateChoices
 
 
-def is_GMOD09Q1_batch_complete(eo_source: EOSource) -> bool:
-    """Retuens True if all tiles for that group/date is present """
-    match = GMOD09Q1_DATE_PATTERN.match(eo_source.filename)
-    group_dict = match.groupdict()
-    year = group_dict['year']
-    doy = group_dict['doy']
+def is_gmod09q1_batch_complete(eo_source: EOSource) -> bool:
+    """Returns True if all tiles for that group/date is present """
+
     qs = EOSource.objects.filter(group=eo_source.group)
-    qs = qs.filter(filename__contains=f'{year}{doy}')
+    qs = qs.filter(reference_date=eo_source.reference_date)
+    qs = qs.filter(state=EOSourceStateChoices.AVAILABLE_LOCALLY)
+    count = qs.count()
 
     # how many tiles should a date/group have?
-    if eo_source.group == EOSourceGroupChoices.GMOD09Q1_NDVI_ANOM_ZAF:
-        return qs.count() == 5
-    if eo_source.group == EOSourceGroupChoices.GMOD09Q1_NDVI_ANOM_MOZ:
-        return qs.count() == 4
-    if eo_source.group == EOSourceGroupChoices.GMOD09Q1_NDVI_ANOM_TUN:
-        return qs.count() == 4
-    if eo_source.group == EOSourceGroupChoices.GMOD09Q1_NDVI_ANOM_KEN:
-        return qs.count() == 4
-    if eo_source.group == EOSourceGroupChoices.GMOD09Q1_NDVI_ANOM_GHA:
-        return qs.count() == 5
-    if eo_source.group == EOSourceGroupChoices.GMOD09Q1_NDVI_ANOM_RWA:
-        return qs.count() == 1
-    if eo_source.group == EOSourceGroupChoices.GMOD09Q1_NDVI_ANOM_ETH:
-        return qs.count() == 5
-    if eo_source.group == EOSourceGroupChoices.GMOD09Q1_NDVI_ANOM_NER:
-        return qs.count() == 6
+    if eo_source.group.name == EOSourceGroupChoices.S02P02_NDVIA_250M_ZAF_GMOD:
+        return count == 5
+    if eo_source.group.name == EOSourceGroupChoices.S02P02_NDVIA_250M_MOZ_GMOD:
+        return count == 4
+    if eo_source.group.name == EOSourceGroupChoices.S02P02_NDVIA_250M_TUN_GMOD:
+        return count == 4
+    if eo_source.group.name == EOSourceGroupChoices.S02P02_NDVIA_250M_KEN_GMOD:
+        return count == 4
+    if eo_source.group.name == EOSourceGroupChoices.S02P02_NDVIA_250M_GHA_GMOD:
+        return count == 5
+    if eo_source.group.name == EOSourceGroupChoices.S02P02_NDVIA_250M_RWA_GMOD:
+        return count == 1
+    if eo_source.group.name == EOSourceGroupChoices.S02P02_NDVIA_250M_ETH_GMOD:
+        return count == 5
+    if eo_source.group.name == EOSourceGroupChoices.S02P02_NDVIA_250M_NER_GMOD:
+        return count == 6
 
     return False

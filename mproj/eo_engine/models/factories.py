@@ -55,7 +55,7 @@ def create_wapor_object(filename: str) -> EOSource:
     group = getattr(EOSourceGroupChoices, f'WAPOR_{wapor_variable.product_id}_{wapor_variable.area.upper()}')
 
     return EOSource.objects.create(
-        state=EOSourceStateChoices.AvailableRemotely,
+        state=EOSourceStateChoices.AVAILABLE_REMOTELY,
         group=group,
         filename=filename,
         domain='wapor',

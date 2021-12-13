@@ -1,0 +1,140 @@
+- model: eo_engine.EOProductGroup
+  pk: 1
+  fields:
+    name: 'S02P02_NDVI_300M_V3_AFR'
+- model: eo_engine.EOProductGroup
+  pk: 2
+  fields:
+    name: 'S02P02_NDVI_1KM_V3_AFR'
+- model: eo_engine.EOProductGroup
+  pk: 3
+  fields:
+    name: 'S02P02_VCI_1KM_V2_AFR'
+- model: eo_engine.EOProductGroup
+  pk: 4
+  fields:
+    name: 'S02P02_LAI_300M_V1_AFR'
+- model: eo_engine.EOProductGroup
+  pk: 5
+  fields:
+    name: 'S02P02_LAI_1KM_V2_AFR'
+- model: eo_engine.EOProductGroup
+  pk: 6
+  fields:
+    name: 'S02P02_NDVIA_250M_TUN'
+- model: eo_engine.EOProductGroup
+  pk: 7
+  fields:
+    name: 'S02P02_NDVIA_250M_RWA'
+- model: eo_engine.EOProductGroup
+  pk: 8
+  fields:
+    name: 'S02P02_NDVIA_250M_ETH'
+- model: eo_engine.EOProductGroup
+  pk: 9
+  fields:
+    name: 'S02P02_NDVIA_250M_ZAF'
+- model: eo_engine.EOProductGroup
+  pk: 10
+  fields:
+    name: 'S02P02_NDVIA_250M_NER'
+- model: eo_engine.EOProductGroup
+  pk: 11
+  fields:
+    name: 'S02P02_NDVIA_250M_GAH'
+- model: eo_engine.EOProductGroup
+  pk: 12
+  fields:
+    name: 'S02P02_NDVIA_250M_MOZ'
+- model: eo_engine.EOProductGroup
+  pk: 13
+  fields:
+    name: 'S02P02_NDVIA_250M_KEN'
+- model: eo_engine.EOProductGroup
+  pk: 14
+  fields:
+    name: 'S04P03_FLD_375M_1D_AFR'
+- model: eo_engine.EOProductGroup
+  pk: 15
+  fields:
+    name: 'S04P03_FLD_10m_BAG'
+- model: eo_engine.EOProductGroup
+  pk: 16
+  fields:
+    name: 'S06P01_WB_300M_V2_AFR'
+- model: eo_engine.EOProductGroup
+  pk: 17
+  fields:
+    name: 'S06P01_WB_100M_V1_TUN'
+- model: eo_engine.EOProductGroup
+  pk: 18
+  fields:
+    name: 'S06P01_WB_100M_V1_RWA'
+- model: eo_engine.EOProductGroup
+  pk: 19
+  fields:
+    name: 'S06P01_WB_100M_V1_ETH'
+- model: eo_engine.EOProductGroup
+  pk: 20
+  fields:
+    name: 'S06P01_WB_100M_V1_MOZ'
+- model: eo_engine.EOProductGroup
+  pk: 21
+  fields:
+    name: 'S06P01_WB_100M_V1_ZAF'
+- model: eo_engine.EOProductGroup
+  pk: 22
+  fields:
+    name: 'S06P01_WB_100M_V1_GHA'
+- model: eo_engine.EOProductGroup
+  pk: 23
+  fields:
+    name: 'S06P01_WB_100M_V1_NER'
+- model: eo_engine.EOProductGroup
+  pk: 24
+  fields:
+    name: 'S06P01_WB_100M_V1_KEN'
+- model: eo_engine.EOProductGroup
+  pk: 25
+  fields:
+    name: 'S06P01_WB_10M_KZN'
+- model: eo_engine.EOProductGroup
+  pk: 26
+  fields:
+    name: 'S06P01_WB_10M_BAG'
+- model: eo_engine.EOProductGroup
+  pk: 27
+  fields:
+    name: 'S06P04_ET_3KM_AFR'
+- model: eo_engine.EOProductGroup
+  pk: 28
+  fields:
+    name: 'S06P04_ETAnom_5KM_M_AFR'
+- model: eo_engine.EOProductGroup
+  pk: 29
+  fields:
+    name: 'S06P04_AETI_250M_D_AFR'
+- model: eo_engine.EOProductGroup
+  pk: 30
+  fields:
+    name: 'S06P04_AETI_100M_D_TUN'
+- model: eo_engine.EOProductGroup
+  pk: 31
+  fields:
+    name: 'S06P04_AETI_100M_D_KEN'
+- model: eo_engine.EOProductGroup
+  pk: 32
+  fields:
+    name: 'S06P04_AETI_100M_D_MOZ'
+- model: eo_engine.EOProductGroup
+  pk: 33
+  fields:
+    name: 'S06P04_AETI_100M_D_RWA'
+- model: eo_engine.EOProductGroup
+  pk: 34
+  fields:
+    name: 'S06P04_AETI_100M_D_ETH'
+- model: eo_engine.EOProductGroup
+  pk: 35
+  fields:
+    name: 'S06P04_L1_AETI_D_GHA'

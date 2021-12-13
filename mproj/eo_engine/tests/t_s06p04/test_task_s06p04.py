@@ -25,7 +25,7 @@ class TaskS06P04Test(TransactionTestCase):
         super().setUpClass()
         TEST_MEDIA_ROOT.mkdir(exist_ok=True)
         cls.eo_source = EOSource.objects.create(
-            state=EOSourceStateChoices.AvailableLocally,
+            state=EOSourceStateChoices.AVAILABLE_LOCALLY,
             group=EOSourceGroupChoices.MSG_3km_GLOB,
             filename=TEST_FILE.name,
             domain='test-domain',

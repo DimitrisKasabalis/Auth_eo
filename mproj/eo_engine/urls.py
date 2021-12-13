@@ -5,19 +5,15 @@ from . import views
 app_name = 'eo_engine'
 
 urlpatterns = [
-    path('', views.homepage, name='main-page'),
-    path('credentials', views.utilities_view_post_credentials, name='credentials'),
-    path('configure/crawler/<str:group_name>', views.configure_crawler, name='configure-crawler'),
-    path('delete_file/<str:resource_type>/<int:pk>', views.delete_file, name='delete-file'),
-    path('eoproducts/<str:product_group>', views.list_eoproducts, name='list-eoproducts'),
-    path('eosources/<str:product_group>', views.list_eosources, name='list-eosources'),
-    path('spiders/', views.list_crawelers, name='list-spiders'),
+    path('', views.main_page, name='main-page'),
+    path('crawler/configure/<str:group_name>', views.configure_crawler, name='crawler-configure'),
+    path('crawler/triger/<str:spider_name>', views.trigger_spider, name='trigger-spider'),
+    path('credentials/list', views.utilities_view_post_credentials, name='credentials-list'),
+    path('pipeline/<int:pipeline_pk>/inputs', views.pipeline_inputs, name='pipeline-inputs-list'),
+    path('pipeline/<int:pipeline_pk>/outputs', views.pipeline_outputs, name='pipeline-outputs-list'),
     path('tasks/revoke/<str:task_id>', views.view_revoke_task, name='revoke-task'),
     path('tasks/submit', views.submit_task, name='submit-task'),
-    path('trigger/download_eosource/<int:eo_source_pk>', views.trigger_download_eosource, name='trigger-dl-eosource'),
-    path('trigger/eoproduct_generation/<str:filename>', views.trigger_generate_eoproduct,
-         name='trigger-eoproduct_generation'),
-    path('trigger/spider_crawl/<str:spider_name>', views.trigger_spider, name='trigger-spider'),
+    path('utilities/delete_file/<str:resource_type>/<int:pk>', views.delete_file, name='delete-file'),
     path('utilities/refresh-rows', views.utilities_save_rows, name='refresh-rows'),
     path('utilties/create-wapor/<str:product>', views.create_wapor_entry, name='create-wapor'),
 

@@ -49,7 +49,7 @@ class BaseTaskWithRetry(Task):
             eo_product_pk = kwargs['eo_product_pk']
             eo_product = EOProduct.objects.get(pk=eo_product_pk)
             logger.info(f"Marking product {eo_product} as 'GENERATING'")
-            eo_product.state = EOProductStateChoices.Generating
+            eo_product.state = EOProductStateChoices.GENERATING
             eo_product.save()
 
         return
@@ -62,13 +62,13 @@ class BaseTaskWithRetry(Task):
             eo_product = EOProduct.objects.get(pk=eo_product_pk)
             if status == SUCCESS:
                 logger.info('INFO:TASK:AFTER_RETURN: Making as READY')
-                eo_product.state = EOProductStateChoices.Ready
+                eo_product.state = EOProductStateChoices.READY
             if status == FAILURE:
                 logger.info('INFO:TASK:AFTER_RETURN: Making as Failed')
-                eo_product.state = EOProductStateChoices.Failed
+                eo_product.state = EOProductStateChoices.FAILED
             if status == REVOKED:
                 logger.info('INFO:TASK:AFTER_RETURN: Making as Ignored')
-                eo_product.state = EOProductStateChoices.Ignore
+                eo_product.state = EOProductStateChoices.IGNORE
             eo_product.save()
         return
 
@@ -118,5 +118,5 @@ class BaseTaskWithRetry(Task):
         if is_process_task(self.name):
             eo_product_pk = kwargs['eo_product_pk']
             eo_product = EOProduct.objects.get(pk=eo_product_pk)
-            eo_product.state = EOProductStateChoices.Failed
+            eo_product.state = EOProductStateChoices.FAILED
             eo_product.save()

@@ -30,17 +30,17 @@ class TestTaskS02P02CglsComputeVci1kmV2(TransactionTestCase):
         product_source = cls.product_source = EOProduct.objects.create(
             filename=TEST_FILE.name,
             output_folder='S2_P02/NDVI_1000',  # doesn't matter
-            group=EOProductGroupChoices.AGRO_NDVI_1KM_V3_AFR,  # matters
+            group=EOProductGroupChoices.S02P02_NDVI_1KM_V3_AFR,  # matters
             datetime_creation=datetime(year=2020, month=12, day=10),
             task_name='doesn-matter',  # doesn't matter
-            state=EOProductStateChoices.Ready,
+            state=EOProductStateChoices.READY,
         )
         product_source.file.save(name=TEST_FILE.name, content=File(TEST_FILE.open('rb')), save=True)
 
         product_source.refresh_from_db()
         cls.eo_product: EOProduct = EOProduct.objects.filter(eo_products_inputs=product_source).first()
         # pre-flight checks
-        assert cls.eo_product.state == EOProductStateChoices.Available
+        assert cls.eo_product.state == EOProductStateChoices.AVAILABLE
         task_ref = get_task_ref_from_name(cls.eo_product.task_name)
 
         task = task_ref.s(eo_product_pk=cls.eo_product.pk, **cls.eo_product.task_kwargs)
@@ -62,4 +62,4 @@ class TestTaskS02P02CglsComputeVci1kmV2(TransactionTestCase):
 
     def test_state(self):
         self.eo_product.refresh_from_db()
-        self.assertEqual(self.eo_product.state, EOProductStateChoices.Ready)
+        self.assertEqual(self.eo_product.state, EOProductStateChoices.READY)

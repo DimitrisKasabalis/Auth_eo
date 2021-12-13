@@ -1,22 +1,23 @@
 import json
 import os
 import re
-from celery.utils.log import get_logger, get_task_logger
+from celery.utils.log import get_task_logger
 from datetime import datetime, date as dt_date
-from scrapy.http import Response
-from scrapy.selector.unified import Selector
-from typing import List, Pattern, Optional
-from urllib.parse import urlsplit, urlparse
-
 from django.core.exceptions import ObjectDoesNotExist
 from pytz import utc
 from scrapy import Request, FormRequest
+from scrapy.http import Response
 from scrapy.linkextractors import LinkExtractor
 from scrapy.loader import ItemLoader
+from scrapy.selector.unified import Selector
 from scrapy.spiders import CrawlSpider, Spider
 from scrapy.spiders import Rule
 from scrapy.spiders.init import InitSpider
+from typing import List, Pattern, Optional
+from urllib.parse import urlsplit, urlparse
 
+from eo_engine.models import EOSourceGroup
+from eo_engine.models.other import CrawlerConfiguration
 from eo_scraper.items import RemoteSourceItem
 from eo_scraper.utils import get_credentials, credentials
 
@@ -52,15 +53,49 @@ There are multiple variation of Spiders, The simplest one is the scrapy.Spider.
     Then we have 
         - CrawlSpider
         - InitSpider
-        
-        
 '''
 
 
-class CopernicusVgtDatapool(InitSpider, CrawlSpider):
+class AfricultureCrawlerMixin:
+    """ A set of common functions for all Crawlers """
+
+    def get_crawler_settings(self):
+        return CrawlerConfiguration.objects.filter(group=self.name).get()
+
+    def get_group_settings(self) -> EOSourceGroup:
+        return EOSourceGroup.objects.get(name=self.name)
+
+    def should_process_response(self, response: Response) -> bool:
+        """if false, the request will not be processed"""
+        return True
+
+    def date_reference_from_filename(self, filename) -> Optional[dt_date]:
+        from eo_engine.common.misc import str_to_date
+        eo_source_group = EOSourceGroup.objects.get(name=self.name)
+
+        return str_to_date(token=filename, regex_string=eo_source_group.date_regex)
+
+    def is_expected_filename(self, filename: str) -> bool:
+        """Return True if filename passes the date_regex check. False otherwise"""
+        eo_source_group = EOSourceGroup.objects.get(name=self.name)
+        regex_str = eo_source_group.date_regex
+        match = re.match(eo_source_group.date_regex, filename, re.IGNORECASE)
+        if match:
+            return True
+        logger.warning(f'{filename} did not match the reg-ex string {regex_str}')
+        return False
+
+    # noinspection PyMethodMayBeStatic
+    def should_process_filename(self, filename: str) -> bool:
+        """Return True to process the Entry. False to Drop.
+        Some entries should not be processed based on the their filename. Eg tiles or other.
+        """
+        return True
+
+
+class CopernicusVgtDatapool(InitSpider, CrawlSpider, AfricultureCrawlerMixin):
     allowed_domains: List[str] = ['land.copernicus.vgt.vito.be']
     login_page: str = 'https://land.copernicus.vgt.vito.be/PDF/datapool'
-    product_name: str
 
     credentials: [str, str]  # username, password
 
@@ -72,18 +107,7 @@ class CopernicusVgtDatapool(InitSpider, CrawlSpider):
         Rule(LinkExtractor(allow=(catalog_page_regex,)), callback='parse_catalog', follow=True)
     )
 
-    def __init__(self, *args, **kwargs):
-        super(CopernicusVgtDatapool, self).__init__(*args, **kwargs)  # default init binds kwargs to self
-        from eo_engine.models.other import CrawlerConfiguration
-        try:
-            configuration = CrawlerConfiguration.objects.filter(group=self.name).get()
-            self.from_date = configuration.from_date
-        except:
-            logger.warn('WARNING:Configuration for this craweler does not exist. Defaulting to defaults')
-            self.from_date = dt_date(2017, 1, 1)
-
     def init_request(self):
-        print("init_request")
         url_split = urlsplit(self.login_page)
         domain = url_split.netloc
         self.credentials = get_credentials(domain)
@@ -105,29 +129,20 @@ class CopernicusVgtDatapool(InitSpider, CrawlSpider):
 
     def parse(self, response, **kwargs):
         # https://docs.scrapy.org/en/latest/topics/spiders.html#scrapy.spiders.Spider.parse
-
-        # This is the default callback used by Scrapy to process
-        # downloaded responses, when their requests don’t specify a callback.
-
-        # self.logger.info('A response from %s just arrived!' % response.url)
         pass
 
-    def pre_parse_check(self, response: Response) -> bool:
-        """if false, the request will not be processed"""
-        return True
-
-    def datetime_reference_from_filename(self, filename) -> Optional[datetime]:
-        raise NotImplementedError()
-
     def parse_catalog(self, response):
-        if not self.pre_parse_check(response):
+        # if not need to process the response further, yield nothing
+        if not self.should_process_response(response):
             yield
+
         tableRow: Selector
         for idx, tableRow in enumerate(response.xpath('//tr[count(td)=4]')):
             filename = str(tableRow.xpath('.//td[1]/text()').get()).strip()
-            dt_reference = self.datetime_reference_from_filename(filename)
+            if not self.is_expected_filename(filename=filename):
+                return
+            dt_reference = self.date_reference_from_filename(filename)
             loader = ItemLoader(item=RemoteSourceItem(), selector=tableRow)
-
             loader.add_xpath('size', 'td[position()=2]/text()', pos=2)
 
             loader.add_value('datetime_reference', dt_reference)
@@ -140,7 +155,7 @@ class CopernicusVgtDatapool(InitSpider, CrawlSpider):
             yield loader.load_item()
 
 
-class FtpRequest(Request):
+class FtpRequest(Request, AfricultureCrawlerMixin):
 
     def __init__(self, url, credentials: Optional[credentials], *args, **kwargs):
         super(FtpRequest, self).__init__(url, *args, **kwargs)
@@ -159,7 +174,7 @@ class FtpRequest(Request):
         pass
 
 
-class FtpSpider(Spider):
+class FtpSpider(Spider, AfricultureCrawlerMixin):
     # there's no robots.txt
     custom_settings = {
         'ROBOTSTXT_OBEY': False
@@ -197,7 +212,6 @@ class FtpSpider(Spider):
 
             if f['filetype'] == '-':
                 result = RemoteSourceItem(
-                    # product_name='asf',
                     filename=f.get('filename', None),
                     # extension=f.get('filename', None),
                     size=f.get('size', None),

@@ -16,24 +16,22 @@ from eo_engine.models import EOSourceGroupChoices
 
 # https://github.com/laserson/ftptree/blob/master/ftptree_crawler/spiders.py
 class FtpGlobalLandWB100m(FtpSpider):
-    name = EOSourceGroupChoices.C_GLS_WB_100M_V1_GLOB
-    product_name = EOSourceGroupChoices.C_GLS_WB_100M_V1_GLOB
+    name = EOSourceGroupChoices.S06P01_C_GLS_WB_100M_V1_GLOB
     allowed_domains = ['ftp.globalland.cls.fr', ]
 
     ftp_root_url: str = 'ftp://ftp.globalland.cls.fr/home/glbland_ftp/Core/SIRS/dataset-sirs-wb-nrt-100m'
 
 
 class FtpGlobalLandWB300m(FtpSpider):
-    name = EOSourceGroupChoices.C_GLS_WB_300M_V2_GLOB
-    product_name = EOSourceGroupChoices.C_GLS_WB_300M_V2_GLOB
+    name = EOSourceGroupChoices.S06P01_C_GLS_WB_300M_V2_GLOB
     allowed_domains = ['ftp.globalland.cls.fr', ]
 
     ftp_root_url: str = 'ftp://ftp.globalland.cls.fr/home/glbland_ftp/Core/SIRS/dataset-sirs-wb-nrt-300m'
 
 
 class FtpFloodLightViiR(FtpSpider):
-    name = EOSourceGroupChoices.FLOODLIGHT_VIIRS_1_DAY
-    product_name = EOSourceGroupChoices.FLOODLIGHT_VIIRS_1_DAY
+    name = EOSourceGroupChoices.S04P03_FLD_375M_1D_VIIRS
+
     allowed_domain = ['floodlight.ssec.wisc.edu']
 
     ftp_root_url: str = 'ftp://floodlight.ssec.wisc.edu/composite'

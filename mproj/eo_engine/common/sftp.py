@@ -11,9 +11,7 @@ SftpFile = NamedTuple('SftpFile', (
     ('url', str),
     ('filename', str),
     ('filesize_reported', int),
-    ('datetime_reference', datetime)
-)
-                      )
+    ('datetime_reference', datetime)))
 
 
 def sftp_connection(host, username, password) -> pysftp.Connection:
@@ -25,8 +23,7 @@ def sftp_connection(host, username, password) -> pysftp.Connection:
         host=host,
         username=username,
         password=password,
-        cnopts=cnopts
-    )
+        cnopts=cnopts)
 
     return c
 
@@ -43,5 +40,5 @@ def list_dir_entries(remotepath: str, connection: pysftp.Connection):
                 filename=filename,
                 filesize_reported=entry.st_size,
                 datetime_reference=parse_dt_from_generic_string(filename),
-                url=url_template.format(schema='sftp',host=domain,path=path)
+                url=url_template.format(schema='sftp', host=domain, path=path)
             )

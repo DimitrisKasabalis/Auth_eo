@@ -1,7 +1,8 @@
 from .c import GeopGroupTask, GeopTask
-from .eo_product import EOProductGroupChoices, EOProductStateChoices, EOProduct
-from .eo_source import EOSourceStateChoices, EOSource, EOSourceGroupChoices
-from .other import Credentials, CrawlerConfiguration
+from .eo_group import EOProductGroupChoices, EOProductGroup, EOSourceGroup, EOSourceGroupChoices, EOGroup
+from .eo_product import EOProductStateChoices, EOProduct
+from .eo_source import EOSourceStateChoices, EOSource
+from .other import Credentials, CrawlerConfiguration, Pipeline
 
 __all__ = [
     "Credentials",
@@ -13,5 +14,9 @@ __all__ = [
     "EOProductStateChoices",
     "GeopGroupTask",
     "GeopTask",
-    "CrawlerConfiguration"
+    "CrawlerConfiguration",
+    'EOSourceGroup',
+    'EOProductGroup',
+    'Pipeline',
+    'EOGroup'
 ]

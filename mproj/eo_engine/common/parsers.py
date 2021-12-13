@@ -1,11 +1,11 @@
 import re
 import string
 from datetime import datetime
+from dateutil.parser import parse, ParserError
 from functools import cache
-from pathlib import Path
 from pytz import utc
-from dateutil.parser import parse
 
+from eo_engine.errors import AfriCultuReSError
 from eo_engine.common.copernicus import copernicus_name_elements
 
 punctuation_chars = re.escape(string.punctuation)
@@ -35,8 +35,10 @@ def parse_dt_from_generic_string(timestr: str) -> datetime:
     token = max(
         re.sub(r'[' + punctuation_chars + ascii_letters + ']', ' ', timestr).split(),
         key=len)
-
-    return parse(token, fuzzy=True)
+    try:
+        return parse(token, fuzzy=True)
+    except ParserError as e:
+        raise AfriCultuReSError(f'Could not extract datetime from string: {timestr}') from e
 
 
 def parse_copernicus_name(filename: str) -> copernicus_name_elements:

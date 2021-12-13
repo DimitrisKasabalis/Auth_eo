@@ -17,7 +17,7 @@ from typing import List, Union, Optional, Literal
 
 from eo_engine.common.tasks import get_task_ref_from_name
 from eo_engine.errors import AfriCultuReSRetriableError, AfriCultuReSError
-from eo_engine.models import Credentials
+from eo_engine.models import Credentials, Pipeline
 from eo_engine.models import EOProduct, EOProductStateChoices
 from eo_engine.models import EOSource, EOSourceStateChoices
 
@@ -104,8 +104,7 @@ def create_wapor_entry(self, level_id: Literal['L1', 'L2'], product_id: Literal[
 
 # SFTP
 @shared_task
-def task_sftp_parse_remote_dir(remote_dir: Union[str, List[str]]):
-    from eo_engine.common.products import filename_to_product
+def task_sftp_parse_remote_dir(remote_dir: Union[str, List[str]], group_name: str):
     # remote dir is in the form of
     #  sftp://adf.adf.com/asdf/aa'
     if isinstance(remote_dir, List):
@@ -122,15 +121,14 @@ def task_sftp_parse_remote_dir(remote_dir: Union[str, List[str]]):
                                       username=credentials.username,
                                       password=credentials.password)
     for entry in list_dir_entries(remotepath=path, connection=sftp_connection):
-        product_group = filename_to_product(entry.filename)
-        add_to_db(entry, product_group=product_group[0])
+        add_to_db(entry, eo_source_group_name=group_name)
 
 
-# @shared_task(bind=True)
+@shared_task(bind=True)
 def task_schedule_download_eosource(self):
-    qs = EOSource.objects.filter(status=EOSourceStateChoices.AvailableRemotely)
+    qs = EOSource.objects.filter(status=EOSourceStateChoices.AVAILABLE_REMOTELY)
     if qs.exists():
-        qs.update(status=EOSourceStateChoices.ScheduledForDownload)
+        qs.update(status=EOSourceStateChoices.SCHEDULED_FOR_DOWNLOAD)
         job = group(task_download_file.s(eo_source_pk=eo_source.pk) for eo_source in qs.only('pk'))
         return job.apply_async()
 
@@ -138,16 +136,14 @@ def task_schedule_download_eosource(self):
 # noinspection SpellCheckingInspection
 @shared_task
 def task_schedule_create_eoproduct():
-    qs = EOProduct.objects.none()
-
-    qs |= EOProduct.objects.filter(status=EOProductStateChoices.Available)
+    qs = EOProduct.objects.filter(status=EOProductStateChoices.AVAILABLE)
     if qs.exists():
         logger.info(f'Found {qs.count()} EOProducts that are ready')
 
         job = group(
             get_task_ref_from_name(eo_product.task_name).s(eo_product_pk=eo_product.pk, **eo_product.task_kwargs) for
             eo_product in qs)
-        qs.update(status=EOProductStateChoices.Scheduled)
+        qs.update(status=EOProductStateChoices.SCHEDULED)
         return job.apply_async()
 
     return
@@ -166,7 +162,7 @@ def task_download_file(self, eo_source_pk: int):
                                            download_sftp_eosource,
                                            download_wapor_eosource)
     eo_source = EOSource.objects.get(pk=eo_source_pk)
-    eo_source.state = EOSourceStateChoices.BeingDownloaded
+    eo_source.state = EOSourceStateChoices.DOWNLOADING
     eo_source.save()
     url_parse = urlparse(eo_source.url)
     scheme = url_parse.scheme
@@ -186,12 +182,12 @@ def task_download_file(self, eo_source_pk: int):
             raise Exception(f'There was no defined method for scheme: {scheme}')
     except AfriCultuReSRetriableError as exc:
         eo_source.refresh_from_db()
-        eo_source.state = EOSourceStateChoices.Defered
+        eo_source.state = EOSourceStateChoices.DEFERRED
         eo_source.save()
         raise self.retry(countdown=10)
     except BaseException as e:
         eo_source.refresh_from_db()
-        eo_source.state = EOSourceStateChoices.FailedToDownload
+        eo_source.state = EOSourceStateChoices.DOWNLOAD_FAILED
         eo_source.save()
         raise Exception('Could not download.') from e
 
@@ -206,7 +202,7 @@ def task_download_file(self, eo_source_pk: int):
 # s02p02
 ###########
 @shared_task
-def task_s02p02_c_gls_ndvi_300_clip(
+def task_s02p02_ndvi300m_v2(
         eo_product_pk: Union[int, EOProduct],
         aoi: List[int]
 ):
@@ -286,7 +282,7 @@ def task_s02p02_c_gls_ndvi_300_clip(
             content = File(file.open('rb'))
             eo_product.file.save(name=eo_product.filename, content=content, save=False)
             eo_product.filesize = eo_product.file.size
-            eo_product.state = EOProductStateChoices.Ready
+            eo_product.state = EOProductStateChoices.READY
             logger.debug(f'removing temp file {file.name}')
             file.unlink(missing_ok=True)
     except Exception as ex:
@@ -295,14 +291,14 @@ def task_s02p02_c_gls_ndvi_300_clip(
         print(message)
         raise ex
 
-    eo_product.state = EOProductStateChoices.Ready
+    eo_product.state = EOProductStateChoices.READY
     eo_product.datetime_creation = now
     eo_product.save()
     return eo_product.file.path
 
 
 @shared_task
-def task_s02p02_agro_nvdi_300_resample_to_1km(eo_product_pk):
+def task_s02p02_nvdi1km_v3(eo_product_pk):
     """" Resamples to 1km and cuts to AOI bbox """
 
     eo_product = EOProduct.objects.get(id=eo_product_pk)
@@ -353,7 +349,7 @@ def task_s02p02_agro_nvdi_300_resample_to_1km(eo_product_pk):
         with open(output_temp_file, 'rb') as fh:
             content = File(fh)
             eo_product.file.save(name=eo_product.filename, content=content)
-            eo_product.state = EOProductStateChoices.Ready
+            eo_product.state = EOProductStateChoices.READY
             eo_product.datetime_creation = now
             eo_product.save()
         os.unlink(output_temp_file)
@@ -362,7 +358,7 @@ def task_s02p02_agro_nvdi_300_resample_to_1km(eo_product_pk):
 
 
 @shared_task
-def task_s02p02_cgls_compute_vci_1km_v2(eo_product_pk):
+def task_s02p02_vci1km_v2(eo_product_pk):
     # Processing of the resampled NDVI 1km v3 (clipped to Africa) in order to retrieve VCI v2 for Africa
     # version 1.0 - 16/04/2021
     # Contact: icherif@yahoo.com
@@ -489,19 +485,22 @@ def task_s02p02_cgls_compute_vci_1km_v2(eo_product_pk):
         content = File(open(outfile, 'rb'))
 
         output_obj.file.save(name=output_obj.filename, content=content, save=False)
-        output_obj.state = EOProductStateChoices.Ready
+        output_obj.state = EOProductStateChoices.READY
         output_obj.datetime_creation = now
         output_obj.save()
     return
 
 
 @shared_task
-def task_s0p02_clip_lai300m_v1_afr(eo_product_pk: int):
+def task_s02p02_lai300m_v1(eo_product_pk: int):
     import snappy
     from snappy import ProductIO, GPF, HashMap, WKTReader
 
-    eo_product = EOProduct.objects.get(pk=eo_product_pk)
-    eo_source: EOSource = eo_product.eo_sources_inputs.first()
+    produced_file = EOProduct.objects.get(id=eo_product_pk)
+    pipeline = Pipeline.objects.get(task_name='task_s02p02_lai300m_v1', task_kwargs={})
+    pipeline_input_group = pipeline.input_group
+    input_files_qs = EOSource.objects.filter(group=pipeline_input_group, reference_date=produced_file.reference_date)
+    eo_source: EOSource = input_files_qs.first()
 
     filename_in = eo_source.filename
 
@@ -531,7 +530,7 @@ def task_s0p02_clip_lai300m_v1_afr(eo_product_pk: int):
     with TemporaryDirectory(prefix='task_s0p02_clip_lai300m_v1_afr_') as temp_dir:
         data = ProductIO.readProduct(eo_source.file.path)
         geom = WKTReader().read(wkt)
-        out_file = Path(temp_dir) / eo_product.filename
+        out_file = Path(temp_dir) / produced_file.filename
         clipped: Path = clip(data=data, out_file=out_file.as_posix(), geom=geom)
 
         try:
@@ -548,16 +547,21 @@ def task_s0p02_clip_lai300m_v1_afr(eo_product_pk: int):
             raise e
 
         content = File(clipped.open('rb'))
-        eo_product.file.save(name=eo_product.filename, content=content, save=False)
-        eo_product.state = EOProductStateChoices.Ready
-        eo_product.datetime_creation = now
-        eo_product.save()
+        produced_file.file.save(name=produced_file.filename, content=content, save=False)
+        produced_file.state = EOProductStateChoices.READY
+        produced_file.datetime_creation = now
+        produced_file.save()
     return
 
 
 @shared_task
-def task_s02p02_process_ndvia(eo_product_pk: int, iso: str):
-    # raise NotImplementedError()
+def task_s02p02_ndvianom250m(eo_product_pk: int, iso: str):
+    produced_file = EOProduct.objects.get(id=eo_product_pk)
+    pipeline = Pipeline.objects.get(task_name='task_s02p02_ndvianom250m', task_kwargs={"iso": iso})
+    pipeline_input_group = pipeline.input_group
+    input_files_qs = EOSource.objects.filter(group=pipeline_input_group,
+                                             reference_date=produced_file.reference_date)
+
     import rasterio
     from rasterio.merge import merge as rio_merge
 
@@ -654,7 +658,6 @@ def task_s02p02_process_ndvia(eo_product_pk: int, iso: str):
         raise AfriCultuReSError(f'Shapefile {f_shp_path.as_posix()} does not exist')
 
     with tempfile.TemporaryDirectory() as temp_dir:
-        input_files_qs = eo_product.eo_sources_inputs.all()
         input_files_path: List[Path] = [Path(x.file.path) for x in input_files_qs]
         temp_dir_path = Path(temp_dir)
 
@@ -664,7 +667,7 @@ def task_s02p02_process_ndvia(eo_product_pk: int, iso: str):
 
         content = File(final_raster_path.open('rb'))
         eo_product.file.save(name=eo_product.filename, content=content, save=False)
-        eo_product.state = EOProductStateChoices.Ready
+        eo_product.state = EOProductStateChoices.READY
         eo_product.datetime_creation = now
         eo_product.save()
     return eo_product.file.path
@@ -707,16 +710,70 @@ def task_s04p03_convert_to_tiff(eo_product_pk: int, tile: int):
 
         content = File(file_handle)
         eo_product.file.save(name=eo_product.filename, content=content, save=False)
-        eo_product.state = EOProductStateChoices.Ready
+        eo_product.state = EOProductStateChoices.READY
         eo_product.datetime_creation = now
         eo_product.save()
+
+
+@shared_task
+def task_s04p03_floods375m(eo_product_pk: int):
+    NotImplementedError()
+
+
+@shared_task
+def task_s04p03_floods10m(eo_product_pk: int):
+    NotImplementedError()
 
 
 ###########
 # s06p01
 ##########
 @shared_task
-def task_s0601_wb_100m(eo_product_pk: int, wkt: str, iso: str):
+def task_s06p01_wb300m_v2(eo_product_pk: int):
+    import snappy
+    from snappy import ProductIO, GPF, HashMap, WKTReader
+
+    eo_product = EOProduct.objects.get(pk=eo_product_pk)
+    eo_source = eo_product.eo_sources_inputs.first()
+
+    wkt = "POLYGON((-30 40, 60 40, 60 -40, -30 -40, -30 40, -30 40))"  # Africa
+    HashMap = snappy.jpy.get_type('java.util.HashMap')
+    # Get snappy Operators
+    GPF.getDefaultInstance().getOperatorSpiRegistry().loadOperatorSpis()
+
+    def clip(file_in, file_out, geom) -> Path:
+        # Read the file
+        data = ProductIO.readProduct(file_in)
+
+        params = HashMap()
+        # params.put('sourceBands', 'WB') #'QUAL'
+        params.put('region', '0, 0, 0, 0')
+        params.put('geoRegion', geom)
+        params.put('subSamplingX', 1)
+        params.put('subSamplingY', 1)
+        params.put('fullSwath', False)
+        params.put('copyMetadata', True)
+        clipped = GPF.createProduct('Subset', params, data)
+
+        ProductIO.writeProduct(clipped, file_out.as_posix(), 'NetCDF4-CF')
+        return Path(str(clipped.getFileLocation()))
+
+    with TemporaryDirectory(prefix='task_s06p01_clip_to_africa_') as temp_dir:
+        date = eo_source.filename.split('_')[3][:8]
+        f_out = date + '_SE2_AFR_0300m_0030_WBMA.nc'
+        clipped = clip(eo_source.file.path, Path(temp_dir).joinpath(f_out), WKTReader().read(wkt))
+
+        content = File(clipped.open('rb'))
+        eo_product.file.save(name=eo_product.filename, content=content, save=False)
+        eo_product.state = EOProductStateChoices.READY
+        eo_product.datetime_creation = now
+        eo_product.save()
+
+    return 0
+
+
+@shared_task
+def task_s06p01_wb100m(eo_product_pk: int, wkt: str, iso: str):
     import os
     import snappy
     from snappy import ProductIO, GPF, HashMap, WKTReader
@@ -761,68 +818,17 @@ def task_s0601_wb_100m(eo_product_pk: int, wkt: str, iso: str):
 
         content = File(clipped.open('rb'))
         eo_product.file.save(name=eo_product.filename, content=content, save=False)
-        eo_product.state = EOProductStateChoices.Ready
+        eo_product.state = EOProductStateChoices.READY
         eo_product.datetime_creation = now
         eo_product.save()
 
     return 0
-
-
-#####
-# S06P01
-@shared_task
-def task_s06p01_clip_to_africa(eo_product_pk: int):
-    import snappy
-    from snappy import ProductIO, GPF, HashMap, WKTReader
-
-    eo_product = EOProduct.objects.get(pk=eo_product_pk)
-    eo_source = eo_product.eo_sources_inputs.first()
-
-    wkt = "POLYGON((-30 40, 60 40, 60 -40, -30 -40, -30 40, -30 40))"  # Africa
-    HashMap = snappy.jpy.get_type('java.util.HashMap')
-    # Get snappy Operators
-    GPF.getDefaultInstance().getOperatorSpiRegistry().loadOperatorSpis()
-
-    def clip(file_in, file_out, geom) -> Path:
-        # Read the file
-        data = ProductIO.readProduct(file_in)
-
-        params = HashMap()
-        # params.put('sourceBands', 'WB') #'QUAL'
-        params.put('region', '0, 0, 0, 0')
-        params.put('geoRegion', geom)
-        params.put('subSamplingX', 1)
-        params.put('subSamplingY', 1)
-        params.put('fullSwath', False)
-        params.put('copyMetadata', True)
-        clipped = GPF.createProduct('Subset', params, data)
-
-        ProductIO.writeProduct(clipped, file_out.as_posix(), 'NetCDF4-CF')
-        return Path(str(clipped.getFileLocation()))
-
-    with TemporaryDirectory(prefix='task_s06p01_clip_to_africa_') as temp_dir:
-        date = eo_source.filename.split('_')[3][:8]
-        f_out = date + '_SE2_AFR_0300m_0030_WBMA.nc'
-        clipped = clip(eo_source.file.path, Path(temp_dir).joinpath(f_out), WKTReader().read(wkt))
-
-        content = File(clipped.open('rb'))
-        eo_product.file.save(name=eo_product.filename, content=content, save=False)
-        eo_product.state = EOProductStateChoices.Ready
-        eo_product.datetime_creation = now
-        eo_product.save()
-
-    return 0
-
-
-####
-# S06P03
 
 
 ######
 # S06P04
-
 @shared_task
-def task_s06p04_et_3km(eo_product_pk: int):
+def task_s06p04_et3km(eo_product_pk: int):
     from eo_engine.common.contrib.h5georef import H5Georef
     import bz2
 
@@ -868,13 +874,13 @@ def task_s06p04_et_3km(eo_product_pk: int):
 
         content = File(final_file)
         eo_product.file.save(name=eo_product.filename, content=content, save=False)
-        eo_product.state = EOProductStateChoices.Ready
+        eo_product.state = EOProductStateChoices.READY
         eo_product.datetime_creation = now
         eo_product.save()
 
 
 @shared_task
-def task_s06p04_main_sse_bop_v5(eo_product_pk: int):
+def task_s06p04_etanom5km(eo_product_pk: int):
     """
     # Description of task:
     The task consists in clipping the ET anomaly file(SSEBop v5) to Africa and changing the metadata.
@@ -929,11 +935,21 @@ def task_s06p04_main_sse_bop_v5(eo_product_pk: int):
             with open(f_new_nc, 'rb') as file_handler:
                 content = File(file_handler)
                 eo_product.file.save(name=eo_product.filename, content=content, save=False)
-                eo_product.state = EOProductStateChoices.Ready
+                eo_product.state = EOProductStateChoices.READY
                 eo_product.datetime_creation = now
                 eo_product.save()
 
         return '+++Finished+++'
+
+
+@shared_task
+def task_s06p04_et250m(eo_product_pk: int):
+    raise NotImplementedError()
+
+
+@shared_task
+def task_s06p04_et100m(eo_product_pk: int):
+    raise NotImplementedError
 
 
 ######

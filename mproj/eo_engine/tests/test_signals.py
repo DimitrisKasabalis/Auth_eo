@@ -12,7 +12,7 @@ class TestSignals(BaseTest):
         cls.eo_sourse = EOSource.objects.create(
             domain='www.mock.site.gr',
             filename='c_gls_WB100_202105010000_GLOBE_S2_V1.0.1.nc',
-            status=EOSourceStateChoices.AvailableRemotely,
+            status=EOSourceStateChoices.AVAILABLE_REMOTELY,
             url="test/testity.nc",
             credentials=c,
             product="c_gls_WB100-V1-GLOB",
@@ -28,7 +28,7 @@ class TestSignals(BaseTest):
         self.assertEqual(len(EOProduct.objects.all()), 0)
 
         #  source becames
-        self.eo_sourse.state = EOSourceStateChoices.AvailableLocally
+        self.eo_sourse.state = EOSourceStateChoices.AVAILABLE_LOCALLY
         self.eo_sourse.save()
 
         self.assertGreaterEqual(len(EOProduct.objects.filter(status=EOProductStateChoices.Available)), 1)

@@ -35,16 +35,16 @@ class TestTaskS02P02AgroNvdi300ResampleTo1km(TransactionTestCase):
         product_source = cls.product_source = EOProduct.objects.create(
             filename=TEST_FILE.name,
             output_folder='S2_P02/NDVI_300',
-            group=EOProductGroupChoices.AGRO_NDVI_300M_V3_AFR,
+            group=EOProductGroupChoices.S02P02_NDVI_300M_V3_AFR,
             datetime_creation=datetime(year=2020, month=12, day=10),
             task_name='doesn-matter',
-            state=EOProductStateChoices.Ready,
+            state=EOProductStateChoices.READY,
         )
         product_source.file.save(name=TEST_FILE.name, content=File(TEST_FILE.open('rb')), save=True)
         # </editor-fold>
         product_source.refresh_from_db()
         cls.eo_product: EOProduct = EOProduct.objects.filter(eo_products_inputs=product_source).first()
-        assert cls.eo_product.state == EOProductStateChoices.Available
+        assert cls.eo_product.state == EOProductStateChoices.AVAILABLE
         task = task_s02p02_agro_nvdi_300_resample_to_1km \
             .s(eo_product_pk=cls.eo_product.pk, **cls.eo_product.task_kwargs)
         time.sleep(1)
@@ -65,4 +65,4 @@ class TestTaskS02P02AgroNvdi300ResampleTo1km(TransactionTestCase):
 
     def test_state(self):
         self.eo_product.refresh_from_db()
-        self.assertEqual(self.eo_product.state, EOProductStateChoices.Ready)
+        self.assertEqual(self.eo_product.state, EOProductStateChoices.READY)

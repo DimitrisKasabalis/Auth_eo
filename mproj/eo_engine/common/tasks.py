@@ -30,11 +30,11 @@ def revoke_task(task_id, terminate: bool = False):
 
     if task.eo_product.exists():
         db_entries = task.eo_product.all()
-        db_entries.update(status=EOProductStateChoices.Ignore)
+        db_entries.update(status=EOProductStateChoices.IGNORE)
 
     elif task.eo_source.exists():
         db_entries = task.eo_source.all()
-        db_entries.update(status=EOSourceStateChoices.Ignore)
+        db_entries.update(status=EOSourceStateChoices.IGNORE)
     task.state = GeopTask.TaskTypeChoices.REVOKED
     task.save()
     app.control.revoke(task_id=task_id, terminate=terminate)

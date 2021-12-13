@@ -29,19 +29,19 @@ def filename_to_product(filename: str) -> Optional[List[typeProductGroup]]:
     filename = filename.lower()
 
     if fnmatch(filename, 'c_gls_ndvi300*.nc'.lower()):
-        return [EOProductGroupChoices.AGRO_NDVI_300M_V3_AFR, ]
+        return [EOProductGroupChoices.S02P02_NDVI_300M_V3_AFR, ]
 
     if fnmatch(filename, '????????_SE3_AFR_0300m_0010_NDVI.nc'.lower()):
-        return [EOProductGroupChoices.AGRO_NDVI_1KM_V3_AFR, ]
+        return [EOProductGroupChoices.S02P02_NDVI_1KM_V3_AFR, ]
 
     if fnmatch(filename, '????????_SE3_AFR_1000m_0010_NDVI.nc'.lower()):
         return [EOProductGroupChoices.AGRO_VCI_1KM_V2_AFR, ]
 
     if fnmatch(filename, 'c_gls_LAI300-RT[2,6]_????????0000_GLOBE_OLCI_V1.1.[1,2].nc'.lower()):
-        return [EOProductGroupChoices.AGRO_LAI_300M_V1_AFR, ]
+        return [EOProductGroupChoices.S02P02_LAI_300M_V1_AFR, ]
 
     if fnmatch(filename, 'hdf5_lsasaf_msg_dmet_msg-disk_????????????.bz2'.lower()):
-        return [EOProductGroupChoices.MSG_3KM_AFR, ]
+        return [EOProductGroupChoices.S06P04_ET_3KM_AFR, ]
 
     # not implemented yet
     if fnmatch(filename, 'c_gls_WB300_????????0000_GLOBE_S2_V2.0.1.nc'.lower()):
@@ -65,21 +65,21 @@ def filename_to_product(filename: str) -> Optional[List[typeProductGroup]]:
         tiles_eth = ["x23y08", "x23y09", "x24y08", "x24y09", "x25y09"]
         tiles_ner = ["x19y08", "x19y09", "x20y07", "x20y08", "x20y09", "x21y07", "x21y08"]
         if tile in tiles_zaf:
-            return [EOProductGroupChoices.AGRO_NDVIA_ZAF, ]
+            return [EOProductGroupChoices.S02P02_NDVIA_250M_ZAF, ]
         elif tile in tiles_moz:
-            return [EOProductGroupChoices.AGRO_NDVIA_MOZ, ]
+            return [EOProductGroupChoices.S02P02_NDVIA_250M_MOZ, ]
         elif tile in tiles_tun:
-            return [EOProductGroupChoices.AGRO_NDVIA_TUN, ]
+            return [EOProductGroupChoices.S02P02_NDVIA_250M_TUN, ]
         elif tile in tiles_ken:
-            return [EOProductGroupChoices.AGRO_NDVIA_KEN, ]
+            return [EOProductGroupChoices.S02P02_NDVIA_250M_KEN, ]
         elif tile in tiles_gha:
-            return [EOProductGroupChoices.AGRO_NDVIA_GHA, ]
+            return [EOProductGroupChoices.S02P02_NDVIA_250M_GHA, ]
         elif tile in tiles_rwa:
-            return [EOProductGroupChoices.AGRO_NDVIA_RWA, ]
+            return [EOProductGroupChoices.S02P02_NDVIA_250M_RWA, ]
         elif tile in tiles_eth:
-            return [EOProductGroupChoices.AGRO_NDVIA_ETH, ]
+            return [EOProductGroupChoices.S02P02_NDVIA_250M_ETH, ]
         elif tile in tiles_ner:
-            return [EOProductGroupChoices.AGRO_NDVIA_NER, ]
+            return [EOProductGroupChoices.S02P02_NDVIA_250M_NER, ]
 
     logger.warn(f'No rule for derivative products for +{filename}+')
     return None
@@ -99,7 +99,7 @@ def generate_products_from_source(filename: str) -> List[product_output]:
         return [
             product_output('S2_P02/NDVI_300',  # folder
                            f"{date_str_YYYYMMDD}_SE3_AFR_0300m_0010_NDVI.nc",  # filename
-                           EOProductGroupChoices.AGRO_NDVI_300M_V3_AFR,  # group
+                           EOProductGroupChoices.S02P02_NDVI_300M_V3_AFR,  # group
                            'task_s02p02_c_gls_ndvi_300_clip',  # task_name
                            {
                                'aoi': [-30, 40, 60, -40]  # kwargs
@@ -112,14 +112,14 @@ def generate_products_from_source(filename: str) -> List[product_output]:
         return [
             product_output('S2_P02/NDVI_1km',
                            f"{date_str_YYYYMMDD}_SE3_AFR_1000m_0010_NDVI.nc",
-                           EOProductGroupChoices.AGRO_NDVI_1KM_V3_AFR,
+                           EOProductGroupChoices.S02P02_NDVI_1KM_V3_AFR,
                            'task_s02p02_agro_nvdi_300_resample_to_1km',
                            task_kwargs={})
         ]
 
     # NDVI Anomaly
     # eg filename: GMOD09Q1.A2020001.08d.latlon.x23y10.6v1.NDVI_anom_S2001-2015.tif.gz
-    if product and product.count(EOProductGroupChoices.AGRO_NDVIA_ZAF):
+    if product and product.count(EOProductGroupChoices.S02P02_NDVIA_250M_ZAF):
         iso = 'ZAF'
         match = GMOD09Q1_DATE_PATTERN.match(filename)
         group_dict = match.groupdict()
@@ -132,13 +132,13 @@ def generate_products_from_source(filename: str) -> List[product_output]:
                 filename='{YYYYMMDD}_MOD_{ISOCODE}_0250m_0008_NDVI_anom.nc'.format(
                     ISOCODE=iso,
                     YYYYMMDD=date.strftime('%Y%m%d')),
-                group=EOProductGroupChoices.AGRO_NDVIA_ZAF,
+                group=EOProductGroupChoices.S02P02_NDVIA_250M_ZAF,
                 task_name='task_s02p02_process_ndvia',
                 task_kwargs={'iso': iso}
             )
         ]
 
-    if product and product.count(EOProductGroupChoices.AGRO_NDVIA_MOZ):
+    if product and product.count(EOProductGroupChoices.S02P02_NDVIA_250M_MOZ):
         iso = 'MOZ'
         match = GMOD09Q1_DATE_PATTERN.match(filename)
         group_dict = match.groupdict()
@@ -151,13 +151,13 @@ def generate_products_from_source(filename: str) -> List[product_output]:
                 filename='{YYYYMMDD}_MOD_{ISOCODE}_0250m_0008_NDVI_anom.nc'.format(
                     ISOCODE=iso,
                     YYYYMMDD=date.strftime('%Y%m%d')),
-                group=EOProductGroupChoices.AGRO_NDVIA_MOZ,
+                group=EOProductGroupChoices.S02P02_NDVIA_250M_MOZ,
                 task_name='task_s02p02_process_ndvia',
                 task_kwargs={'iso': iso}
             )
         ]
 
-    if product and product.count(EOProductGroupChoices.AGRO_NDVIA_TUN):
+    if product and product.count(EOProductGroupChoices.S02P02_NDVIA_250M_TUN):
         iso = 'TUN'
         match = GMOD09Q1_DATE_PATTERN.match(filename)
         group_dict = match.groupdict()
@@ -170,13 +170,13 @@ def generate_products_from_source(filename: str) -> List[product_output]:
                 filename='{YYYYMMDD}_MOD_{ISOCODE}_0250m_0008_NDVI_anom.nc'.format(
                     ISOCODE=iso,
                     YYYYMMDD=date.strftime('%Y%m%d')),
-                group=EOProductGroupChoices.AGRO_NDVIA_TUN,
+                group=EOProductGroupChoices.S02P02_NDVIA_250M_TUN,
                 task_name='task_s02p02_process_ndvia',
                 task_kwargs={'iso': iso}
             )
         ]
 
-    if product and product.count(EOProductGroupChoices.AGRO_NDVIA_KEN):
+    if product and product.count(EOProductGroupChoices.S02P02_NDVIA_250M_KEN):
         iso = 'KEN'
         match = GMOD09Q1_DATE_PATTERN.match(filename)
         group_dict = match.groupdict()
@@ -189,13 +189,13 @@ def generate_products_from_source(filename: str) -> List[product_output]:
                 filename='{YYYYMMDD}_MOD_{ISOCODE}_0250m_0008_NDVI_anom.nc'.format(
                     ISOCODE=iso,
                     YYYYMMDD=date.strftime('%Y%m%d')),
-                group=EOProductGroupChoices.AGRO_NDVIA_KEN,
+                group=EOProductGroupChoices.S02P02_NDVIA_250M_KEN,
                 task_name='task_s02p02_process_ndvia',
                 task_kwargs={'iso': iso}
             )
         ]
 
-    if product and product.count(EOProductGroupChoices.AGRO_NDVIA_GHA):
+    if product and product.count(EOProductGroupChoices.S02P02_NDVIA_250M_GHA):
         iso = 'GHA'
         match = GMOD09Q1_DATE_PATTERN.match(filename)
         group_dict = match.groupdict()
@@ -208,13 +208,13 @@ def generate_products_from_source(filename: str) -> List[product_output]:
                 filename='{YYYYMMDD}_MOD_{ISOCODE}_0250m_0008_NDVI_anom.nc'.format(
                     ISOCODE=iso,
                     YYYYMMDD=date.strftime('%Y%m%d')),
-                group=EOProductGroupChoices.AGRO_NDVIA_GHA,
+                group=EOProductGroupChoices.S02P02_NDVIA_250M_GHA,
                 task_name='task_s02p02_process_ndvia',
                 task_kwargs={'iso': iso}
             )
         ]
 
-    if product and product.count(EOProductGroupChoices.AGRO_NDVIA_RWA):
+    if product and product.count(EOProductGroupChoices.S02P02_NDVIA_250M_RWA):
         iso = 'RWA'
         match = GMOD09Q1_DATE_PATTERN.match(filename)
         group_dict = match.groupdict()
@@ -227,13 +227,13 @@ def generate_products_from_source(filename: str) -> List[product_output]:
                 filename='{YYYYMMDD}_MOD_{ISOCODE}_0250m_0008_NDVI_anom.nc'.format(
                     ISOCODE=iso,
                     YYYYMMDD=date.strftime('%Y%m%d')),
-                group=EOProductGroupChoices.AGRO_NDVIA_RWA,
+                group=EOProductGroupChoices.S02P02_NDVIA_250M_RWA,
                 task_name='task_s02p02_process_ndvia',
                 task_kwargs={'iso': iso}
             )
         ]
 
-    if product and product.count(EOProductGroupChoices.AGRO_NDVIA_ETH):
+    if product and product.count(EOProductGroupChoices.S02P02_NDVIA_250M_ETH):
         iso = 'ETH'
         match = GMOD09Q1_DATE_PATTERN.match(filename)
         group_dict = match.groupdict()
@@ -246,13 +246,13 @@ def generate_products_from_source(filename: str) -> List[product_output]:
                 filename='{YYYYMMDD}_MOD_{ISOCODE}_0250m_0008_NDVI_anom.nc'.format(
                     ISOCODE=iso,
                     YYYYMMDD=date.strftime('%Y%m%d')),
-                group=EOProductGroupChoices.AGRO_NDVIA_ETH,
+                group=EOProductGroupChoices.S02P02_NDVIA_250M_ETH,
                 task_name='task_s02p02_process_ndvia',
                 task_kwargs={'iso': iso}
             )
         ]
 
-    if product and product.count(EOProductGroupChoices.AGRO_NDVIA_NER):
+    if product and product.count(EOProductGroupChoices.S02P02_NDVIA_250M_NER):
         iso = 'NER'
         match = GMOD09Q1_DATE_PATTERN.match(filename)
         group_dict = match.groupdict()
@@ -265,19 +265,19 @@ def generate_products_from_source(filename: str) -> List[product_output]:
                 filename='{YYYYMMDD}_MOD_{ISOCODE}_0250m_0008_NDVI_anom.nc'.format(
                     ISOCODE=iso,
                     YYYYMMDD=date.strftime('%Y%m%d')),
-                group=EOProductGroupChoices.AGRO_NDVIA_NER,
+                group=EOProductGroupChoices.S02P02_NDVIA_250M_NER,
                 task_name='task_s02p02_process_ndvia',
                 task_kwargs={'iso': iso}
             )
         ]
 
-    if product and product.count(EOProductGroupChoices.AGRO_LAI_300M_V1_AFR):
+    if product and product.count(EOProductGroupChoices.S02P02_LAI_300M_V1_AFR):
         name_elements = parse_dt_from_generic_string(filename)
         date_str_YYYYMMDD = name_elements.strftime('%Y%m%d')
         return [
             product_output('S2_P02/LAI_300',
                            f"{date_str_YYYYMMDD}_SE3_AFR_0300m_0010_LAI.nc",
-                           EOProductGroupChoices.AGRO_LAI_300M_V1_AFR,
+                           EOProductGroupChoices.S02P02_LAI_300M_V1_AFR,
                            'task_s0p02_clip_lai300m_v1_afr', {}
                            ),
         ]
@@ -395,7 +395,7 @@ def generate_products_from_source(filename: str) -> List[product_output]:
 
         ]
 
-    if product and product.count(EOProductGroupChoices.MSG_3KM_AFR):
+    if product and product.count(EOProductGroupChoices.S06P04_ET_3KM_AFR):
         output_filename_template = 'LSASAF_MSG_DMET_Africa_{YYYYMMDD}.nc'
         return [
             product_output(
@@ -403,7 +403,7 @@ def generate_products_from_source(filename: str) -> List[product_output]:
                 filename=output_filename_template.format(
                     YYYYMMDD=(lambda: filename.removesuffix('.bz2').split('_')[-1][:-4])()
                 ),
-                group=EOProductGroupChoices.MSG_3KM_AFR,
+                group=EOProductGroupChoices.S06P04_ET_3KM_AFR,
                 task_name='task_s06p04_et_3km',
                 task_kwargs={}
             )

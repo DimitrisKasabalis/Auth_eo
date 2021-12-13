@@ -1,0 +1,246 @@
+- model: eo_engine.EOSourceGroup
+  pk: 36
+  fields:
+    name: 'S02P02_NDVI_300M_V2_GLOB_CGLS'
+    date_regex: 'c_gls_NDVI300_(?P<year>\d{4})(?P<month>\d{2})(?P<day>\d{2})0000_GLOBE_OLCI_V2\.0\.[1|2]\.nc'
+    crawler_type: 'SCRAPPY_SPIDER'
+- model: eo_engine.EOSourceGroup
+  pk: 1
+  fields:
+    name: 'S02P02_NDVI_300M_V3_AFR'
+    date_regex: '(?P<YYYYMMDD>\d{8})_SE3_AFR_0300m_0010_NDVI\.nc'
+    crawler_type: 'NONE'
+- model: eo_engine.EOSourceGroup
+  pk: 2
+  fields:
+    name: 'S02P02_NDVI_1KM_V3_AFR'
+    crawler_type: 'NONE'
+    date_regex: '(?P<YYYYMMDD>\d{8})_SE3_AFR_1000m_0010_NDVI\.nc'
+- model: eo_engine.EOSourceGroup
+  pk: 37
+  fields:
+    name: 'S02P02_LAI_300M_V1_GLOB_CGLS'
+    crawler_type: 'SCRAPY_SPIDER'
+    date_regex: 'c_gls_LAI300-RT[2,6]_(?P<YYYYMMDD>\d{8})0000_GLOBE_OLCI_V1\.1\.[1,2]\.nc'
+- model: eo_engine.EOSourceGroup
+  pk: 4
+  fields:
+    name: 'S02P02_LAI_300M_V1_AFR'
+    date_regex: '(?P<YYYMMDD>\d{8})_SE3_AFR_0300m_0010_LAI\.nc'
+    crawler_type: 'NONE'
+- model: eo_engine.EOSourceGroup
+  pk: 38
+  fields:
+    name: 'S02P02_NDVIA_250M_TUN_GMOD'
+    crawler_type: 'SCRAPY_SPIDER'
+    date_regex: 'GMOD09Q1\.A(?P<YYYYDOY>\d{7})\.08d\.latlon.*NDVI_anom_S2001-2015\.tif.gz'
+- model: eo_engine.EOSourceGroup
+  pk: 39
+  fields:
+    name: 'S02P02_NDVIA_250M_RWA_GMOD'
+    crawler_type: 'SCRAPY_SPIDER'
+    date_regex: 'GMOD09Q1\.A(?P<YYYYDOY>\d{7})\.08d\.latlon.*NDVI_anom_S2001-2015\.tif.gz'
+- model: eo_engine.EOSourceGroup
+  pk: 40
+  fields:
+    name: 'S02P02_NDVIA_250M_ETH_GMOD'
+    crawler_type: 'SCRAPY_SPIDER'
+    date_regex: 'GMOD09Q1\.A(?P<YYYYDOY>\d{7})\.08d\.latlon.*NDVI_anom_S2001-2015\.tif.gz'
+- model: eo_engine.EOSourceGroup
+  pk: 41
+  fields:
+    name: 'S02P02_NDVIA_250M_ZAF_GMOD'
+    crawler_type: 'SCRAPY_SPIDER'
+    date_regex: 'GMOD09Q1\.A(?P<YYYYDOY>\d{7})\.08d\.latlon.*NDVI_anom_S2001-2015\.tif.gz'
+- model: eo_engine.EOSourceGroup
+  pk: 42
+  fields:
+    name: 'S02P02_NDVIA_250M_NER_GMOD'
+    crawler_type: 'SCRAPY_SPIDER'
+    date_regex: 'GMOD09Q1\.A(?P<YYYYDOY>\d{7})\.08d\.latlon.*NDVI_anom_S2001-2015\.tif.gz'
+- model: eo_engine.EOSourceGroup
+  pk: 43
+  fields:
+    name: 'S02P02_NDVIA_250M_GHA_GMOD'
+    crawler_type: 'SCRAPY_SPIDER'
+    date_regex: 'GMOD09Q1\.A(?P<YYYYDOY>\d{7})\.08d\.latlon.*NDVI_anom_S2001-2015\.tif.gz'
+- model: eo_engine.EOSourceGroup
+  pk: 44
+  fields:
+    name: 'S02P02_NDVIA_250M_MOZ_GMOD'
+    crawler_type: 'SCRAPY_SPIDER'
+    date_regex: 'GMOD09Q1\.A(?P<YYYYDOY>\d{7})\.08d\.latlon.*NDVI_anom_S2001-2015\.tif.gz'
+- model: eo_engine.EOSourceGroup
+  pk: 45
+  fields:
+    crawler_type: 'SCRAPY_SPIDER'
+    date_regex: 'GMOD09Q1\.A(?P<YYYYDOY>\d{7})\.08d\.latlon.*NDVI_anom_S2001-2015\.tif.gz'
+    name: 'S02P02_NDVIA_250M_KEN_GMOD'
+- model: eo_engine.EOSourceGroup
+  pk: 46
+  fields:
+    crawler_type: 'SCRAPY_SPIDER'
+    name: 'S04P03_FLD_375M_1D_VIIRS'
+    date_regex: 'RIVER-FLDglobal-composite1_(?P<YYYYMMDD>\d{8}).+part.+\.tif'
+- model: eo_engine.EOSourceGroup
+  pk: 26
+  fields:
+    crawler_type: 'NONE'
+    name: 'S04P03_WB_10m_BAG'
+    date_regex: '(?P<YYYYMMDD>\d{8})_SE1_BAG_0010m_0006_WBMA_CODE\.nc'
+- model: eo_engine.EOSourceGroup
+  pk: 47
+  fields:
+    crawler_type: 'SCRAPY_SPIDER'
+    name: 'S06P01_WB_300M_V2_GLOB_CGLS'
+    date_regex: 'c_gls_WB300_(?P<YYYYMMDD>\d{8})D0000_GLOBE_S2_V2\.0\.1\.nc'
+- model: eo_engine.EOSourceGroup
+  pk: 48
+  fields:
+    crawler_type: 'SCRAPY_SPIDER'
+    name: 'S06P01_WB_100M_V1_GLOB_CGLS'
+    date_regex: 'c_gls_WB100_(?P<YYYYMMDD>\d{8})D0000_GLOBE_S2_V1\.0\.1\.nc'
+#- model: eo_engine.EOSourceGroup
+#  pk: 49
+#  name: S06P01_S1_10M
+#  fields:
+#    name: 'S06P01_S1_10M'
+#    date_regex: ''
+- model: eo_engine.EOSourceGroup
+  pk: 50
+  fields:
+    crawler_type: 'OTHER (SFTP)'
+    name: 'S06P04_ET_3KM_GLOB_MSG'
+    date_regex: 'HDF5_LSASAF_MSG_DMET_MSG-Disk_(?P<YYYYMMDD>\d{8})0000.bz2'
+- model: eo_engine.EOSourceGroup
+  pk: 51
+  fields:
+    crawler_type: 'SCRAPY_SPIDER'
+    name: 'S06P04_ETAnom_5KM_M_GLOB_SSEBOP'
+    date_regex: 'm(?P<YYYYMM>\d{4}).zip'
+- model: eo_engine.EOSourceGroup
+  pk: 52
+  fields:
+    crawler_type: 'OTHER (WAPOR)'
+    name: 'S06P04_WAPOR_L1_AETI_D_AFRICA'
+    date_regex: 'L1_AETI_D_(?P<YYKK>\d{4}).tif'
+- model: eo_engine.EOSourceGroup
+  pk: 53
+  fields:
+    crawler_type: 'OTHER (WAPOR)'
+    name: 'S06P04_WAPOR_L1_QUAL_LST_D_AFRICA'
+    date_regex: 'L1_QUAL_LST_D_(?P<YYKK>\d{4}).tif'
+- model: eo_engine.EOSourceGroup
+  pk: 54
+  fields:
+    crawler_type: 'OTHER (WAPOR)'
+    name: 'S06P04_WAPOR_L1_QUAL_NDVI_D_AFRICA'
+    date_regex: 'L1_QUAL_NDVI_D_(?P<YYKK>\d{4}).tif'
+- model: eo_engine.EOSourceGroup
+  pk: 55
+  fields:
+    crawler_type: 'OTHER (WAPOR)'
+    name: 'S06P04_WAPOR_L2_AETI_D_TUN'
+    date_regex: 'L2_AETI_D_(?P<YYKK>\d{4})_TUN.tif'
+- model: eo_engine.EOSourceGroup
+  pk: 56
+  fields:
+    crawler_type: 'OTHER (WAPOR)'
+    name: 'S06P04_WAPOR_L2_QUAL_LST_D_TUN'
+    date_regex: 'L2_QUAL_LST_D_(?P<YYKK>\d{4})_TUN.tif'
+- model: eo_engine.EOSourceGroup
+  pk: 57
+  fields:
+    crawler_type: 'OTHER (WAPOR)'
+    name: 'S06P04_WAPOR_L2_QUAL_NDVI_D_TUN'
+    date_regex: 'L2_QUAL_NDVI_D_(?P<YYKK>\d{4})_TUN.tif'
+- model: eo_engine.EOSourceGroup
+  pk: 58
+  fields:
+    crawler_type: 'OTHER (WAPOR)'
+    name: 'S06P04_WAPOR_L2_AETI_D_KEN'
+    date_regex: 'L2_AETI_D_(?P<YYKK>\d{4})_KEN.tif'
+- model: eo_engine.EOSourceGroup
+  pk: 59
+  fields:
+    crawler_type: 'OTHER (WAPOR)'
+    name: 'S06P04_WAPOR_L2_QUAL_LST_D_KEN'
+    date_regex: 'L2_QUAL_LST_D_(?P<YYKK>\d{4})_KEN.tif'
+- model: eo_engine.EOSourceGroup
+  pk: 60
+  fields:
+    crawler_type: 'OTHER (WAPOR)'
+    name: 'S06P04_WAPOR_L2_QUAL_NDVI_D_KEN'
+    date_regex: 'L2_QUAL_NDVI_D_(?P<YYKK>\d{4})_KEN.tif'
+- model: eo_engine.EOSourceGroup
+  pk: 61
+  fields:
+    crawler_type: 'OTHER (WAPOR)'
+    name: 'S06P04_WAPOR_L2_AETI_D_MOZ'
+    date_regex: 'L2_AETI_D_(?P<YYKK>\d{4})_MOZ.tif'
+- model: eo_engine.EOSourceGroup
+  pk: 62
+  fields:
+    crawler_type: 'OTHER (WAPOR)'
+    name: 'S06P04_WAPOR_L2_QUAL_LST_D_MOZ'
+    date_regex: 'L2_QUAL_LST_D_(?P<YYKK>\d{4})_MOZ.tif'
+- model: eo_engine.EOSourceGroup
+  pk: 63
+  fields:
+    crawler_type: 'OTHER (WAPOR)'
+    name: 'S06P04_WAPOR_L2_QUAL_NDVI_D_MOZ'
+    date_regex: 'L2_QUAL_NDVI_D_(?P<YYKK>\d{4})_MOZ.tif'
+- model: eo_engine.EOSourceGroup
+  pk: 64
+  fields:
+    crawler_type: 'OTHER (WAPOR)'
+    name: 'S06P04_WAPOR_L2_AETI_D_RWA'
+    date_regex: 'L2_AETI_D_(?P<YYKK>\d{4})_RWA.tif'
+- model: eo_engine.EOSourceGroup
+  pk: 65
+  fields:
+    crawler_type: 'OTHER (WAPOR)'
+    name: 'S06P04_WAPOR_L2_QUAL_LST_D_RWA'
+    date_regex: 'L2_QUAL_LST_D_(?P<YYKK>\d{4})_RW.tif'
+- model: eo_engine.EOSourceGroup
+  pk: 66
+  fields:
+    crawler_type: 'OTHER (WAPOR)'
+    name: 'S06P04_WAPOR_L2_QUAL_NDVI_D_RWA'
+    date_regex: 'L2_QUAL_NDVI_D_(?P<YYKK>\d{4})_RW.tif'
+- model: eo_engine.EOSourceGroup
+  pk: 67
+  fields:
+    crawler_type: 'OTHER (WAPOR)'
+    name: 'S06P04_WAPOR_L2_AETI_D_ETH'
+    date_regex: 'L2_AETI_D_(?P<YYKK>\d{4})_ETH.tif'
+- model: eo_engine.EOSourceGroup
+  pk: 68
+  fields:
+    crawler_type: 'OTHER (WAPOR)'
+    name: 'S06P04_WAPOR_L2_QUAL_LST_D_ETH'
+    date_regex: 'L2_QUAL_LST_D_(?P<YYKK>\d{4})_ETH.tif'
+- model: eo_engine.EOSourceGroup
+  pk: 69
+  fields:
+    crawler_type: 'OTHER (WAPOR)'
+    name: 'S06P04_WAPOR_L2_QUAL_NDVI_D_ETH'
+    date_regex: 'L2_QUAL_NDVI_D_(?P<YYKK>\d{4})_ETH.tif'
+- model: eo_engine.EOSourceGroup
+  pk: 70
+  fields:
+    crawler_type: 'OTHER (WAPOR)'
+    name: 'S06P04_WAPOR_L2_AETI_D_GHA'
+    date_regex: 'L2_AETI_D_(?P<YYKK>\d{4})_GHA.tif'
+- model: eo_engine.EOSourceGroup
+  pk: 71
+  fields:
+    crawler_type: 'OTHER (WAPOR)'
+    name: 'S06PS06P04_WAPOR_L2_QUAL_LST_D_GHA'
+    date_regex: 'L2_QUAL_LST_D_(?P<YYKK>\d{4})_GHA.tif'
+- model: eo_engine.EOSourceGroup
+  pk: 72
+  fields:
+    crawler_type: 'OTHER (WAPOR)'
+    name: 'S06P0S06P04_WAPOR_L2_QUAL_NDVI_D_GHA'
+    date_regex: 'L2_QUAL_NDVI_D_(?P<YYKK>\d{4})_GHA.tif'

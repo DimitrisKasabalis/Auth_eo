@@ -4,30 +4,36 @@
 {% endblock %}
 
 {% block body %}
-        <div class="container">
+    <div class="container">
         <div class="row">
-            <div class="col"><a href="{% url "eo_engine:main-page" %}">MainPage</a></div>
-{#            <div class="col"><a href="{% url "eo_engine:list-eosources" %}">Sources</a></div>#}
+            <div class="col">
+                {{ group_name }}
+                <a href="{% url "eo_engine:main-page" %}">MainPage</a></div>
+            {#            <div class="col"><a href="{% url "eo_engine:list-eosources" %}">Sources</a></div>#}
         </div>
     </div>
     <table style="width: 100%">
         <tr>
+            <th>id</th>
             <th>Filename</th>
-            <th>Group</th>
             <th>Action</th>
             <th>Generate</th>
             <th>Download</th>
             <th></th>
 
         </tr>
-        {% for eo_product in eo_products %}
+        {% for eo_product in data %}
             <tr>
+                <td>{{ eo_product.pk }}</td>
                 <td>{{ eo_product.filename }}</td>
-                <td>{{ eo_product.get_group_display }}</td>
-                <td>{{ eo_product.get_state_display }}</td>
-                <td><a href="{% url 'eo_engine:trigger-eoproduct_generation' eo_product.filename %}">Generate</a></td>
-                {% if eo_product.file %}
-                    <td><a href="{{ eo_product.file.url }}" download>Download</a></td>
+                <td>{{ eo_product.state }}</td>
+                {% if eo_product.generate_url %}
+                    <td><a href="{{ eo_product.generate_url }}">Generate</a></td>
+                {% else %}
+                    <td>-</td>
+                {% endif %}
+                {% if eo_product.file_url %}
+                    <td><a href="{{ eo_product.file_url }}" download>Download</a></td>
                     <td>
                         <a style="-webkit-appearance: button;-moz-appearance: button;text-decoration: none; color: initial"
                            href="{% url 'eo_engine:delete-file' resource_type="eo_product" pk=eo_product.pk %}">delete</a>

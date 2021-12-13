@@ -33,7 +33,7 @@ class TaskS06P01Wb100mToCountryTest(TestCase):
     def setUpTestData(cls):
         # <editor-fold desc="cls-eo-source">
         f = cls.eo_source = EOSource.objects.create(
-            state=EOSourceStateChoices.AvailableLocally,
+            state=EOSourceStateChoices.AVAILABLE_LOCALLY,
             group=EOSourceGroupChoices.C_GLS_NDVI_300M_V2_GLOB,
             filename=TEST_FILE.name,
             domain='test-domain',
@@ -49,7 +49,7 @@ class TaskS06P01Wb100mToCountryTest(TestCase):
         cls.eo_source.file.save(name=TEST_FILE.name, content=File(TEST_FILE.open('rb')))
 
         cls.eo_product: EOProduct = EOProduct.objects.first()
-        assert cls.eo_product.state == EOProductStateChoices.Available
+        assert cls.eo_product.state == EOProductStateChoices.AVAILABLE
         task = task_s02p02_c_gls_ndvi_300_clip \
             .s(eo_product_pk=cls.eo_product.pk, **cls.eo_product.task_kwargs)
         time.sleep(1)
@@ -70,4 +70,4 @@ class TaskS06P01Wb100mToCountryTest(TestCase):
 
     def test_state(self):
         self.eo_product.refresh_from_db()
-        self.assertEqual(self.eo_product.state,EOProductStateChoices.Ready)
+        self.assertEqual(self.eo_product.state, EOProductStateChoices.READY)

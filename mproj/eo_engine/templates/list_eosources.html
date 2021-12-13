@@ -8,46 +8,32 @@
 {% block body %}
     <div class="container">
         <div class="row">
+            {{ group_name }}
             <div class="col"><a href="{% url "eo_engine:main-page" %}">MainPage</a></div>
-{#            <div class="col"><a href="{% url "eo_engine:list-eoproducts" %}"> Products</a></div>#}
+            {#            <div class="col"><a href="{% url "eo_engine:list-eoproducts" %}"> Products</a></div>#}
         </div>
     </div>
     <table style="width: 100%">
         <tr>
+            <th>ID</th>
             <th>Filename</th>
             <th>Reference Date</th>
-            <th>Group</th>
             <th>State</th>
-            <th>Cancel Task</th>
-            <th>Download</th>
-            <th>Delete</th>
+            {#            <th>Cancel Task</th>#}
+            <th>Fetch from remote Server</th>
+            <th>Download locally</th>
+            {#            <th>Delete</th>#}
         </tr>
-        {% for eo_source, url_string in eo_sources %}
+        {% for eo_source in data %}
             <tr>
+                <td>{{ eo_source.pk }}</td>
                 <td>{{ eo_source.filename }}</td>
-                <td>{{ eo_source.datetime_reference | date:"D d M Y" }}</td>
-                <td>{{ eo_source.get_group_display }}</td>
-                <td>
-                    {{ eo_source.get_state_display }}
-                    {{ eo_source.task.latest.state }}
-                    {#                    {{ valid_status_to_cancel }}#}
-                    {% if eo_source.task.latest.state in valid_status_to_cancel %}
-                        <a href="{% url "eo_engine:revoke-task" task_id=eo_source.task.latest.task_id %}?return_page={% url "eo_engine:list-eosources" %}">cancel</a>
-                    {% endif %}
-                </td>
-                <td>
-
-                </td>
-                <td><a href={{ url_string }}>Fetch from remote
-                    server</a>
-                </td>
+                <td>{{ eo_source.reference_date | date:"D d M Y" }}</td>
+                <td>{{ eo_source.state }}</td>
+                <td><a href="{{ eo_source.download_task_url }}">Fetch from Remote Server</a></td>
                 {% if eo_source.file %}
-                    <td><a href="{{ eo_source.file.url }}" download>Download</a></td>
-                    <td>
-                        <a href="{% url "eo_engine:delete-file" resource_type="eo_source" pk=eo_source.pk %}">Delete</a>
-                    </td>
+                    <td><a href="{{ eo_source.file }}">Download</a></td>
                 {% else %}
-                    <td>-</td>
                     <td>-</td>
                 {% endif %}
             </tr>

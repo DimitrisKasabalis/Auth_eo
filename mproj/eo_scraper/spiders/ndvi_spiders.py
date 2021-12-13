@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date as dt_date
 from re import Match
 from scrapy.http.response import Response
 from typing import Optional
@@ -20,40 +20,23 @@ class NDVISpider(CopernicusVgtDatapool):
 #         f"https://land.copernicus.vgt.vito.be/PDF/datapool/Vegetation/Indicators/NDVI_300m_V1/"
 #     ]
 
-from datetime import date as dt_date
-
 
 class NDVI300mV2Spider(NDVISpider):
-    def datetime_reference_from_filename(self, filename) -> Optional[dt_date]:
-        from eo_engine.common.patterns import S02P02_GCL_NDVI_V2_300M_FILENAME_PARSE
-        match = S02P02_GCL_NDVI_V2_300M_FILENAME_PARSE.match(filename)
-        if match:
-            groupdict = match.groupdict()
-            year = int(groupdict['year'])
-            month = int(groupdict['month'])
-            day = int(groupdict['day'])
+    name = EOSourceGroupChoices.S02P02_NDVI_300M_V2_GLOB_CGLS
 
-            date: dt_date = dt_date(year=year, month=month, day=day)
-            return date
-        else:
-            self.logger.warn(f'The date time pattern failed, returning None. The filename was {filename}')
-            return None
-
-    name = EOSourceGroupChoices.C_GLS_NDVI_300M_V2_GLOB
-    product_name = EOSourceGroupChoices.C_GLS_NDVI_300M_V2_GLOB
     start_urls = [
         f"https://land.copernicus.vgt.vito.be/PDF/datapool/Vegetation/Indicators/NDVI_300m_V2/"
     ]
 
-    def pre_parse_check(self, response: Response) -> bool:
-        from eo_engine.common.patterns import S02P02_GCL_NDVI_V2_300M_DATE_MONTH as pattern
+    def should_process_response(self, response: Response) -> bool:
+        from eo_engine.common.patterns import S02P02_GCL_NDVI_V2_300M_DATE_MONTH_FOLDER_PATTERN as pattern
         url = response.url
         match: Match = pattern.match(url)
         if match:
             groupdict = match.groupdict()
             year = int(groupdict['year'])
             month = int(groupdict['month'])
-            directory_date = date(year, month, 1)
+            directory_date = dt_date(year, month, 1)
             self.logger.info(f'Comparing dates!:  {directory_date <= self.from_date}')
             return directory_date <= self.from_date
         else:
@@ -61,12 +44,12 @@ class NDVI300mV2Spider(NDVISpider):
             raise Exception
 
 
-class NDVI1kmV3Spider(NDVISpider):
-    name = EOSourceGroupChoices.C_GLS_NDVI_1KM_V3_GLOB
-    product_name = EOSourceGroupChoices.C_GLS_NDVI_1KM_V3_GLOB
-    start_urls = [
-        f"https://land.copernicus.vgt.vito.be/PDF/datapool/Vegetation/Indicators/NDVI_1km_V3/"
-    ]
+# class NDVI1kmV3Spider(NDVISpider):
+#     name = EOSourceGroupChoices.C_GLS_NDVI_1KM_V3_GLOB
+#
+#     start_urls = [
+#         f"https://land.copernicus.vgt.vito.be/PDF/datapool/Vegetation/Indicators/NDVI_1km_V3/"
+#     ]
 
 # class NDVI1kmV2Spider(NDVISpider):
 #     name = "ndvi-1km-v2-spider"

@@ -1,6 +1,7 @@
 from django.db import models
+from typing import Optional
 
-from eo_engine.models.eo_source import EOSourceGroupChoices
+from eo_engine.models import EOSourceGroupChoices
 
 
 class Credentials(models.Model):
@@ -30,3 +31,55 @@ class RuleMixin(models.Model):
 class CrawlerConfiguration(RuleMixin):
     group = models.TextField(choices=EOSourceGroupChoices.choices, unique=True)
     from_date = models.DateField()  # date where scan should begin from. assume 00:00
+
+
+class Pipeline(RuleMixin):
+    class PackageChoices(models.TextChoices):
+        S02P02 = 'S02P02', 'Package S02P02'
+        S04P01 = 'S04P01', 'Package S04P01'
+        S04P03 = 'S04P03', 'Package S04P03'
+        S06P01 = 'S06P01', 'Package S06P01'
+        S06P04 = 'S06P04', 'Package S06P04'
+
+    name = models.TextField(default='No Name')
+    package = models.TextField(choices=PackageChoices.choices)
+    description = models.TextField(default='No-Description')
+    input_group = models.ForeignKey('EOGroup', on_delete=models.DO_NOTHING, related_name='pipelines_from_input')
+    output_group = models.ForeignKey('EOGroup', on_delete=models.DO_NOTHING, related_name='pipelines_from_output')
+    output_filename_template = models.TextField()
+    output_folder = models.TextField()
+    task_name = models.TextField()
+    task_kwargs = models.JSONField(default=dict)
+
+    def output_filename(self, **kwargs) -> str:
+        return self.output_filename_template.format(**kwargs)
+
+    def urls(self) -> dict:
+        from django.shortcuts import reverse
+        from eo_engine.models import EOSourceGroup
+
+        def crawler() -> Optional[dict]:
+            if self.input_group.has_source():
+                crawler_type = self.input_group.eosourcegroup.crawler_type
+                if crawler_type == EOSourceGroup.CrawlerTypeChoices.SCRAPY_SPIDER:
+                    return {'label': 'Crawler', 'url_str': reverse('eo_engine:crawler-configure', kwargs={
+                        'group_name': self.input_group.eosourcegroup.name})}
+                elif crawler_type == EOSourceGroup.CrawlerTypeChoices.OTHER_SFTP:
+                    return {'label': 'SFTP Dir Parse', 'url_str': 'none-yet'}
+                elif crawler_type == EOSourceGroup.CrawlerTypeChoices.NONE:
+                    return None
+            return None
+
+        return {
+            '1': crawler(),
+            '2': {'label': 'Inputs ',
+                  'url_str': reverse('eo_engine:pipeline-inputs-list', kwargs={'pipeline_pk': self.pk})},
+            '3': {'label': 'Output Group',
+                  'url_str': reverse('eo_engine:pipeline-outputs-list', kwargs={'pipeline_pk': self.pk})}}
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['input_group', 'output_group'], name='unique input/output'),
+            models.UniqueConstraint(fields=['task_name', 'task_kwargs'], name='unique task/kw_task')
+        ]
+        ordering = ['package', 'name']

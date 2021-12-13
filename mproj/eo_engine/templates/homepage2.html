@@ -21,7 +21,9 @@
                                     <h5 class="card-title">{{ section_element.name }}</h5>
                                     <p class="card-text">{{ section_element.description }}</p>
                                     {% for id,url in section_element.urls.items %}
-                                        <a href="{{ url.url_str }}" class="btn btn-primary">{{ url.label }}</a>
+                                        {% if url %}
+                                            <a href="{{ url.url_str }}" class="btn btn-primary">{{ url.label }}</a>
+                                        {% endif %}
                                     {% endfor %}
 
                                 </div>
