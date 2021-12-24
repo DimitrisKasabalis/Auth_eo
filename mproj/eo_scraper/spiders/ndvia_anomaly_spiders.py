@@ -146,7 +146,7 @@ class NDVIAnomalyKEN(NDVIAnomaly):
 
 # GHANA
 class NDVIAnomalyGHA(NDVIAnomaly):
-    tiles = tiles_gha = ["x23y08", "x23y09", "x24y08", "x24y09", "x25y09"]
+    tiles = tiles_gha = ["x19y08", "x19y09", "x20y08", "x20y09"]
     name = EOSourceGroupChoices.S02P02_NDVIA_250M_GHA_GMOD
 
 
