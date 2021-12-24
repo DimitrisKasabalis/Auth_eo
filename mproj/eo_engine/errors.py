@@ -1,4 +1,4 @@
-class AfriCultuReSError(BaseException):
+class AfriCultuReSError(Exception):
     pass
 
 
