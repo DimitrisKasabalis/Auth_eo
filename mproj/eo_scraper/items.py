@@ -5,14 +5,16 @@
 import re
 import scrapy
 from celery.utils.log import get_task_logger
-from datetime import datetime
+from datetime import datetime, date
 from itemloaders.processors import Join, MapCompose, TakeFirst
-from typing import Optional
+from pytz import timezone
+from typing import Optional, Union
 from urllib.parse import urlsplit
 
 units = {"B": 1, "KB": 2 ** 10, "MB": 2 ** 20, "GB": 2 ** 30, "TB": 2 ** 40}
 
 logger = get_task_logger(__name__)
+utc = timezone('UTC')
 
 
 def parse_size(str_token: str):
@@ -49,7 +51,7 @@ def parse_size(str_token: str):
         number, unit = [string.strip() for string in str_token.split()]
     except ValueError:
         # couldn't parse the value
-        logger.warning('SCRAPER:ITEM-PROCESSING:parse_size Could not parse string to bytes.')
+        # logger.warning('SCRAPER:ITEM-PROCESSING:parse_size Could not parse string to bytes.')
         return -1
     return int(float(number) * units[unit])
 
@@ -67,6 +69,12 @@ def drop_query_from_url(value: str):
     return value.split('?')[0]
 
 
+def set_utc_timezone(dt_object: Union[datetime, date]):
+    if isinstance(dt_object, date):
+        return dt_object
+    return dt_object.replace(tzinfo=utc)
+
+
 class RemoteSourceItem(scrapy.Item):
     filename: str = scrapy.Field(
         input_processor=MapCompose(str.strip),
@@ -77,7 +85,8 @@ class RemoteSourceItem(scrapy.Item):
     domain: str = scrapy.Field(
         input_processor=MapCompose(get_domain_of_url),
         output_processor=TakeFirst())
-    datetime_reference: Optional[datetime] = scrapy.Field(output_processor=TakeFirst())
+    datetime_reference: Optional[datetime] = scrapy.Field(input_processor=MapCompose(set_utc_timezone),
+                                                          output_processor=TakeFirst())
     datetime_seen: str = scrapy.Field(output_processor=TakeFirst())
     url: str = scrapy.Field(
         input_processor=MapCompose(drop_query_from_url),

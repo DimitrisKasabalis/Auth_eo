@@ -2,8 +2,8 @@
   pk: 36
   fields:
     name: 'S02P02_NDVI_300M_V2_GLOB_CGLS'
-    date_regex: 'c_gls_NDVI300_(?P<year>\d{4})(?P<month>\d{2})(?P<day>\d{2})0000_GLOBE_OLCI_V2\.0\.[1|2]\.nc'
-    crawler_type: 'SCRAPPY_SPIDER'
+    date_regex: 'c_gls_NDVI300_(?P<YYYYMMDD>\d{8})0000_GLOBE_OLCI_V2\.0\.[1|2]\.nc'
+    crawler_type: 'SCRAPY_SPIDER'
 - model: eo_engine.EOSourceGroup
   pk: 1
   fields:

@@ -44,7 +44,7 @@ class Pipeline(RuleMixin):
     name = models.TextField(default='No Name')
     package = models.TextField(choices=PackageChoices.choices)
     description = models.TextField(default='No-Description')
-    input_group = models.ForeignKey('EOGroup', on_delete=models.DO_NOTHING, related_name='pipelines_from_input')
+    input_groups = models.ManyToManyField('EOGroup', related_name='pipelines_from_input', related_query_name='pipelines')
     output_group = models.ForeignKey('EOGroup', on_delete=models.DO_NOTHING, related_name='pipelines_from_output')
     output_filename_template = models.TextField()
     output_folder = models.TextField()
@@ -59,11 +59,11 @@ class Pipeline(RuleMixin):
         from eo_engine.models import EOSourceGroup
 
         def crawler() -> Optional[dict]:
-            if self.input_group.has_source():
-                crawler_type = self.input_group.eosourcegroup.crawler_type
+            if self.input_groups.exists():
+                crawler_type = self.input_groups.eosourcegroup.crawler_type
                 if crawler_type == EOSourceGroup.CrawlerTypeChoices.SCRAPY_SPIDER:
                     return {'label': 'Crawler', 'url_str': reverse('eo_engine:crawler-configure', kwargs={
-                        'group_name': self.input_group.eosourcegroup.name})}
+                        'group_name': self.input_groups.eosourcegroup.name})}
                 elif crawler_type == EOSourceGroup.CrawlerTypeChoices.OTHER_SFTP:
                     return {'label': 'SFTP Dir Parse', 'url_str': 'none-yet'}
                 elif crawler_type == EOSourceGroup.CrawlerTypeChoices.NONE:
@@ -71,7 +71,7 @@ class Pipeline(RuleMixin):
             return None
 
         return {
-            '1': crawler(),
+            '1': None,
             '2': {'label': 'Inputs ',
                   'url_str': reverse('eo_engine:pipeline-inputs-list', kwargs={'pipeline_pk': self.pk})},
             '3': {'label': 'Output Group',
@@ -79,7 +79,7 @@ class Pipeline(RuleMixin):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=['input_group', 'output_group'], name='unique input/output'),
+            models.UniqueConstraint(fields=['output_group'], name='unique input/output'),
             models.UniqueConstraint(fields=['task_name', 'task_kwargs'], name='unique task/kw_task')
         ]
         ordering = ['package', 'name']

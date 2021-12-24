@@ -64,4 +64,5 @@ def str_to_date(token: str, regex_string: str, re_flags=re.IGNORECASE) -> dt_dat
         raise AfriCultuReSError()
     except (AfriCultuReSError, AttributeError) as e:
         raise AfriCultuReSError(
-            f'BUG_REPORT:SHOULD_NOT_END_HERE:No date tokens found in string {token} and regEx string +{regex_string}+.')
+            f'BUG_REPORT:SHOULD_NOT_END_HERE:No date tokens found in string {token} and regEx string +{regex_string}+.'
+            f'\nDid you forget to add YYYY/MM/DD tokens?')

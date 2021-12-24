@@ -6,5 +6,5 @@ def check_netcdf(filepath: Path) -> bool:
         import xarray as xr
         dataset = xr.open_dataset(filepath)
         dataset.load()
-    except:
+    except Exception:
         return False

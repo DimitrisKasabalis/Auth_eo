@@ -5,6 +5,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 
+
 class EOProductStateChoices(models.TextChoices):
     AVAILABLE = 'AVAILABLE', "AVAILABLE for generation."
     SCHEDULED = 'SCHEDULED', "SCHEDULED For generation."
@@ -12,7 +13,7 @@ class EOProductStateChoices(models.TextChoices):
     GENERATING = 'GENERATING', "GENERATING..."
     IGNORE = 'IGNORE', "Skip generation (Ignored) ."
     READY = 'READY', "Product is READY."
-    MISSING_SOURCE = 'MISSING_SOURCE', "Some or all EOSouce(s) Are Not Available"
+    MISSING_SOURCE = 'MISSING_SOURCE', "Some or all EOSource(s) Are Not Available"
 
 
 def _upload_to(instance: 'EOProduct', filename):
@@ -31,7 +32,7 @@ def _upload_to(instance: 'EOProduct', filename):
 
 class EOProduct(models.Model):
     filename = models.TextField(unique=True)
-    group = models.ForeignKey('EOProductGroup', on_delete=models.DO_NOTHING)
+    group = models.ForeignKey('EOGroup', on_delete=models.DO_NOTHING)
     datetime_creation = models.DateTimeField(null=True)
     reference_date = models.DateField()
     file = models.FileField(upload_to=_upload_to, null=True, max_length=2048)
@@ -47,6 +48,30 @@ class EOProduct(models.Model):
     def __str__(self):
         return f"{self.__class__.__name__}/{self.filename}/{self.state}/{self.id}"
 
+
+@receiver(post_save, sender=EOProduct, weak=False, dispatch_uid='eoproduct_post_save_handler')
+def eoproduct_post_save_handler(instance: EOProduct, **kwargs):
+    from eo_engine.models import Pipeline
+
+    # some output piplines dfds
+    eo_product = instance
+    if eo_product.state != EOProductStateChoices.READY:
+        return
+
+    yyyymmdd = eo_product.reference_date.strftime('%Y%m%d')
+    pipelines = Pipeline.objects.filter(input_groups__eoproduct=eo_product)
+    for pipeline in pipelines:
+        output_filename = pipeline.output_filename(YYYYMMDD=yyyymmdd)
+        output_group = pipeline.output_group.as_eoproduct_group()
+
+        prod, created = EOProduct.objects.get_or_create(
+            filename=output_filename,
+            group=output_group,
+            reference_date=eo_product.reference_date
+        )
+        if created:
+            prod.state = EOProductStateChoices.AVAILABLE
+        prod.save()
 
 __all__ = [
     "EOProduct",

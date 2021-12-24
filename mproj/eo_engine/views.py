@@ -1,7 +1,4 @@
 import logging
-from django.utils.http import urlencode
-from typing import Literal, Callable, Optional, Dict, Union
-
 from celery.result import AsyncResult
 from celery.utils.serialization import strtobool
 from django.contrib import messages
@@ -10,10 +7,12 @@ from django.http import QueryDict
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.utils.datetime_safe import date
+from django.utils.http import urlencode
 from more_itertools import collapse
+from typing import Literal, Callable, Optional, Dict, Union
 
 from eo_engine.common.tasks import get_task_ref_from_name
-from eo_engine.models import EOSource, EOProduct, EOProductStateChoices
+from eo_engine.models import EOSource, EOProduct, EOProductStateChoices, EOSourceGroup, EOProductGroup
 from eo_engine.models.factories import create_wapor_object
 from eo_engine.models.other import CrawlerConfiguration, Pipeline
 
@@ -49,7 +48,8 @@ def main_page(request):
                     '3': {
                         'name': 'Credential Manager',
                         'descrition': 'Add View or remove credentials that are used by the system when fetchin remote sources.',
-                        'urls': {"1": {'label': 'Credential Manager', 'url_str': reverse('eo_engine:credentials-list')}}},
+                        'urls': {
+                            "1": {'label': 'Credential Manager', 'url_str': reverse('eo_engine:credentials-list')}}},
                     '4': {'name': 'Retrieve/Crawl AETI WaPOR Products',
                           'urls': {"1": {'label': 'Refresh', 'url_str': 'url_str'}}}
                 },
@@ -67,47 +67,10 @@ def main_page(request):
                     'description': v.description,
                     'urls': v.urls()
                 } for idx, v in enumerate(Pipeline.objects.filter(package='S02P02'))}
-            }
+            },
         }
     }
 
-    # context = {
-    #     'eo_products_grps_value_label': EOProductGroupChoices.choices,
-    #     'eo_sources_grps_value_label': EOSourceGroupChoices.choices,
-    # }
-    #
-    # scrappers = {}
-    # spider_list = list_spiders()
-    # for spider in spider_list:
-    #     query_dictionary = QueryDict('', mutable=True)
-    #     query_dictionary.update(
-    #         task_name=task_init_spider_name,
-    #         spider_name=spider
-    #     )
-    #     url = url_template.format(
-    #         base_url=submit_task_url,
-    #         querystring=query_dictionary.urlencode()
-    #     )
-    #     scrappers[spider] = {
-    #         'url': url,
-    #         'is_configured': EOSourceMeta.objects.filter(group=spider).exists()
-    #     }
-    #
-    # # extra scrappers
-    # # scrappers[LABEL] = {url: url, is_configured: T/F}
-    # q = QueryDict('', mutable=True)
-    # q.update(
-    #     task_name=task_sftp_parse_remote_dir.name,
-    #     remote_dir='sftp://safmil.ipma.pt/home/safpt/OperationalChain/LSASAF_Products/DMET'
-    # )
-    # scrappers['LSAF'] = {
-    #     'url': url_template.format(
-    #         base_url=reverse("eo_engine:submit-task"),
-    #         querystring=q.urlencode()),
-    #     'is_configured': EOSourceMeta.objects.filter(group='LSAF').exists()
-    # }
-    #
-    # context.update(scrappers=scrappers)
     return render(request, "homepage2.html", context=context)
 
 
@@ -213,7 +176,8 @@ def submit_task(request):
         query_dictionary.update(**request.GET)
         task_name = query_dictionary.pop('task_name')[0]  # required
         next_page = list(collapse(query_dictionary.pop('next_page', None)))[
-                        0] or request.META.get('HTTP_REFERER', None) or reverse("eo_engine:main-page")  # default to main-page
+                        0] or request.META.get('HTTP_REFERER', None) or reverse(
+            "eo_engine:main-page")  # default to main-page
 
         for k, v in query_dictionary.items():
             param = list(collapse(v))
@@ -314,7 +278,7 @@ def utilities_view_post_credentials(request):
     if request.method == "POST":
         try:
             messages.success(request, 'change submitted')
-        except:
+        except Exception:
             messages.error(request, 'error')
         finally:
             return redirect(reverse('credentials-list'))
@@ -399,28 +363,32 @@ def configure_crawler(request, group_name: str):
 
 
 def pipeline_inputs(request, pipeline_pk: int):
-    from eo_engine.tasks import task_download_file
     pipeline = Pipeline.objects.get(pk=pipeline_pk)
-    group = pipeline.input_group
 
-    source_group = group.eosourcegroup
-    eo_source_qs = EOSource.objects.filter(group=source_group).order_by('-reference_date')
+    input_eo_source_groups = EOSourceGroup.objects.filter(id__in=pipeline.input_groups.all().values_list('id'))
+    # EOSource.objects.filter(group__in=pipeline.input_group.all())
+    input_eo_product_groups = EOProductGroup.objects.filter(id__in=pipeline.input_groups.all().values_list('id'))
 
+    input_eo_source_data = [
+        {"idx": idx,
+         "type": 'source',
+         "group_name": eo_source_group.get_name_display,
+         'discover_url': eo_source_group.discover_url(),
+         'entries': EOSource.objects.filter(group=eo_source_group).order_by('-reference_date')}
+        for idx, eo_source_group in enumerate(input_eo_source_groups)
+    ]
+    # todo: properly
+    input_eo_product_data = [
+        {"idx": idx,
+         "type": 'product',
+         "group_name": eo_product_group.get_name_display,
+         # 'discover_url': eo_product_group.discover_url(),
+         'entries': EOProduct.objects.filter(group=eo_product_group).order_by('-reference_date')}
+        for idx, eo_product_group in enumerate(input_eo_product_groups)
+    ]
     context = {
-        'group_name': source_group.name,
-        'data': [
-            {'pk': eo_source.pk,
-             'reference_date': eo_source.reference_date,
-             'filename': eo_source.filename,
-             'state': eo_source.get_state_display,
-             'download_task_url': '?'.join(
-                 (reverse('eo_engine:submit-task'),
-                  urlencode(
-                      {'task_name': task_download_file.name,
-                       'eo_source_pk': eo_source.pk}))),
-             'file': eo_source.file.url if eo_source.file else None
-             } for eo_source in eo_source_qs]}
-
+        "data": input_eo_source_data + input_eo_product_data
+    }
     return render(request, 'list_eosources.html', context=context)
 
 
@@ -440,11 +408,12 @@ def pipeline_outputs(request, pipeline_pk: int):
             {'pk': eo_product.pk,
              'filename': eo_product.filename,
              'state': eo_product.get_state_display,
-             'generate_url': '?'.join(
-                 (reverse('eo_engine:submit-task'),
-                  urlencode({'task_name': task_name,
-                             'eo_product_pk': eo_product.pk,
-                             **task_kwargs}))) if [EOProductStateChoices.AVAILABLE, EOProductStateChoices.READY, EOProductStateChoices.FAILED].count(
+             'generate_url': '?'.join((
+                 reverse('eo_engine:submit-task'),
+                 urlencode({'task_name': task_name,
+                            'eo_product_pk': eo_product.pk,
+                            **task_kwargs}))) if [EOProductStateChoices.AVAILABLE, EOProductStateChoices.READY,
+                                                  EOProductStateChoices.FAILED].count(
                  eo_product.state) == 1 else None,
              'file_url': eo_product.file.url if eo_product.file else None,
              } for eo_product in qs]}

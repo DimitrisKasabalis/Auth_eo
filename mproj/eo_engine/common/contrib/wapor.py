@@ -180,7 +180,7 @@ def WAPOR(output_folder,
 
                     else:
                         print("ERROR: Was not able to connect to WAPOR server")
-                except:
+                except Exception:
                     success = 0
                     no_succes += 1
                     if no_succes == 10:

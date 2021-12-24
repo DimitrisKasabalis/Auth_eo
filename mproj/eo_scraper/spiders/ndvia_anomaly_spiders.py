@@ -37,17 +37,11 @@ class NDVIAnomaly(Spider, AfricultureCrawlerMixin):
         return self.tiles
 
     def parse(self, response: Response, **kwargs):
-        print(f'hello from response: {response.url}')
         all_hrefs = list(response.copy().xpath('//a/@href').getall())
-        print(f"all_ahrefs: {all_hrefs}")
-
         href: str
         for href in all_hrefs:
             target_url = response.url + href
-            logger.warn(href)
-            logger.warn(f'+++target_url+++ {target_url}')
             match = GMOD09Q1_PAGE_PATTERN.match(target_url)
-            logger.warn(match)
             if match:
                 group_dict = match.groupdict()
                 try:
@@ -77,26 +71,29 @@ class NDVIAnomaly(Spider, AfricultureCrawlerMixin):
 
     def is_expected_filename(self, filename: str) -> bool:
         group_settings = self.get_group_settings()
-        filename_regex = group_settings.date_regex_cached # cached version
+        filename_regex = group_settings.date_regex_cached  # cached version
         match = re.match(filename_regex, filename, re.IGNORECASE)
         if match is None:
             self.logger.info(
-                f'SHOULD_PROCESS_FILENAME:FAILED: +{filename}+ did not pass regex check: +{filename_regex}+ ')
+                f'SHOULD_PROCESS_FILENAME:FAILED: +{filename}+ did not pass regex check: +{filename_regex}+')
             return False
         return True
 
     def should_process_filename(self, filename: str) -> bool:
         #  file is checked to be in the correct form
         # GMOD09Q1.A2019057.08d.latlon.x01y04.6v1.NDVI_anom_S2001-2015.tif.gz
-        match = re.match(
-            r'^GMOD09Q1\.A((?P<year>\d{4})(?P<doy>\d{3})).*(?P<tile>(x\d{1,2}y\d{1,2}))\.6v1.NDVI_anom_S2001-2015\.tif\.gz$',
-            filename, re.IGNORECASE)
+        pattern = r'^GMOD09Q1\.A((?P<year>\d{4})(?P<doy>\d{3})).*(?P<tile>(x\d{1,2}y\d{1,2}))\.6v1.NDVI_anom_S2001-2015\.tif\.gz$'
+        match = re.match(pattern, filename, re.IGNORECASE)
         if match:
             groupdict = match.groupdict()
-            tile = groupdict.get('tile')
+            tile = groupdict['tile']
+            # if 'tile' is in tiles
+            self.logger.info(f'Tile: {tile} does not exist in {self.tiles}')
             return bool(self.tiles.count(tile))
         else:
-            raise Exception('BUG REPORT. Filename ws not captured by the tile regex')
+            self.logger.warn(
+                f'Potential BUG REPORT. Filename +{filename}+ ws not captured by the tile regex: {pattern}')
+            return False
 
     def parse_catalog(self, response, **kwargs):
         # parse catalog page
@@ -108,6 +105,12 @@ class NDVIAnomaly(Spider, AfricultureCrawlerMixin):
                 continue
 
             filename = tableRow.xpath('.//a/text()').get()
+
+            # for speed-up reasons we check if the tiles should be processed here,
+            # same check is happening over at the 2nd tier level
+            if not self.should_process_filename(filename):
+                continue
+
             loader = ItemLoader(item=RemoteSourceItem(), selector=tableRow)
 
             loader.add_value('filename', filename)

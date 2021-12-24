@@ -1,3 +1,5 @@
+from logging import Logger
+
 import os
 import subprocess
 import tempfile
@@ -6,6 +8,7 @@ from celery.app import shared_task
 from celery.utils.log import get_task_logger
 from django.core.files import File
 from django.core.files.temp import NamedTemporaryFile
+from django.db import connections as django_connections
 from django.utils import timezone
 from more_itertools import collapse
 from osgeo import gdal
@@ -21,7 +24,7 @@ from eo_engine.models import Credentials, Pipeline
 from eo_engine.models import EOProduct, EOProductStateChoices
 from eo_engine.models import EOSource, EOSourceStateChoices
 
-logger = get_task_logger(__name__)
+logger: Logger = get_task_logger(__name__)
 
 now = timezone.now()
 
@@ -58,7 +61,7 @@ def task_init_spider(spider_name):
     rule_qs = CrawlerConfiguration.objects.filter(group=spider.name)
     if not rule_qs.exists():
         msg = 'This spider is not configured. Please Configured it using the web gui'
-        logger.err(msg)
+        logger.error(msg)
         raise AfriCultuReSError(msg)
     rule = rule_qs.get()
     if not rule.enabled:
@@ -202,15 +205,15 @@ def task_download_file(self, eo_source_pk: int):
 # s02p02
 ###########
 @shared_task
-def task_s02p02_ndvi300m_v2(
-        eo_product_pk: Union[int, EOProduct],
-        aoi: List[int]
-):
-    if isinstance(eo_product_pk, EOProduct):
-        eo_product = eo_product_pk
-    else:
-        eo_product: EOProduct = EOProduct.objects.get(pk=eo_product_pk)
-    input: EOSource = eo_product.eo_sources_inputs.first()
+def task_s02p02_ndvi300m_v2(eo_product_pk: int, aoi: List[int]):
+    aoi = [-30, 40, 60, -40]
+    produced_file = EOProduct.objects.get(id=eo_product_pk)
+    input_eo_source_group = produced_file.group.eoproductgroup.pipelines_from_output.get().input_groups.get().eosourcegroup
+    input_files_qs = EOSource.objects.filter(group=input_eo_source_group, reference_date=produced_file.reference_date)
+    input_file = input_files_qs.get()
+
+    input_file_path = Path(input_file.file.path)
+    print(f'file {input_file_path.as_posix()} exists?', input_file_path.exists())
 
     import xarray as xr
     import numpy as np
@@ -220,8 +223,7 @@ def task_s02p02_ndvi300m_v2(
         idx = (np.abs(array - value)).argmin()
         return array[idx]
 
-    def bnd_box_adj(my_ext: [int, int, int, int]):
-
+    def bnd_box_adj(my_ext):
         lat_1k = np.round(np.arange(80., -60., -1. / 112), 8)
         lon_1k = np.round(np.arange(-180., 180., 1. / 112), 8)
 
@@ -254,47 +256,45 @@ def task_s02p02_ndvi300m_v2(
         date_str = name[pos + 1: pos + 9]
         return date_str
 
-    param = {'product': 'NDVI',
-             'short_name': 'Normalized_difference_vegetation_index',
-             'long_name': 'Normalized Difference Vegetation Index Resampled 1 Km',
-             'grid_mapping': 'crs',
-             'flag_meanings': 'Missing cloud snow sea background',
-             'flag_values': '[251 252 253 254 255]',
-             'units': '',
-             'PHYSICAL_MIN': -0.08,
-             'PHYSICAL_MAX': 0.92,
-             'DIGITAL_MAX': 250,
-             'SCALING': 1. / 250,
-             'OFFSET': -0.08}
-
-    ds = xr.open_dataset(input.file.path, mask_and_scale=False)
-    da = ds.NDVI
+    ds = xr.open_dataset(input_file_path, mask_and_scale=False)
+    da, param = ds.NDVI, {'product': 'NDVI',
+                          'short_name': 'Normalized_difference_vegetation_index',
+                          'long_name': 'Normalized Difference Vegetation Index Resampled 1 Km',
+                          'grid_mapping': 'crs',
+                          'flag_meanings': 'Missing cloud snow sea background',
+                          'flag_values': '[251 252 253 254 255]',
+                          'units': '',
+                          'PHYSICAL_MIN': -0.08,
+                          'PHYSICAL_MAX': 0.92,
+                          'DIGITAL_MAX': 250,
+                          'SCALING': 1. / 250,
+                          'OFFSET': -0.08}
     adj_ext = bnd_box_adj(aoi)
     da = da.sel(lon=slice(adj_ext[0], adj_ext[2]), lat=slice(adj_ext[1], adj_ext[3]))
     try:
         prmts = {param['product']: {'dtype': 'i4', 'zlib': 'True', 'complevel': 4}}
         name = param['product']  # 'NDVI'
-        date_str = _date_extr(input.filename)
+        date_str = _date_extr(input_file.filename)
         # file_name = f'CGLS_{name}_{date}_300m_Africa.nc'
         with TemporaryDirectory() as tmp_dir:
             file = Path(tmp_dir) / f'tmp.nc'
-            da.to_netcdf(file, encoding=prmts)  # hmm... maybe it will take too much time, and our conn will die?
+            da.to_netcdf(file, encoding=prmts)
+            # refresh connection just in case
+            django_connections.close_all()
             content = File(file.open('rb'))
-            eo_product.file.save(name=eo_product.filename, content=content, save=False)
-            eo_product.filesize = eo_product.file.size
-            eo_product.state = EOProductStateChoices.READY
-            logger.debug(f'removing temp file {file.name}')
-            file.unlink(missing_ok=True)
+            produced_file.file.save(name=produced_file.filename, content=content, save=False)
+            produced_file.filesize = produced_file.file.size
+            produced_file.state = EOProductStateChoices.READY
+
     except Exception as ex:
         template = "An exception of type {0} occurred. Arguments:\n{1!r}"
         message = template.format(type(ex).__name__, ex.args)
-        print(message)
-        raise ex
+        raise AfriCultuReSError from ex
 
-    eo_product.state = EOProductStateChoices.READY
-    eo_product.datetime_creation = now
-    eo_product.save()
-    return eo_product.file.path
+    produced_file.state = EOProductStateChoices.READY
+    produced_file.datetime_creation = now
+    produced_file.save()
+    return produced_file.file.path
 
 
 @shared_task
@@ -302,15 +302,19 @@ def task_s02p02_nvdi1km_v3(eo_product_pk):
     """" Resamples to 1km and cuts to AOI bbox """
 
     eo_product = EOProduct.objects.get(id=eo_product_pk)
+    # this pipeline needs eo_products, 'S02P02_NDVI_300M_V3_AFR' which was made in another pipeline
+    input_eo_product_group = eo_product.group.eoproductgroup.pipelines_from_output.get().input_groups.get().eoproductgroup
+    input_files_qs = EOProduct.objects.filter(group=input_eo_product_group, reference_date=eo_product.reference_date)
+    input_file = input_files_qs.get()
 
     target_resolution = 0.0089285714286
     xmin, ymin, xmax, ymax = -30.0044643, -40.0044643, 60.0066643, 40.0044643
 
     # Mark it as 'in process'
-    eo_product.state = EOProductStateChoices.Generating
+    eo_product.state = EOProductStateChoices.GENERATING
     eo_product.save()
     # input file//eo_product
-    input_obj: EOProduct = eo_product.eo_products_inputs.first()
+    input_obj: EOProduct = input_file
 
     with TemporaryDirectory() as tmp_dir:
         output_temp_file = f"{tmp_dir}/tmp_file.nc"
@@ -450,7 +454,7 @@ def task_s02p02_vci1km_v2(eo_product_pk):
             raise e
         try:
             vci_float = get_VCI(merged, f_ndvi[:-3] + '_VCI_temp.nc', dir_out)
-        except:
+        except Exception:
             print('Problem computing VCI')
         try:
             date = os.path.basename(f_ndvi).split('_')[0]
@@ -461,8 +465,11 @@ def task_s02p02_vci1km_v2(eo_product_pk):
             raise e
         return os.path.join(dir_out, filename)
 
-    output_obj = EOProduct.objects.get(pk=eo_product_pk)
-    ndvi_1k_obj = output_obj.eo_products_inputs.first()
+    output_obj = EOProduct.objects.get(id=eo_product_pk)
+
+    input_eo_product_group = output_obj.group.eoproductgroup.pipelines_from_output.get().input_groups.get().eoproductgroup
+    input_files_qs = EOProduct.objects.filter(group=input_eo_product_group, reference_date=output_obj.reference_date)
+    ndvi_1k_obj = input_files_qs.get()
 
     lts_dir = Path('/aux_files/NDVI_LTS')
     ndvi_path = ndvi_1k_obj.file.path
@@ -498,9 +505,10 @@ def task_s02p02_lai300m_v1(eo_product_pk: int):
 
     produced_file = EOProduct.objects.get(id=eo_product_pk)
     pipeline = Pipeline.objects.get(task_name='task_s02p02_lai300m_v1', task_kwargs={})
-    pipeline_input_group = pipeline.input_group
-    input_files_qs = EOSource.objects.filter(group=pipeline_input_group, reference_date=produced_file.reference_date)
-    eo_source: EOSource = input_files_qs.first()
+    pipeline_input_groups = pipeline.input_groups.all()
+    input_files_qs = EOSource.objects.filter(group__eosource__group__in=pipeline_input_groups,
+                                             reference_date=produced_file.reference_date).distinct()
+    eo_source: EOSource = input_files_qs.get()
 
     filename_in = eo_source.filename
 
@@ -557,10 +565,8 @@ def task_s02p02_lai300m_v1(eo_product_pk: int):
 @shared_task
 def task_s02p02_ndvianom250m(eo_product_pk: int, iso: str):
     produced_file = EOProduct.objects.get(id=eo_product_pk)
-    pipeline = Pipeline.objects.get(task_name='task_s02p02_ndvianom250m', task_kwargs={"iso": iso})
-    pipeline_input_group = pipeline.input_group
-    input_files_qs = EOSource.objects.filter(group=pipeline_input_group,
-                                             reference_date=produced_file.reference_date)
+    input_eo_source_group = produced_file.group.eoproductgroup.pipelines_from_output.get().input_groups.get().eosourcegroup
+    input_files_qs = EOSource.objects.filter(group=input_eo_source_group, reference_date=produced_file.reference_date)
 
     import rasterio
     from rasterio.merge import merge as rio_merge
@@ -635,7 +641,8 @@ def task_s02p02_ndvianom250m(eo_product_pk: int, iso: str):
 
     eo_product = EOProduct.objects.get(pk=eo_product_pk)
     if iso == 'ZAF':
-        f_shp = '/aux_files/Border_shp/Country_SAfr_main.shp'
+        # South Africa
+        f_shp = '/aux_files/Border_shp/Country_SAfr.shp'
     elif iso == 'MOZ':
         f_shp = '/aux_files/Border_shp/MOZ_adm0.shp'
     elif iso == 'TUN':

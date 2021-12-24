@@ -10,35 +10,45 @@
         <div class="row">
             {{ group_name }}
             <div class="col"><a href="{% url "eo_engine:main-page" %}">MainPage</a></div>
-            {#            <div class="col"><a href="{% url "eo_engine:list-eoproducts" %}"> Products</a></div>#}
         </div>
     </div>
-    <table style="width: 100%">
-        <tr>
-            <th>ID</th>
-            <th>Filename</th>
-            <th>Reference Date</th>
-            <th>State</th>
-            {#            <th>Cancel Task</th>#}
-            <th>Fetch from remote Server</th>
-            <th>Download locally</th>
-            {#            <th>Delete</th>#}
-        </tr>
-        {% for eo_source in data %}
-            <tr>
-                <td>{{ eo_source.pk }}</td>
-                <td>{{ eo_source.filename }}</td>
-                <td>{{ eo_source.reference_date | date:"D d M Y" }}</td>
-                <td>{{ eo_source.state }}</td>
-                <td><a href="{{ eo_source.download_task_url }}">Fetch from Remote Server</a></td>
-                {% if eo_source.file %}
-                    <td><a href="{{ eo_source.file }}">Download</a></td>
-                {% else %}
-                    <td>-</td>
-                {% endif %}
-            </tr>
+    <div class="container-fluid">
+        {% for input_group in data %}
+            {{ input_group.group_name }}
+            {% if  input_group.discover_url %}
+                <a class="btn btn-primary" href="{{ input_group.discover_url.url }}"
+                   role="button">{{ input_group.discover_url.label }}</a>
+            {% endif %}
+            <table class="table">
+                <thead>
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Filename</th>
+                    <th scope="col">Reference Date</th>
+                    <th scope="col">State</th>
+                    <th scope="col">Fetch from remote Server</th>
+                    <th scope="col">Download locally</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for eo_source in input_group.entries %}
+                    <tr>
+                        <td>{{ eo_source.pk }}</td>
+                        <td>{{ eo_source.filename }}</td>
+                        <td>{{ eo_source.reference_date | date:"D d M Y" }}</td>
+                        <td>{{ eo_source.state }}</td>
+                        <td><a class="btn btn-primary"
+                               href="{% url "eo_engine:submit-task" %}?task_name=task_download_file&eo_source_pk={{ eo_source.pk }} ">Submit-Task</a>
+                        </td>
+                        {% if eo_source.file %}
+                            <td><a href="/media/{{ eo_source.file }}" download>Download</a></td>
+                        {% else %}
+                            <td>-</td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
         {% endfor %}
-
-    </table>
-
+    </div>
 {% endblock %}

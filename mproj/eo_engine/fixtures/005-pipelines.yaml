@@ -1,31 +1,31 @@
 - model: eo_engine.Pipeline
   pk: null
   fields:
-    name: "NDVI pre-processing (V2 to V3)"
-    description: "NDVI Preprocessing from C_GSL v2 to v3. The output is used as another 
+    name: "NDVI 300m v2 pre-processing"
+    description: "NDVI CGLS v2 clipping to Africa. The output is used as another 
     input to another process. The inputs are discovered by a crawler with root_url: https://land.copernicus.vgt.vito.be/PDF/datapool/Vegetation/Indicators/NDVI_300m_V2/ 
     Usual file size is about 2GB."
     package: 'S02P02'
     timestamp: 2021-12-10T19:10:20Z
     last_modified: 2021-12-10T19:10:20Z
-    input_group: 36
+    input_groups: [ 36 ]
     output_group: 1
     output_filename_template: '{YYYYMMDD}_SE3_AFR_0300m_0010_NDVI.nc'
-    output_folder: 'S2_P02/NDVI_300'
+    output_folder: 'S2_P02/NDVI_300_v2'
     task_name: 'task_s02p02_ndvi300m_v2'
-    task_kwargs: { "AOI": [ -30, 40, 60, -40 ] }
+    task_kwargs: { "aoi": [ -30, 40, 60, -40 ] }
 - model: eo_engine.Pipeline
   pk: null
   fields:
-    name: "NDVI pre-processing 2 (resampling)"
-    description: "NDVI Preprocessing and resampling from 300m to 1km. 
-    The inputs are coming from another pipelines, and the outputs are used for another pipeline"
+    name: "NDVI resampling to 1km"
+    description: "NDVI resampling from 300m to 1km. 
+    The inputs are coming from another pipeline and the outputs are used for another pipeline"
     package: 'S02P02'
     timestamp: 2021-12-10T19:10:20Z
     last_modified: 2021-12-10T19:10:20Z
-    input_group: 1
+    input_groups: [ 1 ]
     output_group: 2
-    output_folder: 'S2_P02/NDVI_1km'
+    output_folder: 'S2_P02/NDVI_1km_v3'
     output_filename_template: '{YYYYMMDD}_SE3_AFR_1000m_0010_NDVI.nc'
     task_name: 'task_s02p02_nvdi1km_v3'
     task_kwargs: { }
@@ -37,7 +37,7 @@
     package: 'S02P02'
     timestamp: 2021-12-10T19:10:20Z
     last_modified: 2021-12-10T19:10:20Z
-    input_group: 2
+    input_groups: [ 2 ]
     output_group: 3
     output_folder: 'S2_P02/VCI/v2'
     output_filename_template: 'g2_BIOPAR_VCI_{YYYYMMDD}_AFRI_OLCI_V2.0.nc'
@@ -46,13 +46,13 @@
 - model: eo_engine.Pipeline
   pk: null
   fields:
-    name: "LAI clipping"
+    name: "LAI 300m clipping"
     description: 'Clipping of Global LAI 300m to Africa Extends.
     The discovery of inputs are discovered by a spider with a root_url: https://land.copernicus.vgt.vito.be/PDF/datapool/Vegetation/Properties/LAI_300m_V1/"'
     package: 'S02P02'
     timestamp: 2021-12-10T19:10:20Z
     last_modified: 2021-12-10T19:10:20Z
-    input_group: 37
+    input_groups: [ 37 ]
     output_group: 4
     output_folder: 'S2_P02/LAI_300'
     output_filename_template: '{YYYYMMDD}_SE3_AFR_0300m_0010_LAI.nc'
@@ -61,13 +61,13 @@
 - model: eo_engine.Pipeline
   pk: null
   fields:
-    name: "LAI Afr 300m Processing"
+    name: "LAI resampling to 1km"
     enabled: False
     description: 'Not implemented yet!!!'
     package: 'S02P02'
     timestamp: 2021-12-10T19:10:20Z
     last_modified: 2021-12-10T19:10:20Z
-    input_group: 4
+    input_groups: [ 4 ]
     output_group: 5
     output_filename_template: '{YYYYMMDD}_SE3_AFR_1000m_0010_LAI.nc'
     output_folder: 'S2_P02/LAI_1km'
@@ -79,11 +79,11 @@
     name: "NDVI Anomaly (TUN)"
     description: 'Mosaic Generation for NDVI anomaly from individual tiles for TUN. 
     The sourcing of inputs are discovered by a spider 
-    with root_url: https://gimms.gsfc.nasa.gov/MODIS/std/GMOD09Q1/tif/NDVI_anom_S2001-2015/'
+    with root_url: https://gimms.gsfc.nasa.gov/MODIS/std/GMOD09Q1/tif/NDVI_anom_S2001-2018/'
     package: 'S02P02'
     timestamp: 2021-12-10T19:10:20Z
     last_modified: 2021-12-10T19:10:20Z
-    input_group: 38
+    input_groups: [ 38 ]
     output_group: 6
     output_folder: 'S2_P02/NDVI_anom'
     output_filename_template: '{YYYYMMDD}_MOD_TUN_0250m_0008_NDVI_anom.nc'
@@ -95,11 +95,11 @@
     name: "NDVI Anomaly (RWA)"
     description: 'Mosaic Generation for NDVI anomaly from individual tiles for RWA. 
     The sourcing of inputs are discovered by a spider 
-    with root_url: https://gimms.gsfc.nasa.gov/MODIS/std/GMOD09Q1/tif/NDVI_anom_S2001-2015/'
+    with root_url: https://gimms.gsfc.nasa.gov/MODIS/std/GMOD09Q1/tif/NDVI_anom_S2001-2018/'
     package: 'S02P02'
     timestamp: 2021-12-10T19:10:20Z
     last_modified: 2021-12-10T19:10:20Z
-    input_group: 39
+    input_groups: [ 39 ]
     output_group: 7
     output_folder: 'S2_P02/NDVI_anom'
     output_filename_template: '{YYYYMMDD}_MOD_RWA_0250m_0008_NDVI_anom.nc'
@@ -112,10 +112,10 @@
     name: "NDVI Anomaly (ETH)"
     description: 'Mosaic Generation for NDVI anomaly from individual tiles for ETH. 
     The sourcing of inputs are discovered by a spider 
-    with root_url: https://gimms.gsfc.nasa.gov/MODIS/std/GMOD09Q1/tif/NDVI_anom_S2001-2015/'
+    with root_url: https://gimms.gsfc.nasa.gov/MODIS/std/GMOD09Q1/tif/NDVI_anom_S2001-2018/'
     timestamp: 2021-12-10T19:10:20Z
     last_modified: 2021-12-10T19:10:20Z
-    input_group: 40
+    input_groups: [ 40 ]
     output_group: 8
     output_folder: 'S2_P02/NDVI_anom'
     output_filename_template: '{YYYYMMDD}_MOD_ETH_0250m_0008_NDVI_anom.nc'
@@ -128,10 +128,10 @@
     name: "NDVI Anomaly (ZAF)"
     description: 'Mosaic Generation for NDVI anomaly from individual tiles for ZAF. 
     The sourcing of inputs are discovered by a spider 
-    with root_url: https://gimms.gsfc.nasa.gov/MODIS/std/GMOD09Q1/tif/NDVI_anom_S2001-2015/'
+    with root_url: https://gimms.gsfc.nasa.gov/MODIS/std/GMOD09Q1/tif/NDVI_anom_S2001-2018/'
     timestamp: 2021-12-10T19:10:20Z
     last_modified: 2021-12-10T19:10:20Z
-    input_group: 41
+    input_groups: [ 41 ]
     output_group: 9
     output_folder: 'S2_P02/NDVI_anom'
     output_filename_template: '{YYYYMMDD}_MOD_ZAF_0250m_0008_NDVI_anom.nc'
@@ -144,10 +144,10 @@
     name: "NDVI Anomaly (NER)"
     description: 'Mosaic Generation for NDVI anomaly from individual tiles for NER. 
     The sourcing of inputs are discovered by a spider 
-    with root_url: https://gimms.gsfc.nasa.gov/MODIS/std/GMOD09Q1/tif/NDVI_anom_S2001-2015/'
+    with root_url: https://gimms.gsfc.nasa.gov/MODIS/std/GMOD09Q1/tif/NDVI_anom_S2001-2018/'
     timestamp: 2021-12-10T19:10:20Z
     last_modified: 2021-12-10T19:10:20Z
-    input_group: 42
+    input_groups: [ 42 ]
     output_group: 10
     output_folder: 'S2_P02/NDVI_anom'
     output_filename_template: '{YYYYMMDD}_MOD_NER_0250m_0008_NDVI_anom.nc'
@@ -157,13 +157,13 @@
   pk: null
   fields:
     name: "NDVI Anomaly (GAH)"
-    description: 'Mosaic Generation for NDVI anomaly from individual tiles for GAH. 
+    description: 'Mosaic Generation for NDVI anomaly from individual tiles for GHA. 
     The sourcing of inputs are discovered by a spider 
-    with root_url: https://gimms.gsfc.nasa.gov/MODIS/std/GMOD09Q1/tif/NDVI_anom_S2001-2015/'
+    with root_url: https://gimms.gsfc.nasa.gov/MODIS/std/GMOD09Q1/tif/NDVI_anom_S2001-2018/'
     package: 'S02P02'
     timestamp: 2021-12-10T19:10:20Z
     last_modified: 2021-12-10T19:10:20Z
-    input_group: 43
+    input_groups: [ 43 ]
     output_group: 11
     output_folder: 'S2_P02/NDVI_anom'
     output_filename_template: '{YYYYMMDD}_MOD_GAH_0250m_0008_NDVI_anom.nc'
@@ -176,10 +176,10 @@
     name: "NDVI Anomaly (MOZ)"
     description: 'Mosaic Generation for NDVI anomaly from individual tiles for MOZ. 
     The sourcing of inputs are discovered by a spider 
-    with root_url: https://gimms.gsfc.nasa.gov/MODIS/std/GMOD09Q1/tif/NDVI_anom_S2001-2015/'
+    with root_url: https://gimms.gsfc.nasa.gov/MODIS/std/GMOD09Q1/tif/NDVI_anom_S2001-2018/'
     timestamp: 2021-12-10T19:10:20Z
     last_modified: 2021-12-10T19:10:20Z
-    input_group: 44
+    input_groups: [ 44 ]
     output_group: 12
     output_folder: 'S2_P02/NDVI_anom'
     output_filename_template: '{YYYYMMDD}_MOD_MOZ_0250m_0008_NDVI_anom.nc'
@@ -192,12 +192,265 @@
     package: 'S02P02'
     description: 'Mosaic Generation for NDVI anomaly from individual tiles for KEN. 
     The sourcing of inputs are discovered by a spider 
-    with root_url: https://gimms.gsfc.nasa.gov/MODIS/std/GMOD09Q1/tif/NDVI_anom_S2001-2015/'
+    with root_url: https://gimms.gsfc.nasa.gov/MODIS/std/GMOD09Q1/tif/NDVI_anom_S2001-2018/'
     timestamp: 2021-12-10T19:10:20Z
     last_modified: 2021-12-10T19:10:20Z
-    input_group: 45
+    input_groups: [ 45 ]
     output_group: 13
     output_folder: 'S2_P02/NDVI_anom'
     output_filename_template: '{YYYYMMDD}_MOD_KEN_0250m_0008_NDVI_anom.nc'
     task_name: 'task_s02p02_ndvianom250m'
     task_kwargs: { "iso": "KEN" }
+- model: eo_engine.Pipeline
+  pk: null
+  fields:
+    name: "ETanomaly 5.6km pre-processing"
+    description: "Download and clipping to Africa of ETanomaly. The inputs are sourced from https://edcintl.cr.usgs.gov/downloads/sciweb1/shared/fews/web/global/monthly/etav5/anomaly/downloads."
+    package: 'S06P04'
+    timestamp: 2021-12-10T19:10:20Z
+    last_modified: 2021-12-10T19:10:20Z
+    input_groups: [ 51 ]
+    output_group: 28
+    output_folder: 'S6_P04/ETanomaly_5.6km/v5'
+    output_filename_template: '{YYYYMMDD}_MOD_AFR_5600m_0030_ETanom_v5.nc'
+    task_name: 'task_s06p04_etanom5km'
+    task_kwargs: { }
+- model: eo_engine.Pipeline
+  pk: null
+  fields:
+    name: "ET 3km pre-processing"
+    description: "Download and clipping to Africa of LSASAF DMET. The inputs are sourced from sftp link: /home/safpt/OperationalChain/LSASAF_Products/DMET."
+    package: 'S06P04'
+    timestamp: 2021-12-10T19:10:20Z
+    last_modified: 2021-12-10T19:10:20Z
+    input_groups: [ 50 ]
+    output_group: 27
+    output_folder: 'S6_P04/ET_3km'
+    output_filename_template: 'LSASAF_MSG_DMET_Africa_{YYYYMMDD}.nc'
+    task_name: 'task_s06p04_et3km'
+    task_kwargs: { }
+- model: eo_engine.Pipeline
+  pk: null
+  fields:
+    name: "ET 250m pre-processing"
+    description: "Download and pre-processing of FAO WaPOR 250m AETI, NDVI, and LST files for Africa. The inputs are sourced from WaPOR API."
+    package: 'S06P04'
+    timestamp: 2021-12-10T19:10:20Z
+    last_modified: 2021-12-10T19:10:20Z
+    input_groups: [ 52,53, 54 ]
+    output_group: 29
+    output_folder: 'S6_P04/ET_250m'
+    output_filename_template: 'L1_AETI_{YYYYMMDD}_QUAL.nc'
+    task_name: 'task_s06p04_et250m'
+    task_kwargs: { "iso": "AFRICA" }
+- model: eo_engine.Pipeline
+  pk: null
+  fields:
+    name: "ET 100m pre-processing TUN"
+    description: "Download and pre-processing of FAO WaPOR 100m AETI, NDVI, and LST files for TUN. The inputs are sourced from WaPOR API."
+    package: 'S06P04'
+    timestamp: 2021-12-10T19:10:20Z
+    last_modified: 2021-12-10T19:10:20Z
+    input_groups: [ 55, 56, 57 ]
+    output_group: 30
+    output_folder: 'S6_P04/ET_100m/TUN'
+    output_filename_template: 'L2_AETI_{YYYYMMDD}_TUN_QUAL.nc'
+    task_name: 'task_s06p04_et100m'
+    task_kwargs: { "iso": "TUN" }
+- model: eo_engine.Pipeline
+  pk: null
+  fields:
+    name: "ET 100m pre-processing KEN"
+    description: "Download and pre-processing of FAO WaPOR 100m AETI, NDVI, and LST files for KEN. The inputs are sourced from WaPOR API."
+    package: 'S06P04'
+    timestamp: 2021-12-10T19:10:20Z
+    last_modified: 2021-12-10T19:10:20Z
+    input_groups: [ 58, 59, 60 ]
+    output_group: 31
+    output_folder: 'S6_P04/ET_100m/KE'
+    output_filename_template: 'L2_AETI_{YYYYMMDD}_KEN_QUAL.nc'
+    task_name: 'task_s06p04_et100m'
+    task_kwargs: { "iso": "KEN" }
+- model: eo_engine.Pipeline
+  pk: null
+  fields:
+    name: "ET 100m pre-processing MOZ"
+    description: "Download and pre-processing of FAO WaPOR 100m AETI, NDVI, and LST files for MOZ. The inputs are sourced from WaPOR API."
+    package: 'S06P04'
+    timestamp: 2021-12-10T19:10:20Z
+    last_modified: 2021-12-10T19:10:20Z
+    input_groups: [ 61, 62, 63 ]
+    output_group: 32
+    output_folder: 'S6_P04/ET_100m/MOZ'
+    output_filename_template: 'L2_AETI_{YYYYMMDD}_MOZ_QUAL.nc'
+    task_name: 'task_s06p04_et100m'
+    task_kwargs: { "iso": "MOZ" }
+- model: eo_engine.Pipeline
+  pk: null
+  fields:
+    name: "ET 100m pre-processing RWA"
+    description: "Download and pre-processing of FAO WaPOR 100m AETI, NDVI, and LST files for RWA. The inputs are sourced from WaPOR API."
+    package: 'S06P04'
+    timestamp: 2021-12-10T19:10:20Z
+    last_modified: 2021-12-10T19:10:20Z
+    input_groups: [ 64, 65, 66 ]
+    output_group: 33
+    output_folder: 'S6_P04/ET_100m/RW'
+    output_filename_template: 'L2_AETI_{YYYYMMDD}_RWA_QUAL.nc'
+    task_name: 'task_s06p04_et100m'
+    task_kwargs: { "iso": "RWA" }
+- model: eo_engine.Pipeline
+  pk: null
+  fields:
+    name: "ET 100m pre-processing ETH"
+    description: "Download and pre-processing of FAO WaPOR 100m AETI, NDVI, and LST files for ETH. The inputs are sourced from WaPOR API."
+    package: 'S06P04'
+    timestamp: 2021-12-10T19:10:20Z
+    last_modified: 2021-12-10T19:10:20Z
+    input_groups: [ 67, 68, 69 ]
+    output_group: 34
+    output_folder: 'S6_P04/ET_100m/ETH'
+    output_filename_template: 'L2_AETI_{YYYYMMDD}_ETH_QUAL.nc'
+    task_name: 'task_s06p04_et100m'
+    task_kwargs: { "iso": "ETH" }
+- model: eo_engine.Pipeline
+  pk: null
+  fields:
+    name: "ET 100m pre-processing GHA"
+    description: "Download and pre-processing of FAO WaPOR 100m AETI, NDVI, and LST files for GHA. The inputs are sourced from WaPOR API."
+    package: 'S06P04'
+    timestamp: 2021-12-10T19:10:20Z
+    last_modified: 2021-12-10T19:10:20Z
+    input_groups: [ 70, 71, 72 ]
+    output_group: 35
+    output_folder: 'S6_P04/ET_100m/GH'
+    output_filename_template: 'L2_AETI_{YYYYMMDD}_GHA_QUAL.nc'
+    task_name: 'task_s06p04_et100m'
+    task_kwargs: { "iso": "GHA" }
+
+- model: eo_engine.Pipeline
+  pk: null
+  fields:
+    name: "WB 300m v2 pre-processing"
+    description: "WB 300m CGLS v2 clipping to Africa. The files are downloaded from the Copernicus ftp link: /home/glbland_ftp/Core/SIRS/dataset-sirs-wb-nrt-300m."
+    package: 'S06P01'
+    timestamp: 2021-12-10T19:10:20Z
+    last_modified: 2021-12-10T19:10:20Z
+    input_groups: [ 47 ]
+    output_group: 16
+    output_filename_template: '{YYYYMM}01_SE2_AFR_0300m_0030_WBMA.nc'
+    output_folder: 'S6_P01/WB_300/v2'
+    task_name: 'task_s06p01_wb300m_v2'
+    task_kwargs: { }
+- model: eo_engine.Pipeline
+  pk: null
+  fields:
+    name: "WB 100m v1 pre-processing TUN"
+    description: "WB  100m CGLS v1 clipping to TUN AOI. The files are downloaded from the Copernicus ftp link: /home/glbland_ftp/Core/SIRS/dataset-sirs-wb-nrt-100m."
+    package: 'S06P01'
+    timestamp: 2021-12-10T19:10:20Z
+    last_modified: 2021-12-10T19:10:20Z
+    input_groups: [ 48 ]
+    output_group: 17
+    output_filename_template: '{YYYYMM}01_SE2_TUN_0100m_0030_WBMA.nc'
+    output_folder: 'S6_P01/WB_100/TUN'
+    task_name: 'task_s06p01_wb100m'
+    task_kwargs: { "aoi_wkt": "POLYGON((7.491 37.345,  11.583 37.345,  11.583 30.219, 7.491 30.219, 7.491 37.345, 7.491 37.345))" }
+- model: eo_engine.Pipeline
+  pk: null
+  fields:
+    name: "WB 100m v1 pre-processing RWA"
+    description: "WB  100m CGLS v1 clipping to RWA AOI. The files are downloaded from the Copernicus ftp link: /home/glbland_ftp/Core/SIRS/dataset-sirs-wb-nrt-100m."
+    package: 'S06P01'
+    timestamp: 2021-12-10T19:10:20Z
+    last_modified: 2021-12-10T19:10:20Z
+    input_groups: [ 48 ]
+    output_group: 18
+    output_filename_template: '{YYYYMM}01_SE2_RWA_0100m_0030_WBMA.nc'
+    output_folder: 'S6_P01/WB_100/RWA'
+    task_name: 'task_s06p01_wb100m'
+    task_kwargs: { "aoi_wkt": "POLYGON((28.845 -1.052, 30.894 -1.052, 30.894 -2.827, 28.845 -2.827, 28.845 -1.052, 28.845 -1.052))" }
+- model: eo_engine.Pipeline
+  pk: null
+  fields:
+    name: "WB 100m v1 pre-processing ETH"
+    description: "WB  100m CGLS v1 clipping to ETH AOI. The files are downloaded from the Copernicus ftp link: /home/glbland_ftp/Core/SIRS/dataset-sirs-wb-nrt-100m."
+    package: 'S06P01'
+    timestamp: 2021-12-10T19:10:20Z
+    last_modified: 2021-12-10T19:10:20Z
+    input_groups: [ 48 ]
+    output_group: 19
+    output_filename_template: '{YYYYMM}01_SE2_ETH_0100m_0030_WBMA.nc'
+    output_folder: 'S6_P01/WB_100/ETH'
+    task_name: 'task_s06p01_wb100m'
+    task_kwargs: { "aoi_wkt": "POLYGON((32.98 14.93, 48.0 14.93, 48.0 3.37, 32.98 3.37, 32.98 14.93, 32.98 14.93))" }
+- model: eo_engine.Pipeline
+  pk: null
+  fields:
+    name: "WB 100m v1 pre-processing MOZ"
+    description: "WB  100m CGLS v1 clipping to MOZ AOI. The files are downloaded from the Copernicus ftp link: /home/glbland_ftp/Core/SIRS/dataset-sirs-wb-nrt-100m."
+    package: 'S06P01'
+    timestamp: 2021-12-10T19:10:20Z
+    last_modified: 2021-12-10T19:10:20Z
+    input_groups: [ 48 ]
+    output_group: 20
+    output_filename_template: '{YYYYMM}01_SE2_MOZ_0100m_0030_WBMA.nc'
+    output_folder: 'S6_P01/WB_100/MOZ'
+    task_name: 'task_s06p01_wb100m'
+    task_kwargs: { "aoi_wkt": "POLYGON((30.208 -10.467, 40.849 -10.467, 40.849 -26.865, 30.208 -26.865, 30.208 -10.467, 30.208 -10.467))" }
+- model: eo_engine.Pipeline
+  pk: null
+  fields:
+    name: "WB 100m v1 pre-processing ZAF"
+    description: "WB  100m CGLS v1 clipping to ZAF AOI. The files are downloaded from the Copernicus ftp link: /home/glbland_ftp/Core/SIRS/dataset-sirs-wb-nrt-100m."
+    package: 'S06P01'
+    timestamp: 2021-12-10T19:10:20Z
+    last_modified: 2021-12-10T19:10:20Z
+    input_groups: [ 48 ]
+    output_group: 21
+    output_filename_template: '{YYYYMM}01_SE2_ZAF_0100m_0030_WBMA.nc'
+    output_folder: 'S6_P01/WB_100/ZAF'
+    task_name: 'task_s06p01_wb100m'
+    task_kwargs: { "aoi_wkt": "POLYGON((16 -22, 33 -22, 33 -35, 16 -35, 16 -22, 16 -22))" }
+- model: eo_engine.Pipeline
+  pk: null
+  fields:
+    name: "WB 100m v1 pre-processing GHA"
+    description: "WB  100m CGLS v1 clipping to GHA AOI. The files are downloaded from the Copernicus ftp link: /home/glbland_ftp/Core/SIRS/dataset-sirs-wb-nrt-100m."
+    package: 'S06P01'
+    timestamp: 2021-12-10T19:10:20Z
+    last_modified: 2021-12-10T19:10:20Z
+    input_groups: [ 48 ]
+    output_group: 22
+    output_filename_template: '{YYYYMM}01_SE2_GHA_0100m_0030_WBMA.nc'
+    output_folder: 'S6_P01/WB_100/GHA'
+    task_name: 'task_s06p01_wb100m'
+    task_kwargs: { "aoi_wkt": "POLYGON((-3.25 12.16, 2.205 12.16, 2.205 4.7, -3.25 4.7, -3.25 12.16, -3.25 12.16))" }
+- model: eo_engine.Pipeline
+  pk: null
+  fields:
+    name: "WB 100m v1 pre-processing NER"
+    description: "WB  100m CGLS v1 clipping to NER AOI. The files are downloaded from the Copernicus ftp link: /home/glbland_ftp/Core/SIRS/dataset-sirs-wb-nrt-100m."
+    package: 'S06P01'
+    timestamp: 2021-12-10T19:10:20Z
+    last_modified: 2021-12-10T19:10:20Z
+    input_groups: [ 48 ]
+    output_group: 23
+    output_filename_template: '{YYYYMM}01_SE2_NER_0100m_0030_WBMA.nc'
+    output_folder: 'S6_P01/WB_100/NER'
+    task_name: 'task_s06p01_wb100m'
+    task_kwargs: { "aoi_wkt": "POLYGON((0 23.8, 16.1 23.8, 16.1 11.5, 0 11.5, 0 23.8, 0 23.8))" }
+- model: eo_engine.Pipeline
+  pk: null
+  fields:
+    name: "WB 100m v1 pre-processing KEN"
+    description: "WB  100m CGLS v1 clipping to KEN AOI. The files are downloaded from the Copernicus ftp link: /home/glbland_ftp/Core/SIRS/dataset-sirs-wb-nrt-100m."
+    package: 'S06P01'
+    timestamp: 2021-12-10T19:10:20Z
+    last_modified: 2021-12-10T19:10:20Z
+    input_groups: [ 48 ]
+    output_group: 24
+    output_filename_template: '{YYYYMM}01_SE2_KEN_0100m_0030_WBMA.nc'
+    output_folder: 'S6_P01/WB_100/KEN'
+    task_name: 'task_s06p01_wb100m'
+    task_kwargs: { "aoi_wkt": "POLYGON((33.89 4.625, 41.917 4.625, 41.917 -4.671, 33.89 -4.671, 33.89 4.625, 33.89 4.625))" }

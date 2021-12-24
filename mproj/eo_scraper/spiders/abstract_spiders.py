@@ -59,7 +59,13 @@ There are multiple variation of Spiders, The simplest one is the scrapy.Spider.
 class AfricultureCrawlerMixin:
     """ A set of common functions for all Crawlers """
 
-    def get_crawler_settings(self):
+    name: str
+
+    @property
+    def from_date(self):
+        return self.get_crawler_settings().from_date
+
+    def get_crawler_settings(self) -> EOSourceGroup:
         return CrawlerConfiguration.objects.filter(group=self.name).get()
 
     def get_group_settings(self) -> EOSourceGroup:
@@ -88,7 +94,7 @@ class AfricultureCrawlerMixin:
     # noinspection PyMethodMayBeStatic
     def should_process_filename(self, filename: str) -> bool:
         """Return True to process the Entry. False to Drop.
-        Some entries should not be processed based on the their filename. Eg tiles or other.
+        Some entries should not be processed based on their filename. Eg tiles or other.
         """
         return True
 

@@ -11,6 +11,14 @@ docker-compose up
 docker-compose run --rm worker migrate
 ```
 
+#### Load initial data
+
+```powershell
+docker compose run --rm worker loaddata 001-credentials.yaml 002-eo_groups.yaml 003-product_groups.yaml 004-source_groups.yaml 005-pipelines.yaml
+```
+
+
+
 ### Ops
 
 #### Start a scrape
@@ -19,23 +27,6 @@ docker-compose run --rm worker migrate
 docker-compose run --rm worker scrape  <name-of-spider> # or
 docker-compose run --rm worker scrape  --as-task <name-of-spider>  # to sent it to worker as task
 
-# spiders
-###  Lai
-# lai-1km-v2-spider
-# lai-1km-global-v1-spider
-# lai-300m-v1-spider
-
-###  NDVI
-# ndvi-300m-v1-spider
-# ndvi-300m-v2-spider
-# ndvi-1km-v1-spider
-# ndvi-1km-v2-spider
-# ndvi-1km-v3-spider
-
-#### VCI
-# vci-v1-spider
-# wb-africa-v1-spider
-```
 
 #### Download a data source
 

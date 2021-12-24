@@ -1,6 +1,8 @@
 from django.db import models
+from django.shortcuts import reverse
 from django.utils.functional import cached_property
-from typing import Literal
+
+from typing import Optional
 
 
 class EOProductGroupChoices(models.TextChoices):
@@ -107,24 +109,27 @@ class EOGroup(models.Model):
     description = models.TextField(default='No-Description')
 
     # noinspection PyUnresolvedReferences,PyStatementEffect
+    def discover_url(self) -> Optional[dict]:
+        raise NotImplementedError()
 
-    def has_product(self) -> bool:
+    def as_eosource_group(self):
         try:
-            self.eoproductgroup
-            return True
-        except self.DoesNotExist:
-            return False
+            return EOSourceGroup.objects.get(pk=self.pk)
+        except EOSourceGroup.DoesNotExist:
+            return None
 
-    def has_source(self) -> bool:
+    def as_eoproduct_group(self):
         try:
-            self.eosourcegroup
-            return True
-        except self.DoesNotExist:
-            return False
+            return EOProductGroup.objects.get(pk=self.pk)
+        except EOProductGroup.DoesNotExist:
+            return None
 
 
 class EOProductGroup(EOGroup):
     name = models.TextField(choices=EOSourceGroupChoices.choices, unique=True)
+
+    def discover_url(self) -> Optional[dict]:
+        return None
 
 
 class EOSourceGroup(EOGroup):
@@ -140,13 +145,21 @@ class EOSourceGroup(EOGroup):
                   'If not provided the ref date field must have a way to be populated')
     crawler_type = models.TextField(choices=CrawlerTypeChoices.choices, default=CrawlerTypeChoices.NONE)
 
+    def discover_url(self) -> Optional[dict]:
+        if self.crawler_type == self.CrawlerTypeChoices.SCRAPY_SPIDER:
+            return {
+                'label': 'Start Spider',
+                'url': reverse('eo_engine:crawler-configure', kwargs={
+                    'group_name': self.name})
+            }
+
+    def as_eo_product_group(self) -> Optional[EOProductGroup]:
+        return EOProductGroup.objects.get(pk=self.pk)
+
     @cached_property
     def date_regex_cached(self):
         return self.date_regex
 
-    # def get_crawler_task(self):
-    #     if self.crawler_type == '':
-    #         return task
     def crawler_kwargs(self) -> dict:
         if self.crawler_type == self.CrawlerTypeChoices.SCRAPY_SPIDER:
             return {'spider_name': self.name}

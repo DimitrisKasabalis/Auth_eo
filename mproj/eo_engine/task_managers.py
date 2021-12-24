@@ -83,7 +83,7 @@ class BaseTaskWithRetry(Task):
         try:
             task.time_to_complete = \
                 (task.datetime_finished - task.datetime_started).__str__()
-        except:
+        except Exception:
             task.time_to_complete = None
         task.status = task.TaskTypeChoices.SUCCESS
         task.save()

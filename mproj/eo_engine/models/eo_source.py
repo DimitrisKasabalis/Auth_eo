@@ -51,7 +51,8 @@ class EOSource(models.Model):
                              choices=EOSourceStateChoices.choices,
                              default=EOSourceStateChoices.AVAILABLE_REMOTELY)
 
-    group = models.ForeignKey('EOSourceGroup', on_delete=models.DO_NOTHING)
+    # Reason of M2M is that ndvi-anomaly tiles are used for multiple groups.
+    group = models.ManyToManyField('EOSourceGroup')
     # physical file. Read about DJANGO media files
     file = models.FileField(upload_to=_file_storage_path,
                             editable=False,
@@ -63,8 +64,8 @@ class EOSource(models.Model):
     domain = models.CharField(max_length=200)
     # reported filesize, bytes?
     filesize_reported = models.BigIntegerField(validators=(MinValueValidator(0),))
-    # product reference datetime
-    reference_date = models.DateField(null=True, help_text="product reference date")
+    # product reference datetime, cannot be null
+    reference_date = models.DateField(help_text="product reference date")
     # when did we see it?, change to date
     datetime_seen = models.DateTimeField(auto_created=True, help_text="datetime of when it was seen")
     # full url to resource.
@@ -74,7 +75,7 @@ class EOSource(models.Model):
     credentials = models.ForeignKey("Credentials", on_delete=models.SET_NULL, null=True)
 
     class Meta:
-        ordering = ["group", "-reference_date"]
+        ordering = ["filename", "-reference_date", "group__name"]
 
     def __str__(self):
         return f"{self.__class__.__name__}/{self.filename}/{self.state}/{self.id}"
@@ -108,50 +109,56 @@ class EOSource(models.Model):
 @receiver(post_save, sender=EOSource, weak=False, dispatch_uid='eosource_post_save_handler')
 def eosource_post_save_handler(instance: EOSource, **kwargs):
     """ Post save logic goes here. ie an asset is now available locally, are there products that can be made?"""
-    from eo_engine.common.s02p04 import is_gmod09q1_batch_complete
-    from eo_engine.models import Pipeline
-    from eo_engine.models import EOProduct, EOProductStateChoices, EOProductGroup
+    from eo_engine.common.s02p04 import is_gmod09q1_batch_complete_for_group
+    from eo_engine.models import EOProduct, EOProductStateChoices, Pipeline
 
     eo_source = instance
     # if asset is not local, ignore
     if eo_source.state != EOSourceStateChoices.AVAILABLE_LOCALLY:
         return
-        # pass
 
     # it's used for the output filenames
     yyyymmdd = eo_source.reference_date.strftime('%Y%m%d')
 
     # pipelines that are using this source as input:
-    pipelines = eo_source.group.pipelines_from_input.all()
+    pipelines = Pipeline.objects.filter(input_groups__in=eo_source.group.all())
 
     for pipeline in pipelines:
         # a pipeline should have one output group
-        output_group = EOProductGroup.objects.get(pipelines_from_output=pipeline)
+        output_group = pipeline.output_group
+        # but pipelines could have multiple input groups
+        for input_group in pipeline.input_groups.all():
+            input_group_eosource = input_group.as_eosource_group()
+            assert input_group_eosource is not None
 
-        output_filename = pipeline.output_filename(YYYYMMDD=yyyymmdd)
+            # so cast to Product grp
+            if hasattr(output_group, 'as_eo_product_group'):
+                output_group = output_group.as_eo_product_group()
 
-        prod, created = EOProduct.objects.get_or_create(
-            filename=output_filename,
-            group=output_group,
-            reference_date=eo_source.reference_date
-        )
-        if created:
-            prod.state = EOProductStateChoices.AVAILABLE
+            output_filename = pipeline.output_filename(YYYYMMDD=yyyymmdd)
 
-        # these bellow, are a batch, multiple inputs create one
-        if [EOSourceGroupChoices.S02P02_NDVIA_250M_ETH_GMOD, EOSourceGroupChoices.S02P02_NDVIA_250M_GHA_GMOD,
-            EOSourceGroupChoices.S02P02_NDVIA_250M_KEN_GMOD, EOSourceGroupChoices.S02P02_NDVIA_250M_MOZ_GMOD,
-            EOSourceGroupChoices.S02P02_NDVIA_250M_NER_GMOD, EOSourceGroupChoices.S02P02_NDVIA_250M_RWA_GMOD,
-            EOSourceGroupChoices.S02P02_NDVIA_250M_TUN_GMOD, EOSourceGroupChoices.S02P02_NDVIA_250M_ZAF_GMOD
-            ].count(eo_source.group.name):
-            if is_gmod09q1_batch_complete(eo_source):
+            prod, created = EOProduct.objects.get_or_create(
+                filename=output_filename,
+                group=output_group,
+                reference_date=eo_source.reference_date
+            )
+            if created:
                 prod.state = EOProductStateChoices.AVAILABLE
-            else:
-                prod.state = EOProductStateChoices.MISSING_SOURCE
 
-        # # mark it's inputs
-        # prod.eo_sources_inputs.add(eo_source)
-        prod.save()
+            # these bellow, are a batch, multiple inputs create one
+            if [EOSourceGroupChoices.S02P02_NDVIA_250M_ETH_GMOD, EOSourceGroupChoices.S02P02_NDVIA_250M_GHA_GMOD,
+                EOSourceGroupChoices.S02P02_NDVIA_250M_KEN_GMOD, EOSourceGroupChoices.S02P02_NDVIA_250M_MOZ_GMOD,
+                EOSourceGroupChoices.S02P02_NDVIA_250M_NER_GMOD, EOSourceGroupChoices.S02P02_NDVIA_250M_RWA_GMOD,
+                EOSourceGroupChoices.S02P02_NDVIA_250M_TUN_GMOD, EOSourceGroupChoices.S02P02_NDVIA_250M_ZAF_GMOD
+                ].count(input_group_eosource.name):
+                if is_gmod09q1_batch_complete_for_group(eo_source, input_group_eosource):
+                    prod.state = EOProductStateChoices.AVAILABLE
+                else:
+                    prod.state = EOProductStateChoices.MISSING_SOURCE
+
+            # # mark it's inputs
+            # prod.eo_sources_inputs.add(eo_source)
+            prod.save()
 
 
 __all__ = [
