@@ -412,6 +412,7 @@ def pipeline_inputs(request, pipeline_pk: int):
         for idx, eo_product_group in enumerate(input_eo_product_groups)
     ]
     context = {
+        "pipeline_pk": pipeline_pk,
         "data": input_eo_source_data + input_eo_product_data
     }
     return render(request, 'list_eosources.html', context=context)
@@ -428,6 +429,7 @@ def pipeline_outputs(request, pipeline_pk: int):
     task_kwargs = pipeline.task_kwargs
 
     context = {
+        "pipeline_pk": pipeline_pk,
         'group_name': output_group.get_name_display,
         'data': [
             {'pk': eo_product.pk,

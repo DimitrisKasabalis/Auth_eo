@@ -9,7 +9,12 @@
     <div class="container">
         <div class="row">
             {{ group_name }}
-            <div class="col"><a href="{% url "eo_engine:main-page" %}">MainPage</a></div>
+            <div class="col">
+                <a href="{% url "eo_engine:main-page" %}">MainPage</a>
+            </div>
+            <div class="col">
+                <a href="{% url "eo_engine:pipeline-outputs-list" pipeline_pk=pipeline_pk %}">Pipeline Output</a>
+            </div>
         </div>
     </div>
     <div class="container-fluid">

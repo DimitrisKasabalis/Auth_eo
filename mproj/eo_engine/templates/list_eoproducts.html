@@ -6,10 +6,14 @@
 {% block body %}
     <div class="container">
         <div class="row">
+            {{ group_name }}
+        </div>
+        <div class="row">
             <div class="col">
-                {{ group_name }}
                 <a href="{% url "eo_engine:main-page" %}">MainPage</a></div>
-            {#            <div class="col"><a href="{% url "eo_engine:list-eosources" %}">Sources</a></div>#}
+            <div class="col">
+                <a href="{% url "eo_engine:pipeline-inputs-list" pipeline_pk=pipeline_pk %}">Pipeline Inputs</a>
+            </div>
         </div>
     </div>
     <table style="width: 100%">
