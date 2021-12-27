@@ -155,7 +155,7 @@ def task_schedule_create_eoproduct():
 @shared_task(bind=True, autoretry_for=(AfriCultuReSRetriableError,), max_retries=100)
 def task_download_file(self, eo_source_pk: int):
     """
-    Download a remote asset identified by it's ID number.
+    Download a remote asset. Identified by it's ID number.
     if it's already available locally, set force_dl=True to download again.
 
     """
@@ -876,7 +876,7 @@ def task_s06p04_et3km(eo_product_pk: int):
                                  '-a', "ET_MISSING_VALUE,Band1,o,d,-1",
                                  '-a', "_FillValue,Band1,o,d,-0.001",
                                  final_file.name], check=True)
-        except Exception as e:
+        except BaseException as e:
             raise e
 
         content = File(final_file)

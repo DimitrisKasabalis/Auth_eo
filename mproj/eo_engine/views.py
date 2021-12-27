@@ -1,4 +1,5 @@
 import logging
+import re
 from celery.result import AsyncResult
 from celery.utils.serialization import strtobool
 from django.contrib import messages
@@ -13,7 +14,7 @@ from typing import Literal, Callable, Optional, Dict, Union
 
 from eo_engine.common.tasks import get_task_ref_from_name
 from eo_engine.models import EOSource, EOProduct, EOProductStateChoices, EOSourceGroup, EOProductGroup
-from eo_engine.models.factories import create_wapor_object
+from eo_engine.models.factories import create_or_get_wapor_object_from_filename
 from eo_engine.models.other import CrawlerConfiguration, Pipeline
 
 logger = logging.getLogger('eo_engine.frontend_ops')
@@ -66,8 +67,16 @@ def main_page(request):
                     'name': v.name,
                     'description': v.description,
                     'urls': v.urls()
-                } for idx, v in enumerate(Pipeline.objects.filter(package='S02P02'))}
+                } for idx, v in enumerate(Pipeline.objects.filter(package='S02P02').order_by('name'))}
             },
+            "3": {
+                "name": "S06P04",
+                "section_elements": {idx: {
+                    'name': v.name,
+                    'description': v.description,
+                    'urls': v.urls()
+                } for idx, v in enumerate(Pipeline.objects.filter(package='S06P04').order_by('name'))}
+            }
         }
     }
 
@@ -285,54 +294,70 @@ def utilities_view_post_credentials(request):
 
 
 def create_wapor_entry(request, product: str):
-    from eo_engine.common.time import month_dekad_to_running_decad
-    from .forms import WaporNdviForm
-    product = product.lower()
-    context = {
-        'product': product
-    }
-    if product == 'ndvi':
-        formKlass = WaporNdviForm
+    from eo_engine.common.time import month_dekad_to_running_decad, day2dekad
+    from .forms import WaporForm
 
-    else:
+    pat = re.compile(
+        r'S06P04_WAPOR_(?P<LEVEL>(L1|L2))_(?P<PROD>(AETI|QUAL_LST|QUAL_NDVI))_D_(?P<LOCATION>(AFRICA|\w{3}|))',
+        re.IGNORECASE)
+    match = pat.match(product)
+    if match is None:
         raise
+
+    group_dict = match.groupdict()
+    product_level = group_dict['LEVEL']
+    product_name = group_dict['PROD']
+    location = group_dict['LOCATION']
+    product_dimension = 'D'  # it's always D (DEKAD) at this stage
+
+    context = {
+        'product': product,
+        'product_name': product_name,
+        'product_level': product_level,
+        'product_location': location,
+        'product_dimension': 'D'
+    }
+
+    form_class = WaporForm
+
     if request.method == 'GET':
-        # dekads = get('https://io.apps.fao.org/gismgr/api/v1/catalog/workspaces/WAPOR_2/dimensions/DEKAD/members',
-        #              headers={'Content-Type': 'application/json'})
-        context.update(form=formKlass())
+        context.update(form=form_class())
         return render(request, 'utilities/create-wapor.html', context=context)
     if request.method == 'POST':
-        def form_to_wapor_name(form) -> str:
-            data = form.data
-            prod_name = form.prod_name
-            if isinstance(form, WaporNdviForm):
-                dimension = form.dimension
-                level = data['level'].upper()
-                year = int(data['year'])
-                year_str = str(year)
-                month = int(data["month"])
-                dekad = int(data["dekad"])
-                yearly_dekad = month_dekad_to_running_decad(month=month, dekad=dekad)
-                # 2101 -- year/year-dekad
-                time_element = f'{data["year"][2:]}{yearly_dekad}'
-                area = None if data['area'].lower() == 'africa' else data['area'].upper()
-            else:
-                raise
-            if area:
-                return f'{level}_{prod_name}_{dimension}_{time_element}_{area}.tif'
-            return f'{level}_{prod_name}_{dimension}_{time_element}.tif'
-
-        form = formKlass(request.POST)
+        form = form_class(request.POST)
+        from datetime import datetime
+        from dateutil.rrule import rrule, DAILY
         if form.is_valid():
-            filename = form_to_wapor_name(form)
+            data = form.data
+            from_date_str = data['from_date']
+            to_date_str = data['to_date']
+            from_date = datetime.strptime(from_date_str, '%Y-%m-%d')
+            to_date = datetime.strptime(to_date_str, '%Y-%m-%d')
+
+            obj_created = 0
+            obj_exist = 0
+            dt: datetime
+            for idx, dt in enumerate(rrule(DAILY, dtstart=from_date, until=to_date), 1):
+                year = dt.year
+                month = dt.month
+                day = dt.day
+                yearly_dekad = month_dekad_to_running_decad(month, day2dekad(day))
+                YYKK = f'{str(year)[2:]}{yearly_dekad}'  # last two digits of the year + running dekad
+                if location:
+                    filename = f'{product_level}_{product_name}_{product_dimension}_{YYKK}_{location}.tif'
+                else:
+                    filename = f'{product_level}_{product_name}_{product_dimension}_{YYKK}.tif'
+                obj, created = create_or_get_wapor_object_from_filename(filename)
+                if created:
+                    obj_created += 1
+                else:
+                    obj_exist += 1
+            messages.success(request, f' Added {obj_created} entries in the database.')
         else:
+            # form is not valid
             context.update(form=form)
             return render(request, 'utilities/create-wapor.html', context=context)
-        try:
-            obj = create_wapor_object(filename)
-            messages.success(request, obj)
-        except IntegrityError as exp:
-            messages.error(request, f'Could not create item: {exp}')
+
         return redirect(reverse('eo_engine:create-wapor', kwargs={'product': product}))
 
 

@@ -1,6 +1,9 @@
+import datetime
+
 import calendar
 from typing import ClassVar, Final
 
+from django.conf import settings
 from django import forms
 from django.forms import TextInput, JSONField, CharField
 
@@ -41,6 +44,19 @@ class RunTaskForm(forms.Form):
         task_name = self.cleaned_data['task_name']
         normalised_task_name = get_task_ref_from_name(task_name)
         return normalised_task_name
+
+
+class WaporForm(forms.Form):
+    from_date = forms.DateField(required=True,
+                                widget=forms.widgets.DateInput(
+                                    attrs={'type': 'date',
+                                           'min': settings.MIN_WAPOR_DATE,
+                                           'max': datetime.date.today().strftime('%Y-%m-%d')}))
+    to_date = forms.DateField(required=True,
+                              widget=forms.widgets.DateInput(
+                                  attrs={'type': 'date',
+                                         'min': settings.MIN_WAPOR_DATE,
+                                         'max': datetime.date.today().strftime('%Y-%m-%d')}))
 
 
 class WaporNdviForm(forms.Form):

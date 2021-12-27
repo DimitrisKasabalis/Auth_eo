@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 import os
 from pathlib import Path
+from datetime import date as dt_date
 
 from django.contrib.messages import constants as messages
 
@@ -145,11 +146,11 @@ CELERYD_PREFETCH_MULTIPLIER = 1
 GDAL_TRANSLATE = os.getenv("GDAl_TRANSLATE_PATH", "/srv/conda/envs/env_snap/bin/gdal_translate")
 GDAL_WRAP = os.getenv("GDAL_WARP_PATH", '/srv/conda/envs/env_snap/bin/gdalwarp')
 
-
 MESSAGE_TAGS = {
-        messages.DEBUG: 'alert-secondary',
-        messages.INFO: 'alert-info',
-        messages.SUCCESS: 'alert-success',
-        messages.WARNING: 'alert-warning',
-        messages.ERROR: 'alert-danger',
- }
+    messages.DEBUG: 'alert-secondary',
+    messages.INFO: 'alert-info',
+    messages.SUCCESS: 'alert-success',
+    messages.WARNING: 'alert-warning',
+    messages.ERROR: 'alert-danger',
+}
+MIN_WAPOR_DATE = dt_date(2020, 7, 1)

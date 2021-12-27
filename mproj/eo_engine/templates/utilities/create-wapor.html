@@ -1,11 +1,31 @@
 {% extends "base.html" %}
-{% block Title %}Main Page{% endblock %}
-{% block header %}AfriCultuRes{% endblock %}
+{% block Title %}Add WAPOR entries{% endblock %}
+{% block header %}WAPOR entries{% endblock %}
 {% block body %}
-    <form action="{% url "eo_engine:create-wapor" product=product %}" method="post">
-        {{ form }}
-        {% csrf_token %}
-    <input type="submit" value="OK">
-    </form>
-    <a href="{% url "eo_engine:main-page" %}">Home</a>
+    <div class="container-fluid">
+        <div class="container-fluid">
+            <h1 class="display-6">Add Wapor Entries</h1>
+            <p>WAPOR products are requested ON-DEMAND. This means that there is not a place (to my knowledge) where you
+                can crawl and identify already generated products, but rather you ask FAO service what you want and it
+                generates it for you. </p>
+            <p>In this context, this forms adds in this application, the correct entries in the database to help it to
+                generate the correct server requests</p>
+            <p>You want to Generate:</p>
+            <dl class="row">
+                <dt class="col-sm-3">Product</dt>
+                <dd class="col-sm-9">{{ product_name }}</dd>
+                <dt class="col-sm-3">Level</dt>
+                <dd class="col-sm-9">{{ product_level }}</dd>
+                <dt class="col-sm-3">Location</dt>
+                <dd class="col-sm-9">{{ product_location }}</dd>
+            </dl>
+        </div>
+
+        <form action="{% url "eo_engine:create-wapor" product=product %}" method="post">{% csrf_token %}
+            {{ form }}
+            <br>
+            <input type="submit" value="OK">
+        </form>
+        <a href="{% url "eo_engine:main-page" %}">Home</a>
+    </div>
 {% endblock %}

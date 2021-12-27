@@ -120,7 +120,7 @@ def runningdekad2date(year: int, rdekad: int) -> (dt_date, dt_date):
     return start_day, end_date
 
 
-def day2dekad(day):
+def day2dekad(day: int):
     """Returns the dekad of a day.
     Parameters
     ----------

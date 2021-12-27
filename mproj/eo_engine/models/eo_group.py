@@ -53,6 +53,8 @@ class EOProductGroupChoices(models.TextChoices):
 
 
 class EOSourceGroupChoices(models.TextChoices):
+    # Naming convention:
+    # <PACKAGE_NAME>_OTHER
     #  S02P02
     S02P02_NDVI_300M_V2_GLOB_CGLS = 'S02P02_NDVI_300M_V2_GLOB_CGLS', "Copernicus Global Land Service NDVI 300m v2"
     S02P02_NDVI_300M_V3_AFR = 'S02P02_NDVI_300M_V3_AFR', "Generated NDVI  300M v3"
@@ -136,7 +138,7 @@ class EOSourceGroup(EOGroup):
     class CrawlerTypeChoices(models.TextChoices):
         SCRAPY_SPIDER = 'SCRAPY_SPIDER', 'Using Scrappy Spider'
         OTHER_SFTP = 'OTHER (SFTP)', 'Using sftp Crawler'
-        OTHER_WAPOR = 'OTHER (WAPOR)' 'Wapor on demand'
+        OTHER_WAPOR = 'OTHER (WAPOR)', 'Wapor on demand'
         NONE = 'NONE', 'Not using crawling'
 
     name = models.TextField(choices=EOSourceGroupChoices.choices, unique=True)
@@ -151,6 +153,12 @@ class EOSourceGroup(EOGroup):
                 'label': 'Start Spider',
                 'url': reverse('eo_engine:crawler-configure', kwargs={
                     'group_name': self.name})
+            }
+
+        if self.crawler_type == self.CrawlerTypeChoices.OTHER_WAPOR:
+            return {
+                'label': 'Generate WAPOR Entry',
+                'url': reverse('eo_engine:create-wapor', kwargs={'product': self.name})
             }
 
     def as_eo_product_group(self) -> Optional[EOProductGroup]:

@@ -29,7 +29,7 @@ def _file_storage_path(instance: 'EOSource', filename: str):
         if os.path.exists(final_path):
             os.remove(final_path)
 
-        return full_path
+    return full_path
 
 
 class EOSourceStateChoices(models.TextChoices):
@@ -110,6 +110,7 @@ class EOSource(models.Model):
 def eosource_post_save_handler(instance: EOSource, **kwargs):
     """ Post save logic goes here. ie an asset is now available locally, are there products that can be made?"""
     from eo_engine.common.s02p04 import is_gmod09q1_batch_complete_for_group
+    from eo_engine.common.s06p04 import is_s06p04_wapor_batch_complete_for_group
     from eo_engine.models import EOProduct, EOProductStateChoices, Pipeline
 
     eo_source = instance
@@ -155,9 +156,11 @@ def eosource_post_save_handler(instance: EOSource, **kwargs):
                     prod.state = EOProductStateChoices.AVAILABLE
                 else:
                     prod.state = EOProductStateChoices.MISSING_SOURCE
-
-            # # mark it's inputs
-            # prod.eo_sources_inputs.add(eo_source)
+            if input_group_eosource.name.startswith('S06P04_WAPOR'):
+                if is_s06p04_wapor_batch_complete_for_group(eo_source, pipeline):
+                    prod.state = EOProductStateChoices.AVAILABLE
+                else:
+                    prod.state = EOProductStateChoices.MISSING_SOURCE
             prod.save()
 
 

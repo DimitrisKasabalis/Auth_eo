@@ -1,11 +1,10 @@
-from copy import copy
-from pathlib import Path
-from typing import List
-
 from celery.utils.log import get_task_logger
+from copy import copy
 from django.core.files import File
 from django.core.files.temp import NamedTemporaryFile
 from django.db import connections
+from pathlib import Path
+from typing import List
 
 from eo_engine.errors import AfriCultuReSRetriableError, AfriCultuReSError
 from eo_engine.models import EOSource, EOSourceStateChoices
@@ -37,7 +36,6 @@ def download_http_eosource(pk_eosource: int) -> str:
 
         bytes_processed = 0
         for chunk in response.iter_content(chunk_size=2 * 1024):
-            # eosource.refresh_from_db()  # ping to keep db connection alive
             bytes_processed += 2 * 1024
 
             file_handle.write(chunk)
@@ -156,19 +154,19 @@ def download_wapor_eosource(pk_eosource: int) -> str:
                 for chunk in response.iter_content(chunk_size=2 * 1024):
                     file_handle.write(chunk)
                     file_handle.flush()
-                file_handle.seek(0)
 
+                logger.info('LOG:INFO:File downloaded in a temp file.')
                 content = File(file_handle)
                 eosource = EOSource.objects.get(pk=pk_eosource)
+                print(eosource.filename)
                 eosource.file.save(name=eosource.filename, content=content, save=False)
 
                 eosource.filesize = eosource.file.size
                 eosource.state = EOSourceStateChoices.AVAILABLE_LOCALLY
                 eosource.save()
 
-                return eo_source.file.name
+                return eo_source.filename
         else:
-
             eo_source.url = 'wapor://'
             eo_source.save()
             raise AfriCultuReSError(f'Unhandled case!!. Job_url: {remoteJob.job_url()}')

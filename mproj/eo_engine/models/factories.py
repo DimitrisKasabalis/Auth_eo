@@ -8,7 +8,7 @@ from eo_engine.common.contrib.waporv2 import (variables, well_known_bboxes,
                                               WAPORRemoteVariable)
 from eo_engine.common.time import runningdekad2date
 from eo_engine.errors import AfriCultuReSMisconfiguration
-from eo_engine.models import Credentials
+from eo_engine.models import Credentials, EOSourceGroup
 from eo_engine.models.eo_source import EOSource, EOSourceGroupChoices, EOSourceStateChoices
 
 
@@ -48,20 +48,24 @@ def from_eosource_url(url):
     raise AfriCultuReSMisconfiguration('EOSource url was not recognised! :O')
 
 
-def create_wapor_object(filename: str) -> EOSource:
-    """ Throws IntegrityError if entry exists """
+def create_or_get_wapor_object_from_filename(filename: str) -> (EOSource, bool):
+    """ Returns EOSource,Bool """
 
     wapor_variable = wapor_from_filename(filename)
-    group = getattr(EOSourceGroupChoices, f'WAPOR_{wapor_variable.product_id}_{wapor_variable.area.upper()}')
-
-    return EOSource.objects.create(
-        state=EOSourceStateChoices.AVAILABLE_REMOTELY,
-        group=group,
+    group = EOSourceGroup.objects.get(name__endswith=f'{wapor_variable.product_id}_{wapor_variable.area.upper()}')
+    obj, created = EOSource.objects.get_or_create(
         filename=filename,
-        domain='wapor',
-        datetime_seen=now(),
-        filesize_reported=0,
-        datetime_reference=wapor_variable.start_date,
-        url='wapor://',
-        credentials=Credentials.objects.filter(domain='WAPOR').first(),
+        defaults={
+            'state': EOSourceStateChoices.AVAILABLE_REMOTELY,
+            'domain': 'wapor',
+            'datetime_seen': now(),
+            'filesize_reported': 0,
+            'reference_date': wapor_variable.start_date,
+            'url': 'wapor://',
+            'credentials': Credentials.objects.filter(domain='WAPOR').first()
+        }
     )
+    if created:
+        obj.group.add(group)
+
+    return obj, bool
