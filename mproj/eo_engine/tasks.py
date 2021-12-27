@@ -20,9 +20,10 @@ from typing import List, Union, Optional, Literal
 
 from eo_engine.common.tasks import get_task_ref_from_name
 from eo_engine.errors import AfriCultuReSRetriableError, AfriCultuReSError
-from eo_engine.models import Credentials, Pipeline
+from eo_engine.models import Credentials, Pipeline, EOSourceGroup
 from eo_engine.models import EOProduct, EOProductStateChoices
 from eo_engine.models import EOSource, EOSourceStateChoices
+from eo_engine.models import EOSourceGroupChoices
 
 logger: Logger = get_task_logger(__name__)
 
@@ -950,8 +951,103 @@ def task_s06p04_etanom5km(eo_product_pk: int):
 
 
 @shared_task
-def task_s06p04_et250m(eo_product_pk: int):
-    raise NotImplementedError()
+def task_s06p04_et250m(eo_product_pk: int, iso: str):
+    import rasterio
+    import numpy as np
+    from osgeo import gdal
+    gdal.AllRegister()
+
+    africa_borders_buff10km = Path("/aux_files/Border_shp_with_buff/africa_borders_buff10km.shp")
+    assert africa_borders_buff10km.exists()
+    eo_product = EOProduct.objects.get(id=eo_product_pk)
+    input_eo_source_group = eo_product.group.eoproductgroup.pipelines_from_output.get().input_groups.all()
+    input_files_qs = EOSource.objects.filter(
+        group__in=input_eo_source_group,
+        reference_date=eo_product.reference_date)
+
+    et_file = input_files_qs.filter(
+        group=EOSourceGroup.objects.get(
+            name=EOSourceGroupChoices.S06P04_WAPOR_L1_AETI_D_AFRICA)).get()
+    qual_ndvi_file = input_files_qs.filter(
+        group=EOSourceGroup.objects.get(
+            name=EOSourceGroupChoices.S06P04_WAPOR_L1_QUAL_NDVI_D_AFRICA)).get()
+    qual_lst_file = input_files_qs.filter(
+        group=EOSourceGroup.objects.get(
+            name=EOSourceGroupChoices.S06P04_WAPOR_L1_QUAL_LST_D_AFRICA)).get()
+
+    def get_AETI_qual(file_in_path_et: Path,
+                      file_in_path_lst: Path,
+                      file_in_path_ndvi: Path,
+                      file_out_path: Path):
+
+        # Combines 3 input files (AETI, QUAL_NDVI, QUAL_LST) in order to keep only good AETI quality pixels
+
+        # Read the Geotiff image
+        et_band = rasterio.open(file_in_path_et)
+        ndvi_band = rasterio.open(file_in_path_ndvi)
+        lst_band = rasterio.open(file_in_path_lst)
+
+        # Get input values
+        et = et_band.read(1).astype(rasterio.int16)
+        ndvi = ndvi_band.read(1).astype(rasterio.int16)
+        lst = lst_band.read(1).astype(rasterio.int16)
+
+        # et_ql = np.empty(et_band.shape, dtype=rasterio.int16)  # Create empty matrix
+        check1 = np.logical_or(ndvi <= 10, ndvi == 250)  # Create check raster with True/False values
+        check2 = np.logical_and(lst == 0, check1)
+
+        et_ql = np.where(check2, et, -9999)  # Exclude pixels
+
+        if np.max(et_ql) == -9999:
+            raise AfriCultuReSError("No file was produced")
+        else:
+            # print('Get metadata....')
+            # Create metadata cpy
+            et_meta = et_band.meta.copy()
+            # Update the nodata value to be an easier to use number
+            et_meta.update({'crs': rasterio.crs.CRS({'init': 'epsg:4326'})})
+            # print(ET_meta)
+
+            print('Write output file....')
+            with rasterio.open(file_out_path, 'w', compress='lzw', **et_meta) as file:
+                file.write(et_ql, 1)
+
+    with TemporaryDirectory() as temp_dir:
+
+        file_in_path_et = Path(et_file.file.path)
+        file_in_path_lst = Path(qual_lst_file.file.path)
+        file_in_path_ndvi = Path(qual_ndvi_file.file.path)
+
+        get_AETI_qual(file_in_path_et=file_in_path_et, file_in_path_lst=file_in_path_lst,
+                      file_in_path_ndvi=file_in_path_ndvi, file_out_path=Path(temp_dir) / 'out1.tif')
+
+        print('cutting/warping')
+        subprocess.run(['gdalwarp',
+                        '-cutline', africa_borders_buff10km.as_posix(),
+                        '-co', 'COMPRESS=LZW',
+                        (Path(temp_dir) / 'out1.tif').as_posix(),
+                        (Path(temp_dir) / 'out2.tif').as_posix()], check=True)
+
+        print('translating')
+        subprocess.run([
+            'gdal_translate',
+            '-co', 'COMPRESS=LZW',
+            '-of', 'netCDF',
+            (Path(temp_dir) / 'out2.tif').as_posix(),
+            (Path(temp_dir) / 'out3.nc').as_posix()
+        ])
+
+        print('nccopy')
+        subprocess.run(['nccopy', '-k', 'nc4', '-d8', (Path(temp_dir) / 'out3.nc').as_posix(),
+                        (Path(temp_dir) / 'final.nc').as_posix()], check=True)
+        with open((Path(temp_dir) / 'final.nc').as_posix(), 'rb') as file_handler:
+            content = File(file_handler)
+            eo_product.file.save(name=eo_product.filename, content=content, save=False)
+            eo_product.state = EOProductStateChoices.READY
+            eo_product.datetime_creation = now
+            eo_product.save()
+
+    return '+++Finished+++'
 
 
 @shared_task
