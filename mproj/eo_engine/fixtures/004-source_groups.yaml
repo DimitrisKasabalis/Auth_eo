@@ -236,11 +236,11 @@
   pk: 71
   fields:
     crawler_type: 'OTHER (WAPOR)'
-    name: 'S06PS06P04_WAPOR_L2_QUAL_LST_D_GHA'
+    name: 'S06P04_WAPOR_L2_QUAL_LST_D_GHA'
     date_regex: 'L2_QUAL_LST_D_(?P<YYKK>\d{4})_GHA.tif'
 - model: eo_engine.EOSourceGroup
   pk: 72
   fields:
     crawler_type: 'OTHER (WAPOR)'
-    name: 'S06P0S06P04_WAPOR_L2_QUAL_NDVI_D_GHA'
+    name: 'S06P04_WAPOR_L2_QUAL_NDVI_D_GHA'
     date_regex: 'L2_QUAL_NDVI_D_(?P<YYKK>\d{4})_GHA.tif'
