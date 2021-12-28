@@ -22,7 +22,7 @@ logger = get_task_logger(__name__)
 class NDVIAnomaly(Spider, AfricultureCrawlerMixin):
     tiles: List[str]
     start_urls = [
-        f"https://gimms.gsfc.nasa.gov/MODIS/std/GMOD09Q1/tif/NDVI_anom_S2001-2015/"
+        f"https://gimms.gsfc.nasa.gov/MODIS/std/GMOD09Q1/tif/NDVI_anom_S2001-2018/"
     ]
 
     def __init__(self, **kwargs):
@@ -82,7 +82,7 @@ class NDVIAnomaly(Spider, AfricultureCrawlerMixin):
     def should_process_filename(self, filename: str) -> bool:
         #  file is checked to be in the correct form
         # GMOD09Q1.A2019057.08d.latlon.x01y04.6v1.NDVI_anom_S2001-2015.tif.gz
-        pattern = r'^GMOD09Q1\.A((?P<year>\d{4})(?P<doy>\d{3})).*(?P<tile>(x\d{1,2}y\d{1,2}))\.6v1.NDVI_anom_S2001-2015\.tif\.gz$'
+        pattern = r'^GMOD09Q1\.A((?P<year>\d{4})(?P<doy>\d{3})).*(?P<tile>(x\d{1,2}y\d{1,2}))\.6v1.NDVI_anom_S2001-2018\.tif\.gz$'
         match = re.match(pattern, filename, re.IGNORECASE)
         if match:
             groupdict = match.groupdict()

@@ -33,48 +33,48 @@
   fields:
     name: 'S02P02_NDVIA_250M_TUN_GMOD'
     crawler_type: 'SCRAPY_SPIDER'
-    date_regex: 'GMOD09Q1\.A(?P<YYYYDOY>\d{7})\.08d\.latlon.*NDVI_anom_S2001-2015\.tif.gz'
+    date_regex: 'GMOD09Q1\.A(?P<YYYYDOY>\d{7})\.08d\.latlon.*NDVI_anom_S2001-2018\.tif.gz'
 - model: eo_engine.EOSourceGroup
   pk: 39
   fields:
     name: 'S02P02_NDVIA_250M_RWA_GMOD'
     crawler_type: 'SCRAPY_SPIDER'
-    date_regex: 'GMOD09Q1\.A(?P<YYYYDOY>\d{7})\.08d\.latlon.*NDVI_anom_S2001-2015\.tif.gz'
+    date_regex: 'GMOD09Q1\.A(?P<YYYYDOY>\d{7})\.08d\.latlon.*NDVI_anom_S2001-2018\.tif.gz'
 - model: eo_engine.EOSourceGroup
   pk: 40
   fields:
     name: 'S02P02_NDVIA_250M_ETH_GMOD'
     crawler_type: 'SCRAPY_SPIDER'
-    date_regex: 'GMOD09Q1\.A(?P<YYYYDOY>\d{7})\.08d\.latlon.*NDVI_anom_S2001-2015\.tif.gz'
+    date_regex: 'GMOD09Q1\.A(?P<YYYYDOY>\d{7})\.08d\.latlon.*NDVI_anom_S2001-2018\.tif.gz'
 - model: eo_engine.EOSourceGroup
   pk: 41
   fields:
     name: 'S02P02_NDVIA_250M_ZAF_GMOD'
     crawler_type: 'SCRAPY_SPIDER'
-    date_regex: 'GMOD09Q1\.A(?P<YYYYDOY>\d{7})\.08d\.latlon.*NDVI_anom_S2001-2015\.tif.gz'
+    date_regex: 'GMOD09Q1\.A(?P<YYYYDOY>\d{7})\.08d\.latlon.*NDVI_anom_S2001-2018\.tif.gz'
 - model: eo_engine.EOSourceGroup
   pk: 42
   fields:
     name: 'S02P02_NDVIA_250M_NER_GMOD'
     crawler_type: 'SCRAPY_SPIDER'
-    date_regex: 'GMOD09Q1\.A(?P<YYYYDOY>\d{7})\.08d\.latlon.*NDVI_anom_S2001-2015\.tif.gz'
+    date_regex: 'GMOD09Q1\.A(?P<YYYYDOY>\d{7})\.08d\.latlon.*NDVI_anom_S2001-2018\.tif.gz'
 - model: eo_engine.EOSourceGroup
   pk: 43
   fields:
     name: 'S02P02_NDVIA_250M_GHA_GMOD'
     crawler_type: 'SCRAPY_SPIDER'
-    date_regex: 'GMOD09Q1\.A(?P<YYYYDOY>\d{7})\.08d\.latlon.*NDVI_anom_S2001-2015\.tif.gz'
+    date_regex: 'GMOD09Q1\.A(?P<YYYYDOY>\d{7})\.08d\.latlon.*NDVI_anom_S2001-2018\.tif.gz'
 - model: eo_engine.EOSourceGroup
   pk: 44
   fields:
     name: 'S02P02_NDVIA_250M_MOZ_GMOD'
     crawler_type: 'SCRAPY_SPIDER'
-    date_regex: 'GMOD09Q1\.A(?P<YYYYDOY>\d{7})\.08d\.latlon.*NDVI_anom_S2001-2015\.tif.gz'
+    date_regex: 'GMOD09Q1\.A(?P<YYYYDOY>\d{7})\.08d\.latlon.*NDVI_anom_S2001-2018\.tif.gz'
 - model: eo_engine.EOSourceGroup
   pk: 45
   fields:
     crawler_type: 'SCRAPY_SPIDER'
-    date_regex: 'GMOD09Q1\.A(?P<YYYYDOY>\d{7})\.08d\.latlon.*NDVI_anom_S2001-2015\.tif.gz'
+    date_regex: 'GMOD09Q1\.A(?P<YYYYDOY>\d{7})\.08d\.latlon.*NDVI_anom_S2001-2018\.tif.gz'
     name: 'S02P02_NDVIA_250M_KEN_GMOD'
 - model: eo_engine.EOSourceGroup
   pk: 46
