@@ -41,7 +41,7 @@
 - model: eo_engine.EOProductGroup
   pk: 11
   fields:
-    name: 'S02P02_NDVIA_250M_GAH'
+    name: 'S02P02_NDVIA_250M_GHA'
 - model: eo_engine.EOProductGroup
   pk: 12
   fields:

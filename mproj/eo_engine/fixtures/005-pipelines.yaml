@@ -156,7 +156,7 @@
 - model: eo_engine.Pipeline
   pk: null
   fields:
-    name: "NDVI Anomaly (GAH)"
+    name: "NDVI Anomaly (GHA)"
     description: 'Mosaic Generation for NDVI anomaly from individual tiles for GHA. 
     The sourcing of inputs are discovered by a spider 
     with root_url: https://gimms.gsfc.nasa.gov/MODIS/std/GMOD09Q1/tif/NDVI_anom_S2001-2018/'
@@ -166,7 +166,7 @@
     input_groups: [ 43 ]
     output_group: 11
     output_folder: 'S2_P02/NDVI_anom'
-    output_filename_template: '{YYYYMMDD}_MOD_GAH_0250m_0008_NDVI_anom.nc'
+    output_filename_template: '{YYYYMMDD}_MOD_GHA_0250m_0008_NDVI_anom.nc'
     task_name: 'task_s02p02_ndvianom250m'
     task_kwargs: { "iso": "GHA" }
 - model: eo_engine.Pipeline
