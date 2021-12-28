@@ -117,7 +117,7 @@
   fields:
     crawler_type: 'SCRAPY_SPIDER'
     name: 'S06P04_ETAnom_5KM_M_GLOB_SSEBOP'
-    date_regex: 'm(?P<YYYYMM>\d{4}).zip'
+    date_regex: 'm(?P<YYYYMM>\d{6}).zip'
 - model: eo_engine.EOSourceGroup
   pk: 52
   fields:

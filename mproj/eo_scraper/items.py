@@ -85,8 +85,9 @@ class RemoteSourceItem(scrapy.Item):
     domain: str = scrapy.Field(
         input_processor=MapCompose(get_domain_of_url),
         output_processor=TakeFirst())
-    datetime_reference: Optional[datetime] = scrapy.Field(input_processor=MapCompose(set_utc_timezone),
-                                                          output_processor=TakeFirst())
+    datetime_reference: Optional[datetime] = scrapy.Field(
+        input_processor=MapCompose(set_utc_timezone),
+        output_processor=TakeFirst())
     datetime_seen: str = scrapy.Field(output_processor=TakeFirst())
     url: str = scrapy.Field(
         input_processor=MapCompose(drop_query_from_url),

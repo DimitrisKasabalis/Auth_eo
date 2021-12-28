@@ -65,14 +65,14 @@ class AfricultureCrawlerMixin:
     def from_date(self):
         return self.get_crawler_settings().from_date
 
-    def get_crawler_settings(self) -> EOSourceGroup:
+    def get_crawler_settings(self) -> CrawlerConfiguration:
         return CrawlerConfiguration.objects.filter(group=self.name).get()
 
     def get_group_settings(self) -> EOSourceGroup:
         return EOSourceGroup.objects.get(name=self.name)
 
     def should_process_response(self, response: Response) -> bool:
-        """if false, the request will not be processed"""
+        """if false, the request will not be processed. Overrider if needed """
         return True
 
     def date_reference_from_filename(self, filename) -> Optional[dt_date]:
@@ -83,17 +83,19 @@ class AfricultureCrawlerMixin:
 
     def is_expected_filename(self, filename: str) -> bool:
         """Return True if filename passes the date_regex check. False otherwise"""
-        eo_source_group = EOSourceGroup.objects.get(name=self.name)
-        regex_str = eo_source_group.date_regex
-        match = re.match(eo_source_group.date_regex, filename, re.IGNORECASE)
-        if match:
-            return True
-        logger.warning(f'{filename} did not match the reg-ex string {regex_str}')
-        return False
+
+        group_settings = self.get_group_settings()
+        filename_regex = group_settings.date_regex_cached  # cached version
+        match = re.match(filename_regex, filename, re.IGNORECASE)
+        if match is None:
+            self.logger.info(
+                f'SHOULD_PROCESS_FILENAME:FAILED: +{filename}+ did not pass regex check: +{filename_regex}+')
+            return False
+        return True
 
     # noinspection PyMethodMayBeStatic
     def should_process_filename(self, filename: str) -> bool:
-        """Return True to process the Entry. False to Drop.
+        """Return True to process the Entry. False to Drop. Override as needed.
         Some entries should not be processed based on their filename. Eg tiles or other.
         """
         return True
