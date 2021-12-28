@@ -108,9 +108,13 @@ def create_wapor_entry(self, level_id: Literal['L1', 'L2'], product_id: Literal[
 
 # SFTP
 @shared_task
-def task_sftp_parse_remote_dir(remote_dir: Union[str, List[str]], group_name: str):
-    # remote dir is in the form of
-    #  sftp://adf.adf.com/asdf/aa'
+def task_sftp_parse_remote_dir(group_name: str):
+    # assign remote_urls based on the group
+    # urls are in this form: sftp://adf.adf.com/asdf/aa'
+    group = EOSourceGroup.objects.get(name=group_name)
+    print(group.name)
+    if group.name == EOSourceGroupChoices.S06P04_ET_3KM_GLOB_MSG:
+        remote_dir = 'sftp://safmil.ipma.pt/home/safpt/OperationalChain/LSASAF_Products/DMET'
     if isinstance(remote_dir, List):
         remote_dir = next(collapse(remote_dir))
 

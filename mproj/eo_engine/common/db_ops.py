@@ -1,14 +1,20 @@
-from typing import TypedDict, Union
+from logging import Logger
 
+from celery.utils.log import get_task_logger
 from django.utils.timezone import now
+from typing import TypedDict
 
+from eo_engine.common.misc import str_to_date
 from eo_engine.common.sftp import SftpFile
-from eo_engine.errors import AfriCultuReSFileNotExist, AfriCultuReSFileInUse, AfriCultuReSFileInvalidDataType
+from eo_engine.errors import AfriCultuReSFileNotExist, AfriCultuReSFileInUse
+from eo_engine.models import CrawlerConfiguration
 from eo_engine.models import Credentials, EOSourceGroup
-from eo_engine.models import EOProduct, EOProductStateChoices, EOProductGroupChoices
-from eo_engine.models import EOSource, EOSourceStateChoices, EOSourceGroupChoices
+from eo_engine.models import EOProduct, EOProductStateChoices
+from eo_engine.models import EOSource, EOSourceStateChoices
 
 DeletedReport = TypedDict('DeletedReport', {'eo_source': int, 'eo_product': int})
+
+logger: Logger = get_task_logger(__name__)
 
 
 def delete_eo_product(eo_product_pk: int) -> DeletedReport:
@@ -119,15 +125,23 @@ def delete_eo_source(eo_source_pk: int) -> DeletedReport:
 def add_to_db(data: SftpFile, eo_source_group_name: str):
     """ Adds entry in the database. Checks if entry exists based on filename and date of reference. """
     group = EOSourceGroup.objects.get(name=eo_source_group_name)
+    crawler_config = CrawlerConfiguration.objects.get(group=group.name)
+    reference_date = str_to_date(data.filename, group.date_regex)
+    if crawler_config.from_date > reference_date:
+        logger.info(
+            f'Skipping {data.filename} because it\'s reference_date is lse from teh from date {crawler_config.from_date.isoformat()}')
+        return
+
     obj, created = EOSource.objects.get_or_create(
-        domain=data.domain,
         filename=data.filename,
-        group=group,
-        url=data.url,
         defaults={
-            'reference_date': data.datetime_reference.date(),
+            'domain': data.domain,
+            'url': data.url,
+            'reference_date': reference_date,
             'credentials': Credentials.objects.get(domain=data.domain),
             'datetime_seen': now(),
             'filesize_reported': data.filesize_reported,
         }
     )
+    if created:
+        obj.group.add(group)

@@ -3,7 +3,6 @@ import re
 from celery.result import AsyncResult
 from celery.utils.serialization import strtobool
 from django.contrib import messages
-from django.db import IntegrityError
 from django.http import QueryDict
 from django.shortcuts import render, redirect
 from django.urls import reverse
@@ -13,6 +12,7 @@ from more_itertools import collapse
 from typing import Literal, Callable, Optional, Dict, Union
 
 from eo_engine.common.tasks import get_task_ref_from_name
+from eo_engine.errors import AfriCultuReSError
 from eo_engine.models import EOSource, EOProduct, EOProductStateChoices, EOSourceGroup, EOProductGroup
 from eo_engine.models.factories import create_or_get_wapor_object_from_filename
 from eo_engine.models.other import CrawlerConfiguration, Pipeline
@@ -206,18 +206,21 @@ def submit_task(request):
     return redirect(next_page)
 
 
-def trigger_spider(request, spider_name: str):
-    from .tasks import task_init_spider
+def trigger_crawler(request, group_name: str):
+    group = EOSourceGroup.objects.get(name=group_name)
 
-    task = task_init_spider.s(spider_name=spider_name)
-    job: AsyncResult = task.apply_async()
+    if group.crawler_type == group.CrawlerTypeChoices.SCRAPY_SPIDER:
+        from .tasks import task_init_spider
 
-    context = {'card_info':
-                   {'task_name': task.name,
-                    'param': spider_name,
-                    'job_id': job.task_id
-                    }
-               }
+        task = task_init_spider.s(spider_name=group_name)
+        job: AsyncResult = task.apply_async()
+        context = {
+            'card_info':
+                {'task_name': task.name,
+                 'param': group_name,
+                 'job_id': job.task_id
+                 }
+        }
 
     return render(request, 'task_triggered.html', context)
 
@@ -363,6 +366,7 @@ def create_wapor_entry(request, product: str):
 
 def configure_crawler(request, group_name: str):
     from .forms import EOSourceMetaForm
+    group = EOSourceGroup.objects.get(name=group_name)
     context = {}
     instance, created = CrawlerConfiguration.objects.get_or_create(group=group_name,
                                                                    defaults={'from_date': date(2017, 1, 1)})
@@ -377,8 +381,17 @@ def configure_crawler(request, group_name: str):
         f = EOSourceMetaForm(request.POST, instance=instance)
         f.save()
         if 'save_and_run' in request.POST:
-            from eo_engine.tasks import task_init_spider
-            task = task_init_spider.s(spider_name=group_name)
+            # fire a scrapy_spider
+            if group.crawler_type == group.CrawlerTypeChoices.SCRAPY_SPIDER:
+                from eo_engine.tasks import task_init_spider
+                task = task_init_spider.s(spider_name=group_name)
+            # fire a sftp crawl
+            elif group.crawler_type == group.CrawlerTypeChoices.OTHER_SFTP:
+                from eo_engine.tasks import task_sftp_parse_remote_dir
+                task = task_sftp_parse_remote_dir.s(group_name=group_name)
+            else:
+                raise AfriCultuReSError('+CONFIGURE_CRAWLER:BUG. Unknown type of crawler')
+
             job = task.apply_async()
             messages.add_message(
                 request=request, level=messages.SUCCESS,

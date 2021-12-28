@@ -5,7 +5,6 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 
-
 class EOProductStateChoices(models.TextChoices):
     AVAILABLE = 'AVAILABLE', "AVAILABLE for generation."
     SCHEDULED = 'SCHEDULED', "SCHEDULED For generation."
@@ -72,6 +71,7 @@ def eoproduct_post_save_handler(instance: EOProduct, **kwargs):
         if created:
             prod.state = EOProductStateChoices.AVAILABLE
         prod.save()
+
 
 __all__ = [
     "EOProduct",

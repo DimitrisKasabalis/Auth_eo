@@ -76,7 +76,8 @@ class EOSourceGroupChoices(models.TextChoices):
     S06P01_C_GLS_WB_300M_V2_GLOB = 'S06P01_C_GLS_WB_300M_V2_GLOB', "Copernicus Global Land Service Water Bodies Collection 300m Version 2"
 
     #  S0604
-    S06P04_ETAnom_5KM_M_GLOB_SSEBOP = 'S06P04_ETAnom_5KM_M_GLOB_SSEBOP', 'S06P04_ETAnom_5KM_M_GLOB_SSEBOP'
+    S06P04_ETAnom_5KM_M_GLOB_SSEBOP = 'S06P04_ETAnom_5KM_M_GLOB_SSEBOP', 'S06P04: ETAnom 5KM M GLOB SSEBOP'
+    S06P04_ET_3KM_GLOB_MSG = 'S06P04_ET_3KM_GLOB_MSG', 'S06P04: LSAF 3KM DMET'
 
     S06P04_WAPOR_L1_AETI_D_AFRICA = 'S06P04_WAPOR_L1_AETI_D_AFRICA', 'WAPOR: L1 AETI D AFRICA'
     S06P04_WAPOR_L1_QUAL_LST_D_AFRICA = 'S06P04_WAPOR_L1_QUAL_LST_D_AFRICA', 'WAPOR: L1_QUAL_LST_D_AFRICA'
@@ -103,6 +104,7 @@ class EOSourceGroupChoices(models.TextChoices):
     S06P04_WAPOR_L2_QUAL_NDVI_D_RWA = 'S06P04_WAPOR_L2_QUAL_NDVI_D_RWA', 'WAPOR: L2_QUAL_NDVI_D_RWA'
     S06P04_WAPOR_L2_QUAL_NDVI_D_TUN = 'S06P04_WAPOR_L2_QUAL_NDVI_D_TUN', 'WAPOR: L2_QUAL_NDVI_D_TUN'
 
+    #  S04P03
     S04P03_FLD_375M_1D_VIIRS = 'S04P03_FLD_375M_1D_VIIRS', 'FLD 375M 1D VIIRS'
     S04P03_WB_10m_BAG = 'S04P03_WB_10m_BAG', 'WB 10m BAG'
 
@@ -159,6 +161,12 @@ class EOSourceGroup(EOGroup):
             return {
                 'label': 'Generate WAPOR Entry',
                 'url': reverse('eo_engine:create-wapor', kwargs={'product': self.name})
+            }
+        if self.crawler_type == self.CrawlerTypeChoices.OTHER_SFTP:
+            return {
+                'label': 'Start SFTP Crawl',
+                'url': reverse('eo_engine:crawler-configure', kwargs={
+                    'group_name': self.name})
             }
 
     def as_eo_product_group(self) -> Optional[EOProductGroup]:
