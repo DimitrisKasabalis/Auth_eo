@@ -1,17 +1,13 @@
-from datetime import datetime
+import pysftp
 from pathlib import Path
 from typing import NamedTuple
-from tempfile import NamedTemporaryFile
-import pysftp
-
-from eo_engine.common.parsers import parse_dt_from_generic_string
 
 SftpFile = NamedTuple('SftpFile', (
     ('domain', str),
     ('url', str),
     ('filename', str),
-    ('filesize_reported', int),
-    ('datetime_reference', datetime)))
+    ('filesize_reported', int)
+))
 
 
 def sftp_connection(host, username, password) -> pysftp.Connection:
@@ -39,6 +35,5 @@ def list_dir_entries(remotepath: str, connection: pysftp.Connection):
                 domain=domain,
                 filename=filename,
                 filesize_reported=entry.st_size,
-                datetime_reference=parse_dt_from_generic_string(filename),
                 url=url_template.format(schema='sftp', host=domain, path=path)
             )
