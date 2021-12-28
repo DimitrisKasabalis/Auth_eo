@@ -44,6 +44,7 @@ def str_to_date(token: str, regex_string: str, re_flags=re.IGNORECASE) -> dt_dat
         match = pat.match(token)
         groupdict = match.groupdict()
         YYMMDD_str = groupdict.get('YYMMDD', None)
+        YYYYMM_str = groupdict.get('YYYYMM', None)
         YYYYMMDD_str = groupdict.get('YYYYMMDD', None)
         YYKK_str = groupdict.get('YYKK', None)
         YYYYDOY_str = groupdict.get('YYYYDOY')
@@ -60,9 +61,12 @@ def str_to_date(token: str, regex_string: str, re_flags=re.IGNORECASE) -> dt_dat
             rdekad = int(YYKK_str[:2])
             return runningdekad2date(year, rdekad)[0]
         if YYYYDOY_str:
-            return datetime.strptime(YYYYDOY_str, '%Y%j')
+            return datetime.strptime(YYYYDOY_str, '%Y%j').date()
+        if YYYYMM_str:
+            return datetime.strptime(YYYYMM_str, '%Y%m').date()
         raise AfriCultuReSError()
+
     except (AfriCultuReSError, AttributeError) as e:
         raise AfriCultuReSError(
             f'BUG_REPORT:SHOULD_NOT_END_HERE:No date tokens found in string {token} and regEx string +{regex_string}+.'
-            f'\nDid you forget to add YYYY/MM/DD tokens?')
+            f'\nDid you forget to add YYYY/MM/DD tokens?') from e

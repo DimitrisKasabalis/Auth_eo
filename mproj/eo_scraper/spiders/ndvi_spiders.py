@@ -1,7 +1,6 @@
 from datetime import date as dt_date
 from re import Match
 from scrapy.http.response import Response
-from typing import Optional
 
 from eo_engine.models import EOSourceGroupChoices
 from eo_scraper.spiders.abstract_spiders import CopernicusVgtDatapool
