@@ -844,8 +844,12 @@ def task_s06p04_et3km(eo_product_pk: int):
     import bz2
 
     eo_product = EOProduct.objects.get(pk=eo_product_pk)
+    produced_file = EOProduct.objects.get(id=eo_product_pk)
+    input_eo_source_group = produced_file.group.eoproductgroup.pipelines_from_output.get().input_groups.get().eosourcegroup
+    input_files_qs = EOSource.objects.filter(group=input_eo_source_group, reference_date=produced_file.reference_date)
     # only has one input
-    eo_source_input: EOSource = eo_product.eo_sources_inputs.first()
+    eo_source_input: EOSource = input_files_qs.get()
+
     hdf5File = eo_source_input.file.path
     with NamedTemporaryFile() as dest, \
             NamedTemporaryFile() as final_file:
@@ -912,43 +916,50 @@ def task_s06p04_etanom5km(eo_product_pk: int):
     """
     from zipfile import ZipFile
 
-    def clip(file_in, file_out):
-        # Clip the file using GDAL
+    eo_product = EOProduct.objects.get(pk=eo_product_pk)
+    produced_file = EOProduct.objects.get(id=eo_product_pk)
+    input_eo_source_group = produced_file.group.eoproductgroup.pipelines_from_output.get().input_groups.get().eosourcegroup
+    input_files_qs = EOSource.objects.filter(group=input_eo_source_group, reference_date=produced_file.reference_date)
+    # only has one input
+    eo_source_input: EOSource = input_files_qs.get()
+
+    def clip(file_in: Path, file_out: Path):
+        logger.info('Clip the file using GDAL')
         target_resolution = 0.009651999920606611424
         xmin, ymin, xmax, ymax = -20.0084493160248371, -38.0030921809375428, 55.0068940669297461, 40.0043711774050763
-        cp = subprocess.run([
+        subprocess.run([
             'gdalwarp',
             '-r', 'average', '-overwrite',
             '-tr', f'{target_resolution}', f'{target_resolution}',
             '-te', f'{xmin}', f'{ymin}', f'{xmax}', f'{ymax}',
-            file_in, file_out], check=True)
+            file_in.as_posix(), file_out.as_posix()],
+            check=True)
 
-        eo_product = EOProduct.objects.get(eo_product_pk)
-        eo_source = eo_product.eo_sources_inputs.first()
+    with TemporaryDirectory() as temp_dir, \
+            ZipFile(eo_source_input.file.path) as zip_file:
+        filename = eo_source_input.filename
+        temp_dir_path = Path(temp_dir)
+        logger.info(f'Extracting {filename} to TempDir...')
+        zip_file.extractall(temp_dir)
 
-        with TemporaryDirectory() as temp_dir, ZipFile(eo_source.file.path) as z:
-            f = eo_source.filename
-            z.extractall(temp_dir)
-            date = f[1:5]
-            month = f[5:7]
-            f_new_tif = temp_dir + "/" + "m" + date + month + "_modisSSEBopETv5_anomaly_pct.tif"
-            f_new_nc = temp_dir + "/" + "m" + date + month + "01_MOD_AFR_5600m_0030_ETanom_v5.nc"
+        f_new_tif = next(temp_dir_path.glob('*.tif'))
+        f_new_nc = temp_dir_path / 'temp_out.nc'
 
-            clip(f_new_tif, f_new_nc)
-            cp = subprocess.run(['ncrename',
-                                 '-v', 'Band1,ETanom',
-                                 f_new_nc], check=True)
-            cp = subprocess.run(['ncatted',
-                                 '-a', "long_name,ETanom,o,c,Monthly_Evapotranspiration_Anomaly",
-                                 '-a', "Unit,ETanom,o,c,[%]",
-                                 f_new_nc], check=True)
+        clip(f_new_tif, f_new_nc)
+        subprocess.run(['ncrename',
+                        '-v', 'Band1,ETanom',
+                        f_new_nc], check=True)
+        subprocess.run(['ncatted',
+                        '-a', "long_name,ETanom,o,c,Monthly_Evapotranspiration_Anomaly",
+                        '-a', "Unit,ETanom,o,c,[%]",
+                        f_new_nc], check=True)
 
-            with open(f_new_nc, 'rb') as file_handler:
-                content = File(file_handler)
-                eo_product.file.save(name=eo_product.filename, content=content, save=False)
-                eo_product.state = EOProductStateChoices.READY
-                eo_product.datetime_creation = now
-                eo_product.save()
+        with open(f_new_nc, 'rb') as file_handler:
+            content = File(file_handler)
+            eo_product.file.save(name=eo_product.filename, content=content, save=False)
+            eo_product.state = EOProductStateChoices.READY
+            eo_product.datetime_creation = now
+            eo_product.save()
 
         return '+++Finished+++'
 
