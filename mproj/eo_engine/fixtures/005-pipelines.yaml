@@ -338,7 +338,7 @@
     last_modified: 2021-12-10T19:10:20Z
     input_groups: [ 47 ]
     output_group: 16
-    output_filename_template: '{YYYYMM}01_SE2_AFR_0300m_0030_WBMA.nc'
+    output_filename_template: '{YYYYMMDD}_SE2_AFR_0300m_0030_WBMA.nc'
     output_folder: 'S6_P01/WB_300/v2'
     task_name: 'task_s06p01_wb300m_v2'
     task_kwargs: { }
@@ -352,7 +352,7 @@
     last_modified: 2021-12-10T19:10:20Z
     input_groups: [ 48 ]
     output_group: 17
-    output_filename_template: '{YYYYMM}01_SE2_TUN_0100m_0030_WBMA.nc'
+    output_filename_template: '{YYYYMMDD}_SE2_TUN_0100m_0030_WBMA.nc'
     output_folder: 'S6_P01/WB_100/TUN'
     task_name: 'task_s06p01_wb100m'
     task_kwargs: { "aoi_wkt": "POLYGON((7.491 37.345,  11.583 37.345,  11.583 30.219, 7.491 30.219, 7.491 37.345, 7.491 37.345))" }
@@ -366,7 +366,7 @@
     last_modified: 2021-12-10T19:10:20Z
     input_groups: [ 48 ]
     output_group: 18
-    output_filename_template: '{YYYYMM}01_SE2_RWA_0100m_0030_WBMA.nc'
+    output_filename_template: '{YYYYMMDD}_SE2_RWA_0100m_0030_WBMA.nc'
     output_folder: 'S6_P01/WB_100/RWA'
     task_name: 'task_s06p01_wb100m'
     task_kwargs: { "aoi_wkt": "POLYGON((28.845 -1.052, 30.894 -1.052, 30.894 -2.827, 28.845 -2.827, 28.845 -1.052, 28.845 -1.052))" }
@@ -380,7 +380,7 @@
     last_modified: 2021-12-10T19:10:20Z
     input_groups: [ 48 ]
     output_group: 19
-    output_filename_template: '{YYYYMM}01_SE2_ETH_0100m_0030_WBMA.nc'
+    output_filename_template: '{YYYYMMDD}_SE2_ETH_0100m_0030_WBMA.nc'
     output_folder: 'S6_P01/WB_100/ETH'
     task_name: 'task_s06p01_wb100m'
     task_kwargs: { "aoi_wkt": "POLYGON((32.98 14.93, 48.0 14.93, 48.0 3.37, 32.98 3.37, 32.98 14.93, 32.98 14.93))" }
@@ -394,7 +394,7 @@
     last_modified: 2021-12-10T19:10:20Z
     input_groups: [ 48 ]
     output_group: 20
-    output_filename_template: '{YYYYMM}01_SE2_MOZ_0100m_0030_WBMA.nc'
+    output_filename_template: '{YYYYMMDD}_SE2_MOZ_0100m_0030_WBMA.nc'
     output_folder: 'S6_P01/WB_100/MOZ'
     task_name: 'task_s06p01_wb100m'
     task_kwargs: { "aoi_wkt": "POLYGON((30.208 -10.467, 40.849 -10.467, 40.849 -26.865, 30.208 -26.865, 30.208 -10.467, 30.208 -10.467))" }
@@ -408,7 +408,7 @@
     last_modified: 2021-12-10T19:10:20Z
     input_groups: [ 48 ]
     output_group: 21
-    output_filename_template: '{YYYYMM}01_SE2_ZAF_0100m_0030_WBMA.nc'
+    output_filename_template: '{YYYYMMDD}_SE2_ZAF_0100m_0030_WBMA.nc'
     output_folder: 'S6_P01/WB_100/ZAF'
     task_name: 'task_s06p01_wb100m'
     task_kwargs: { "aoi_wkt": "POLYGON((16 -22, 33 -22, 33 -35, 16 -35, 16 -22, 16 -22))" }
@@ -422,7 +422,7 @@
     last_modified: 2021-12-10T19:10:20Z
     input_groups: [ 48 ]
     output_group: 22
-    output_filename_template: '{YYYYMM}01_SE2_GHA_0100m_0030_WBMA.nc'
+    output_filename_template: '{YYYYMMDD}_SE2_GHA_0100m_0030_WBMA.nc'
     output_folder: 'S6_P01/WB_100/GHA'
     task_name: 'task_s06p01_wb100m'
     task_kwargs: { "aoi_wkt": "POLYGON((-3.25 12.16, 2.205 12.16, 2.205 4.7, -3.25 4.7, -3.25 12.16, -3.25 12.16))" }
@@ -436,7 +436,7 @@
     last_modified: 2021-12-10T19:10:20Z
     input_groups: [ 48 ]
     output_group: 23
-    output_filename_template: '{YYYYMM}01_SE2_NER_0100m_0030_WBMA.nc'
+    output_filename_template: '{YYYYMMDD}_SE2_NER_0100m_0030_WBMA.nc'
     output_folder: 'S6_P01/WB_100/NER'
     task_name: 'task_s06p01_wb100m'
     task_kwargs: { "aoi_wkt": "POLYGON((0 23.8, 16.1 23.8, 16.1 11.5, 0 11.5, 0 23.8, 0 23.8))" }
@@ -450,7 +450,7 @@
     last_modified: 2021-12-10T19:10:20Z
     input_groups: [ 48 ]
     output_group: 24
-    output_filename_template: '{YYYYMM}01_SE2_KEN_0100m_0030_WBMA.nc'
+    output_filename_template: '{YYYYMMDD}_SE2_KEN_0100m_0030_WBMA.nc'
     output_folder: 'S6_P01/WB_100/KEN'
     task_name: 'task_s06p01_wb100m'
     task_kwargs: { "aoi_wkt": "POLYGON((33.89 4.625, 41.917 4.625, 41.917 -4.671, 33.89 -4.671, 33.89 4.625, 33.89 4.625))" }

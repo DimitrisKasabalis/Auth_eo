@@ -72,8 +72,8 @@ class EOSourceGroupChoices(models.TextChoices):
     S02P02_NDVIA_250M_KEN_GMOD = 'S02P02_NDVIA_250M_KEN_GMOD', 'MODIS GMOD09Q1 NDVI Anomaly (KEN)'
 
     #  S0601
-    S06P01_C_GLS_WB_100M_V1_GLOB = 'S06P01_C_GLS_WB_100M_V1_GLOB', "Copernicus Global Land Service Water Bodies Collection 100m Version 1"
-    S06P01_C_GLS_WB_300M_V2_GLOB = 'S06P01_C_GLS_WB_300M_V2_GLOB', "Copernicus Global Land Service Water Bodies Collection 300m Version 2"
+    S06P01_WB_100M_V1_GLOB_CGLS = 'S06P01_WB_100M_V1_GLOB_CGLS', "Copernicus Global Land Service Water Bodies Collection 100m Version 2"
+    S06P01_WB_300M_V2_GLOB_CGLS = 'S06P01_WB_300M_V2_GLOB_CGLS', "Copernicus Global Land Service Water Bodies Collection 300m Version 2"
 
     #  S0604
     S06P04_ETAnom_5KM_M_GLOB_SSEBOP = 'S06P04_ETAnom_5KM_M_GLOB_SSEBOP', 'S06P04: ETAnom 5KM M GLOB SSEBOP'

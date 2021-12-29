@@ -743,8 +743,10 @@ def task_s06p01_wb300m_v2(eo_product_pk: int):
     import snappy
     from snappy import ProductIO, GPF, HashMap, WKTReader
 
-    eo_product = EOProduct.objects.get(pk=eo_product_pk)
-    eo_source = eo_product.eo_sources_inputs.first()
+    eo_product = EOProduct.objects.get(id=eo_product_pk)
+    input_eo_source_group = eo_product.group.eoproductgroup.pipelines_from_output.get().input_groups.get().eosourcegroup
+    input_files_qs = EOSource.objects.filter(group=input_eo_source_group, reference_date=eo_product.reference_date)
+    input_file = input_files_qs.get()
 
     wkt = "POLYGON((-30 40, 60 40, 60 -40, -30 -40, -30 40, -30 40))"  # Africa
     HashMap = snappy.jpy.get_type('java.util.HashMap')
@@ -769,9 +771,9 @@ def task_s06p01_wb300m_v2(eo_product_pk: int):
         return Path(str(clipped.getFileLocation()))
 
     with TemporaryDirectory(prefix='task_s06p01_clip_to_africa_') as temp_dir:
-        date = eo_source.filename.split('_')[3][:8]
+        date = input_file.filename.split('_')[3][:8]
         f_out = date + '_SE2_AFR_0300m_0030_WBMA.nc'
-        clipped = clip(eo_source.file.path, Path(temp_dir).joinpath(f_out), WKTReader().read(wkt))
+        clipped = clip(input_file.file.path, Path(temp_dir).joinpath(f_out), WKTReader().read(wkt))
 
         content = File(clipped.open('rb'))
         eo_product.file.save(name=eo_product.filename, content=content, save=False)
@@ -783,24 +785,22 @@ def task_s06p01_wb300m_v2(eo_product_pk: int):
 
 
 @shared_task
-def task_s06p01_wb100m(eo_product_pk: int, wkt: str, iso: str):
+def task_s06p01_wb100m(eo_product_pk: int, aoi_wkt: str):
     import os
     import snappy
     from snappy import ProductIO, GPF, HashMap, WKTReader
 
-    # ORder is TUN, RWA, ETH, MOZ, ZAF, GHA, NER, KEN
-
-    eo_product = EOProduct.objects.get(pk=eo_product_pk)
-
-    eo_source: EOSource = eo_product.eo_sources_inputs.first()
-
+    eo_product = EOProduct.objects.get(id=eo_product_pk)
+    input_eo_source_group = eo_product.group.eoproductgroup.pipelines_from_output.get().input_groups.get().eosourcegroup
+    input_files_qs = EOSource.objects.filter(group=input_eo_source_group, reference_date=eo_product.reference_date)
+    input_file = input_files_qs.get()
     # any of the above eo_product, should point to the same eo_source
 
     HashMap = snappy.jpy.get_type('java.util.HashMap')
     # Get snappy Operators
     GPF.getDefaultInstance().getOperatorSpiRegistry().loadOperatorSpis()
 
-    def clip(data, file_in: Path, dir_out, geom, cnt):
+    def clip(data, file_in: Path, dir_out, geom):
         params = HashMap()
         # params.put('sourceBands', 'WB') #'QUAL' # no band selected here. thus all bands are kept
         params.put('region', '0, 0, 0, 0')
@@ -810,9 +810,8 @@ def task_s06p01_wb100m(eo_product_pk: int, wkt: str, iso: str):
         params.put('fullSwath', False)
         params.put('copyMetadata', True)
         clipped = GPF.createProduct('Subset', params, data)
-        date = file_in.name.split('_')[3][:6]
-        # filename='Subset_c_gls_WB100_' + date + '_GLOBE_S2_V1.0.1_snappy_' + cnt + '.nc'
-        filename = date + '_SE2_' + cnt + '_0100m_0030_WBMA.nc'
+
+        filename = 'out.nc'
         ProductIO.writeProduct(clipped, os.path.join(dir_out, filename), 'NetCDF4-CF')  # 'GeoTIFF'
         return Path(str(clipped.getFileLocation()))
 
@@ -820,11 +819,10 @@ def task_s06p01_wb100m(eo_product_pk: int, wkt: str, iso: str):
 
     # product_list defined in the outer scope
     with TemporaryDirectory(prefix='task_s0601_wb_100m_') as temp_dir:
-        data = ProductIO.readProduct(eo_source.file.path)
-        geom = WKTReader().read(wkt)
-        cnt = iso.upper()
-        file_in = Path(eo_source.file.path)
-        clipped: Path = clip(data=data, file_in=file_in, dir_out=temp_dir, geom=geom, cnt=cnt)
+        data = ProductIO.readProduct(input_file.file.path)
+        geom = WKTReader().read(aoi_wkt)
+        file_in = Path(input_file.file.path)
+        clipped: Path = clip(data=data, file_in=file_in, dir_out=temp_dir, geom=geom)
 
         content = File(clipped.open('rb'))
         eo_product.file.save(name=eo_product.filename, content=content, save=False)

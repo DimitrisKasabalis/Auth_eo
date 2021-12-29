@@ -93,13 +93,13 @@
   fields:
     crawler_type: 'SCRAPY_SPIDER'
     name: 'S06P01_WB_300M_V2_GLOB_CGLS'
-    date_regex: 'c_gls_WB300_(?P<YYYYMMDD>\d{8})D0000_GLOBE_S2_V2\.0\.1\.nc'
+    date_regex: 'c_gls_WB300_(?P<YYYYMMDD>\d{8})0000_GLOBE_S2_V2\.0\.1\.nc'
 - model: eo_engine.EOSourceGroup
   pk: 48
   fields:
     crawler_type: 'SCRAPY_SPIDER'
     name: 'S06P01_WB_100M_V1_GLOB_CGLS'
-    date_regex: 'c_gls_WB100_(?P<YYYYMMDD>\d{8})D0000_GLOBE_S2_V1\.0\.1\.nc'
+    date_regex: 'c_gls_WB100_(?P<YYYYMMDD>\d{8})0000_GLOBE_S2_V1\.0\.1\.nc'
 #- model: eo_engine.EOSourceGroup
 #  pk: 49
 #  name: S06P01_S1_10M
