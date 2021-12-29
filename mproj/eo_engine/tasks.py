@@ -19,6 +19,7 @@ from tempfile import TemporaryDirectory
 from typing import List, Optional, Literal
 
 from eo_engine.common.tasks import get_task_ref_from_name
+from eo_engine.common.verify import check_file_exists
 from eo_engine.errors import AfriCultuReSRetriableError, AfriCultuReSError
 from eo_engine.models import Credentials, Pipeline, EOSourceGroup
 from eo_engine.models import EOProduct, EOProductStateChoices
@@ -693,7 +694,7 @@ def task_s04p03_convert_to_tiff(eo_product_pk: int, tile: int):
     eo_product = EOProduct.objects.get(pk=eo_product_pk)
     eo_source: EOSource = eo_product.eo_sources_inputs.first()
 
-    eo_product.state = EOProductStateChoices.Generating
+    eo_product.state = EOProductStateChoices.GENERATING
     eo_product.save()
 
     with NamedTemporaryFile('wb') as file_handle:
@@ -967,9 +968,7 @@ def task_s06p04_et250m(eo_product_pk: int, iso: str):
     import numpy as np
 
     africa_borders_buff10km = Path("/aux_files/Border_shp_with_buff/africa_borders_buff10km.shp")
-    if not africa_borders_buff10km.exists():
-        raise AfriCultuReSError(
-            f'TASKS:task_s06p04_et250m: the shapefile {africa_borders_buff10km.as_posix()} could not be found!.')
+    check_file_exists(africa_borders_buff10km)
     eo_product = EOProduct.objects.get(id=eo_product_pk)
     input_eo_source_group = eo_product.group.eoproductgroup.pipelines_from_output.get().input_groups.all()
     input_files_qs = EOSource.objects.filter(
@@ -1015,8 +1014,11 @@ def task_s06p04_et250m(eo_product_pk: int, iso: str):
                 file.write(et_ql, 1)
 
     file_in_path_et = Path(et_file.file.path)
+    check_file_exists(file_in_path_et)
     file_in_path_lst = Path(qual_lst_file.file.path)
+    check_file_exists(file_in_path_lst)
     file_in_path_ndvi = Path(qual_ndvi_file.file.path)
+    check_file_exists(file_in_path_ndvi)
     with TemporaryDirectory() as temp_dir:
         get_AETI_qual(file_in_path_et=file_in_path_et, file_in_path_lst=file_in_path_lst,
                       file_in_path_ndvi=file_in_path_ndvi, file_out_path=Path(temp_dir) / 'out1.tif')

@@ -17,6 +17,7 @@ pysftp
 sentinelsat
 pyyaml
 jsonpath-ng
+rasterio
 
 # for testing
 responses
