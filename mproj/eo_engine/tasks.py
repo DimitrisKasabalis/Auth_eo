@@ -16,7 +16,7 @@ from pathlib import Path
 from scrapy import Spider
 from subprocess import run, CompletedProcess
 from tempfile import TemporaryDirectory
-from typing import List, Union, Optional, Literal
+from typing import List, Optional, Literal
 
 from eo_engine.common.tasks import get_task_ref_from_name
 from eo_engine.errors import AfriCultuReSRetriableError, AfriCultuReSError
