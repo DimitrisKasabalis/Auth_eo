@@ -508,13 +508,12 @@ def task_s02p02_lai300m_v1(eo_product_pk: int):
     from snappy import ProductIO, GPF, HashMap, WKTReader
 
     produced_file = EOProduct.objects.get(id=eo_product_pk)
-    pipeline = Pipeline.objects.get(task_name='task_s02p02_lai300m_v1', task_kwargs={})
-    pipeline_input_groups = pipeline.input_groups.all()
-    input_files_qs = EOSource.objects.filter(group__eosource__group__in=pipeline_input_groups,
-                                             reference_date=produced_file.reference_date).distinct()
-    eo_source: EOSource = input_files_qs.get()
+    input_eo_source_group = produced_file.group.eoproductgroup.pipelines_from_output.get().input_groups.get().eosourcegroup
+    input_files_qs = EOSource.objects.filter(group=input_eo_source_group, reference_date=produced_file.reference_date)
+    # only has one input
+    eo_source_input: EOSource = input_files_qs.get()
 
-    filename_in = eo_source.filename
+    filename_in = eo_source_input.filename
 
     HashMap = snappy.jpy.get_type('java.util.HashMap')
     GPF.getDefaultInstance().getOperatorSpiRegistry().loadOperatorSpis()
@@ -540,7 +539,7 @@ def task_s02p02_lai300m_v1(eo_product_pk: int):
         return return_path
 
     with TemporaryDirectory(prefix='task_s0p02_clip_lai300m_v1_afr_') as temp_dir:
-        data = ProductIO.readProduct(eo_source.file.path)
+        data = ProductIO.readProduct(eo_source_input.file.path)
         geom = WKTReader().read(wkt)
         out_file = Path(temp_dir) / produced_file.filename
         clipped: Path = clip(data=data, out_file=out_file.as_posix(), geom=geom)
