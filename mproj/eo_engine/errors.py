@@ -2,7 +2,7 @@ class AfriCultuReSError(Exception):
     pass
 
 
-class AfriCultuReSFileNotExist(AfriCultuReSError):
+class AfriCultuReSFileDoesNotExist(AfriCultuReSError):
     """The file does not exist"""
 
 

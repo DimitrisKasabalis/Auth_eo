@@ -6,7 +6,7 @@ from typing import TypedDict
 
 from eo_engine.common.misc import str_to_date
 from eo_engine.common.sftp import SftpFile
-from eo_engine.errors import AfriCultuReSFileNotExist, AfriCultuReSFileInUse
+from eo_engine.errors import AfriCultuReSFileDoesNotExist, AfriCultuReSFileInUse
 from eo_engine.models import CrawlerConfiguration
 from eo_engine.models import Credentials, EOSourceGroup
 from eo_engine.models import EOProduct, EOProductStateChoices
@@ -29,7 +29,7 @@ def delete_eo_product(eo_product_pk: int) -> DeletedReport:
 
     # file is missing
     if not bool(self.file):
-        raise AfriCultuReSFileNotExist("The file does not exist to delete.")
+        raise AfriCultuReSFileDoesNotExist("The file does not exist to delete.")
 
     # is self being 'generated'?
     if self.state in (EOProductStateChoices.GENERATING, EOProductStateChoices.SCHEDULED):
@@ -100,7 +100,7 @@ def delete_eo_source(eo_source_pk: int) -> DeletedReport:
     eo_source = EOSource.objects.get(pk=eo_source_pk)
     deb_eo_products = EOProduct.objects.filter(eo_sources_inputs=eo_source)
     if not bool(eo_source.file):
-        raise AfriCultuReSFileNotExist("The file does not exist to delete.")
+        raise AfriCultuReSFileDoesNotExist("The file does not exist to delete.")
 
     active_eo_products = deb_eo_products.filter(
         state__in=(EOProductStateChoices.SCHEDULED,

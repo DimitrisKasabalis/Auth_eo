@@ -93,7 +93,7 @@ def main_page(request):
 
 def delete_file(request, resource_type: Literal['eo_source', 'eo_product'], pk: int):
     from eo_engine.common.db_ops import delete_eo_product, delete_eo_source
-    from eo_engine.errors import AfriCultuReSFileNotExist, AfriCultuReSFileInUse
+    from eo_engine.errors import AfriCultuReSFileDoesNotExist, AfriCultuReSFileInUse
 
     fun: Callable
     if resource_type == "eo_source":
@@ -106,7 +106,7 @@ def delete_file(request, resource_type: Literal['eo_source', 'eo_product'], pk: 
         messages.add_message(request=request,
                              level=messages.INFO,
                              message=f"Removed {str(result['eo_source'])} eo_source and {str(result['eo_product'])}")
-    except AfriCultuReSFileNotExist:
+    except AfriCultuReSFileDoesNotExist:
         messages.add_message(request, messages.ERROR,
                              "File does not exist to delete ")
     except AfriCultuReSFileInUse:
