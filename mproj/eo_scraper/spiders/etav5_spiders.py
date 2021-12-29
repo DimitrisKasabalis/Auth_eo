@@ -39,6 +39,6 @@ class ETAv5Spider(Spider, AfricultureCrawlerMixin):
             loader.add_value('domain', response.url)
             # these two are Joined
             loader.add_value('url', response.url)
-            loader.add_xpath('url', filename)
+            loader.add_value('url', filename)
 
             yield loader.load_item()
