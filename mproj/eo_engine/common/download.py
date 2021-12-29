@@ -67,8 +67,12 @@ def download_ftp_eosource(pk_eosource: int) -> str:
     url_parse = urlparse(eo_source.url)
     server: str = url_parse.netloc
     ftp_path = url_parse.path
-    user: str = copy(eo_source.credentials.username)
-    password: str = copy(eo_source.credentials.password)
+    if eo_source.credentials:
+        user: str = copy(eo_source.credentials.username)
+        password: str = copy(eo_source.credentials.password)
+    else:
+        user: str = 'anonymous'
+        password: str = 'anonymous@domain.com'
 
     def progress_cb(chunk: bytearray):
         # This function is called with a byte chunk.
