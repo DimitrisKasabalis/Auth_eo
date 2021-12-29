@@ -21,7 +21,7 @@ from typing import List, Optional, Literal
 from eo_engine.common.tasks import get_task_ref_from_name
 from eo_engine.common.verify import check_file_exists
 from eo_engine.errors import AfriCultuReSRetriableError, AfriCultuReSError
-from eo_engine.models import Credentials, Pipeline, EOSourceGroup
+from eo_engine.models import Credentials, EOSourceGroup
 from eo_engine.models import EOProduct, EOProductStateChoices
 from eo_engine.models import EOSource, EOSourceStateChoices
 from eo_engine.models import EOSourceGroupChoices
@@ -93,7 +93,7 @@ def create_wapor_entry(self, level_id: Literal['L1', 'L2'], product_id: Literal[
     # L2_AETI_D_1904_TUN.tif
     # L2_QUAL_LST_D_1904_TUN.tif
     # L2_QUAL_NDVI_D_1904_TUN.tif
-    from .models.factories import create_wapor_object
+    from .models.factories import create_or_get_wapor_object_from_filename
 
     if area_id is None and level_id == "L2":
         raise AttributeError('L2 can not be choosen without and area')
@@ -103,7 +103,7 @@ def create_wapor_entry(self, level_id: Literal['L1', 'L2'], product_id: Literal[
         wapor_filename = f'{level_id.upper()}_{product_id.upper()}_{dimension_id.upper()}_{dimension_member.upper()}.tif'
 
     logger.info(f'fun: {self.name}, generated filename: {wapor_filename}')
-    create_wapor_object(wapor_filename)
+    create_or_get_wapor_object_from_filename(wapor_filename)
     return
 
 
@@ -709,15 +709,15 @@ def task_s04p03_convert_to_tiff(eo_product_pk: int, tile: int):
             outputSRS="EPSG:4326")  # 1 is the nodata value
         gdal.Translate(srcDS=ds, destName=file_handle.name, options=optionsNC2)
 
-        cp = subprocess.run(['ncrename',
-                             '-v', 'Band1,Flood',
-                             file_handle.name], check=True)
-        cp = subprocess.run(['ncatted',
-                             '-a', 'short_name,Flood,o,c,Flood_MR',
-                             '-a', "long_name,Flood,o,c,Flood map at medium resolution",
-                             '-a', "tile_number,Flood,o,c," + str(tile),
-                             '-a', "_FillValue,Flood,o,i,1",
-                             file_handle.name], check=True)
+        subprocess.run(['ncrename',
+                        '-v', 'Band1,Flood',
+                        file_handle.name], check=True)
+        subprocess.run(['ncatted',
+                        '-a', 'short_name,Flood,o,c,Flood_MR',
+                        '-a', "long_name,Flood,o,c,Flood map at medium resolution",
+                        '-a', "tile_number,Flood,o,c," + str(tile),
+                        '-a', "_FillValue,Flood,o,i,1",
+                        file_handle.name], check=True)
 
         content = File(file_handle)
         eo_product.file.save(name=eo_product.filename, content=content, save=False)
@@ -728,7 +728,41 @@ def task_s04p03_convert_to_tiff(eo_product_pk: int, tile: int):
 
 @shared_task
 def task_s04p03_floods375m(eo_product_pk: int):
-    NotImplementedError()
+    from rasterio.merge import merge
+    eo_product = EOProduct.objects.get(id=eo_product_pk)
+    input_eo_source_group = eo_product.group.eoproductgroup.pipelines_from_output.get().input_groups.get().eosourcegroup
+    input_files_qs = EOSource.objects.filter(group=input_eo_source_group, reference_date=eo_product.reference_date)
+
+    with TemporaryDirectory() as temp_dir:
+        temp_dir_path = Path(temp_dir)
+        dst_path = temp_dir_path / 'mosaic.tif'
+        out_nc = Path(temp_dir) / 'out.nc'
+
+        datasets: List[str] = list(map(Path, [x.file.path for x in input_files_qs]))
+
+        merge(datasets=datasets, dst_path=dst_path, nodata=0)
+
+        print('translating')
+        subprocess.run([
+            'gdal_translate',
+            '-of', 'netCDF',
+            dst_path.as_posix(),
+            out_nc.as_posix()
+        ])
+        subprocess.run(['ncrename',
+                        '-v', 'Band1,Flood',
+                        out_nc.as_posix()], check=True)
+        subprocess.run(['ncatted',
+                        '-a', 'short_name,Flood,o,c,Flood_MR',
+                        '-a', "long_name,Flood,o,c,Flood_map_at_medium_resolution",
+                        '-a', "_FillValue,Flood,o,i,1",
+                        out_nc.as_posix()], check=True)
+
+        content = File(out_nc.open('rb'))
+        eo_product.file.save(name=eo_product.filename, content=content, save=False)
+        eo_product.state = EOProductStateChoices.READY
+        eo_product.datetime_creation = now
+        eo_product.save()
 
 
 @shared_task
@@ -1033,7 +1067,6 @@ def task_s06p04_et250m(eo_product_pk: int, iso: str):
         print('translating')
         subprocess.run([
             'gdal_translate',
-            '-co', 'COMPRESS=LZW',
             '-of', 'netCDF',
             (Path(temp_dir) / 'out2.tif').as_posix(),
             (Path(temp_dir) / 'out3.nc').as_posix()

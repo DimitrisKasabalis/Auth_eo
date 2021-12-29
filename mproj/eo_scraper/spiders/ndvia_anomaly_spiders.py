@@ -88,7 +88,7 @@ class NDVIAnomaly(Spider, AfricultureCrawlerMixin):
             groupdict = match.groupdict()
             tile = groupdict['tile']
             # if 'tile' is in tiles
-            self.logger.info(f'Tile: {tile} does not exist in {self.tiles}')
+            # self.logger.info(f'Tile: {tile} does not exist in {self.tiles}')
             return bool(self.tiles.count(tile))
         else:
             self.logger.warn(

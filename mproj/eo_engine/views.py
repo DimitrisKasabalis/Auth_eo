@@ -78,6 +78,14 @@ def main_page(request):
                 } for idx, v in enumerate(Pipeline.objects.filter(package='S06P01').order_by('name'))}
             },
             "4": {
+                "name": "S06P03",
+                "section_elements": {idx: {
+                    'name': v.name,
+                    'description': v.description,
+                    'urls': v.urls()
+                } for idx, v in enumerate(Pipeline.objects.filter(package='S06P03').order_by('name'))}
+            },
+            "5": {
                 "name": "S06P04",
                 "section_elements": {idx: {
                     'name': v.name,
@@ -420,7 +428,7 @@ def pipeline_inputs(request, pipeline_pk: int):
          "type": 'source',
          "group_name": eo_source_group.get_name_display,
          'discover_url': eo_source_group.discover_url(),
-         'entries': EOSource.objects.filter(group=eo_source_group).order_by('-reference_date')}
+         'entries': EOSource.objects.filter(group=eo_source_group).order_by('-reference_date', '-id')}
         for idx, eo_source_group in enumerate(input_eo_source_groups)
     ]
     # todo: properly
@@ -429,7 +437,7 @@ def pipeline_inputs(request, pipeline_pk: int):
          "type": 'product',
          "group_name": eo_product_group.get_name_display,
          # 'discover_url': eo_product_group.discover_url(),
-         'entries': EOProduct.objects.filter(group=eo_product_group).order_by('-reference_date')}
+         'entries': EOProduct.objects.filter(group=eo_product_group).order_by('-reference_date', '-id')}
         for idx, eo_product_group in enumerate(input_eo_product_groups)
     ]
     context = {

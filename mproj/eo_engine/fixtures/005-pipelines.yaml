@@ -454,3 +454,17 @@
     output_folder: 'S6_P01/WB_100/KEN'
     task_name: 'task_s06p01_wb100m'
     task_kwargs: { "aoi_wkt": "POLYGON((33.89 4.625, 41.917 4.625, 41.917 -4.671, 33.89 -4.671, 33.89 4.625, 33.89 4.625))" }
+- model: eo_engine.Pipeline
+  pk: null
+  fields:
+    name: "Floods VIIRS 375m daily"
+    description: "Mosaicing daily floods tiles over Africa. The inputs are sources using ftp link: ftp://floodlight.ssec.wisc.edu/composite"
+    package: 'S06P03'
+    timestamp: 2021-12-10T19:10:20Z
+    last_modified: 2021-12-10T19:10:20Z
+    input_groups: [ 46 ]
+    output_group: 14
+    output_filename_template: '{YYYYMMDD}_VIIRS_AFR_0375m_0001_FAMA.nc'
+    output_folder: 'S4_P03/Floods_MR/mosaic'
+    task_name: 'task_s04p03_floods375m'
+    task_kwargs: { }

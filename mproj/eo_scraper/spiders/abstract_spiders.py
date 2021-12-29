@@ -190,11 +190,6 @@ class FtpSpider(Spider, AfricultureCrawlerMixin):
     ftp_root_url = None
     credentials: Optional[credentials]
 
-    def filename_filter(self, token: str) -> bool:
-        """a function that accepts the filename token and returns T of F.
-        If False the file is ignored."""
-        return True
-
     def __init__(self, *args, **kwargs):
         super(FtpSpider, self).__init__(*args, **kwargs)
         if self.ftp_root_url is None:
@@ -228,7 +223,6 @@ class FtpSpider(Spider, AfricultureCrawlerMixin):
                     datetime_seen=datetime.utcnow().replace(tzinfo=utc),
                     url=os.path.join(response.url, f['filename'])
                 )
-
-                if self.filename_filter(result['filename']):
-                    # if filename filter in place, and is true
+                filename = result['filename']
+                if self.should_process_filename(filename=filename):
                     yield result

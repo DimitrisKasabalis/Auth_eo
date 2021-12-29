@@ -119,6 +119,7 @@ def eosource_post_save_handler(instance: EOSource, **kwargs):
     """ Post save logic goes here. ie an asset is now available locally, are there products that can be made?"""
     from eo_engine.common.s02p04 import is_gmod09q1_batch_complete_for_group
     from eo_engine.common.s06p04 import is_s06p04_wapor_batch_complete_for_group
+    from eo_engine.common.s04p03 import is_s04p03_fld_complete_for_group
     from eo_engine.models import EOProduct, EOProductStateChoices, Pipeline
 
     eo_source = instance
@@ -154,7 +155,7 @@ def eosource_post_save_handler(instance: EOSource, **kwargs):
             if created:
                 prod.state = EOProductStateChoices.AVAILABLE
 
-            # these bellow, are a batch, multiple inputs create one
+            # these bellow, are a batches, multiple files that create one input
             if [EOSourceGroupChoices.S02P02_NDVIA_250M_ETH_GMOD, EOSourceGroupChoices.S02P02_NDVIA_250M_GHA_GMOD,
                 EOSourceGroupChoices.S02P02_NDVIA_250M_KEN_GMOD, EOSourceGroupChoices.S02P02_NDVIA_250M_MOZ_GMOD,
                 EOSourceGroupChoices.S02P02_NDVIA_250M_NER_GMOD, EOSourceGroupChoices.S02P02_NDVIA_250M_RWA_GMOD,
@@ -164,8 +165,15 @@ def eosource_post_save_handler(instance: EOSource, **kwargs):
                     prod.state = EOProductStateChoices.AVAILABLE
                 else:
                     prod.state = EOProductStateChoices.MISSING_SOURCE
+            # hack
             if input_group_eosource.name.startswith('S06P04_WAPOR'):
                 if is_s06p04_wapor_batch_complete_for_group(eo_source, pipeline):
+                    prod.state = EOProductStateChoices.AVAILABLE
+                else:
+                    prod.state = EOProductStateChoices.MISSING_SOURCE
+
+            if input_group_eosource.name == EOSourceGroupChoices.S04P03_FLD_375M_1D_VIIRS:
+                if is_s04p03_fld_complete_for_group(eo_source, input_group_eosource):
                     prod.state = EOProductStateChoices.AVAILABLE
                 else:
                     prod.state = EOProductStateChoices.MISSING_SOURCE
