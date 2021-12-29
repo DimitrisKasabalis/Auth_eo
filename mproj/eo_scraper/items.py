@@ -5,7 +5,7 @@
 import re
 import scrapy
 from celery.utils.log import get_task_logger
-from datetime import datetime, date
+from datetime import datetime, date as dt_date
 from itemloaders.processors import Join, MapCompose, TakeFirst
 from pytz import timezone
 from typing import Optional, Union
@@ -69,8 +69,8 @@ def drop_query_from_url(value: str):
     return value.split('?')[0]
 
 
-def set_utc_timezone(dt_object: Union[datetime, date]):
-    if isinstance(dt_object, date):
+def set_utc_timezone(dt_object: Union[datetime, dt_date]):
+    if isinstance(dt_object, dt_date):
         return dt_object
     return dt_object.replace(tzinfo=utc)
 
