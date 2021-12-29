@@ -1,3 +1,5 @@
+import os
+
 from celery.utils.log import get_task_logger
 from copy import copy
 from django.core.files import File
@@ -40,19 +42,20 @@ def download_http_eosource(pk_eosource: int) -> str:
 
             file_handle.write(chunk)
             file_handle.flush()
-        logger.info('LOG:INFO: Downloaded file as temporary.')
-        content = File(file_handle)
+        logger.info(f'LOG:INFO: Downloaded file {eo_source.filename} to a temporary file.')
+        logger.info(f'LOG:INFO: Downloaded file has filesize {os.stat(file_handle.name).st_size}.')
 
+        content = File(file_handle)
         for conn in connections.all():
             conn.close_if_unusable_or_obsolete()
-        eosource = EOSource.objects.get(pk=pk_eosource)
-        eosource.file.save(name=eosource.filename, content=content, save=False)
+        eo_source = EOSource.objects.get(pk=pk_eosource)
+        eo_source.file.save(name=eo_source.filename, content=content, save=False)
 
-        eosource.filesize = eosource.file.size
-        eosource.state = EOSourceStateChoices.AVAILABLE_LOCALLY
-        eosource.save()
+        eo_source.filesize = eo_source.file.size
+        eo_source.state = EOSourceStateChoices.AVAILABLE_LOCALLY
+        eo_source.save()
 
-    return eosource.file.name
+    return eo_source.file.name
 
 
 def download_ftp_eosource(pk_eosource: int) -> str:
