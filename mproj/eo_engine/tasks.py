@@ -970,7 +970,9 @@ def task_s06p04_et250m(eo_product_pk: int, iso: str):
     import numpy as np
 
     africa_borders_buff10km = Path("/aux_files/Border_shp_with_buff/africa_borders_buff10km.shp")
-    assert africa_borders_buff10km.exists()
+    if not africa_borders_buff10km.exists():
+        raise AfriCultuReSError(
+            f'TASKS:task_s06p04_et250m: the shapefile {africa_borders_buff10km.as_posix()} could not be found!.')
     eo_product = EOProduct.objects.get(id=eo_product_pk)
     input_eo_source_group = eo_product.group.eoproductgroup.pipelines_from_output.get().input_groups.all()
     input_files_qs = EOSource.objects.filter(
