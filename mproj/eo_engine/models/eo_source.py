@@ -1,3 +1,5 @@
+from logging import Logger
+
 import os
 from celery.utils.log import get_task_logger
 from django.conf import settings
@@ -11,7 +13,7 @@ from urllib.parse import urlsplit
 
 from eo_engine.models.eo_group import EOSourceGroupChoices
 
-logger = get_task_logger(__name__)
+logger: Logger = get_task_logger(__name__)
 
 
 def _file_storage_path(instance: 'EOSource', filename: str):
@@ -21,15 +23,21 @@ def _file_storage_path(instance: 'EOSource', filename: str):
         var = wapor_from_filename(filename)
         product_id = var.product_id
         # wapor/<product_id>/<filename>
-        full_path = f"{o.scheme}/{product_id}/{filename}"
+        full_path = f"{o.scheme}/{product_id}"
     else:
-        full_path = f'{instance.domain}/{o.path[1:] if o.path.startswith(r"/") else o.path}'
+        # .parent removes the filename (for normalisation)
+        full_path = Path(f'{instance.domain}/{o.path[1:] if o.path.startswith(r"/") else o.path}').parent.as_posix()
 
-        final_path = os.path.join(settings.MEDIA_ROOT, full_path)
-        if os.path.exists(final_path):
-            os.remove(final_path)
+    # where to save
+    final_path = os.path.join(full_path, filename)
 
-    return full_path
+    # clean up if exists, not the same as above, as this one is absolute
+    absolute_path = os.path.join(settings.MEDIA_ROOT, final_path)
+    if os.path.exists(absolute_path):
+        logger.warning('Found existing file from previous iteration. Removing')
+        os.remove(absolute_path)
+
+    return final_path
 
 
 class EOSourceStateChoices(models.TextChoices):
