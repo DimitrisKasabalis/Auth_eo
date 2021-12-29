@@ -442,6 +442,7 @@ def pipeline_outputs(request, pipeline_pk: int):
     task_kwargs = pipeline.task_kwargs
 
     context = {
+        'task_name': pipeline.task_name,
         "pipeline_pk": pipeline_pk,
         'group_name': output_group.get_name_display,
         'data': [
