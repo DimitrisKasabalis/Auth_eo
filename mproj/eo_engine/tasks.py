@@ -711,13 +711,13 @@ def task_s04p03_convert_to_tiff(eo_product_pk: int, tile: int):
 
         cp = subprocess.run(['ncrename',
                              '-v', 'Band1,Flood',
-                             file_handle.name])
+                             file_handle.name], check=True)
         cp = subprocess.run(['ncatted',
                              '-a', 'short_name,Flood,o,c,Flood_MR',
                              '-a', "long_name,Flood,o,c,Flood map at medium resolution",
                              '-a', "tile_number,Flood,o,c," + str(tile),
                              '-a', "_FillValue,Flood,o,i,1",
-                             file_handle.name])
+                             file_handle.name], check=True)
 
         content = File(file_handle)
         eo_product.file.save(name=eo_product.filename, content=content, save=False)
