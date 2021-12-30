@@ -1027,6 +1027,7 @@ def task_s06p04_et250m(eo_product_pk: int, iso: str):
         et_band = rasterio.open(file_in_path_et)
         ndvi_band = rasterio.open(file_in_path_ndvi)
         lst_band = rasterio.open(file_in_path_lst)
+        logger.info('Reading Rasters.')
 
         et = et_band.read(1).astype(rasterio.int16)
         ndvi = ndvi_band.read(1).astype(rasterio.int16)
@@ -1043,7 +1044,7 @@ def task_s06p04_et250m(eo_product_pk: int, iso: str):
             et_meta = et_band.meta.copy()
             et_meta.update({'crs': rasterio.crs.CRS({'init': 'epsg:4326'})})
 
-            print('Writing output file....')
+            logger.info('Writing output file....')
             with rasterio.open(file_out_path, 'w', compress='lzw', **et_meta) as file:
                 file.write(et_ql, 1)
 
@@ -1057,14 +1058,14 @@ def task_s06p04_et250m(eo_product_pk: int, iso: str):
         get_AETI_qual(file_in_path_et=file_in_path_et, file_in_path_lst=file_in_path_lst,
                       file_in_path_ndvi=file_in_path_ndvi, file_out_path=Path(temp_dir) / 'out1.tif')
 
-        print('cutting/warping')
+        logger.info('cutting/warping')
         subprocess.run(['gdalwarp',
                         '-cutline', africa_borders_buff10km.as_posix(),
                         '-co', 'COMPRESS=LZW',
                         (Path(temp_dir) / 'out1.tif').as_posix(),
                         (Path(temp_dir) / 'out2.tif').as_posix()], check=True)
 
-        print('translating')
+        logger.info('translating')
         subprocess.run([
             'gdal_translate',
             '-of', 'netCDF',
