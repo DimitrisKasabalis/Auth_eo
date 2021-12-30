@@ -78,12 +78,12 @@ def main_page(request):
                 } for idx, v in enumerate(Pipeline.objects.filter(package='S06P01').order_by('name'))}
             },
             "4": {
-                "name": "S06P03",
+                "name": "S04P03",
                 "section_elements": {idx: {
                     'name': v.name,
                     'description': v.description,
                     'urls': v.urls()
-                } for idx, v in enumerate(Pipeline.objects.filter(package='S06P03').order_by('name'))}
+                } for idx, v in enumerate(Pipeline.objects.filter(package='S04P03').order_by('name'))}
             },
             "5": {
                 "name": "S06P04",

@@ -459,7 +459,7 @@
   fields:
     name: "Floods VIIRS 375m daily"
     description: "Mosaicing daily floods tiles over Africa. The inputs are sources using ftp link: ftp://floodlight.ssec.wisc.edu/composite"
-    package: 'S06P03'
+    package: 'S04P03'
     timestamp: 2021-12-10T19:10:20Z
     last_modified: 2021-12-10T19:10:20Z
     input_groups: [ 46 ]
