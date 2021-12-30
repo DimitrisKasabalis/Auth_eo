@@ -186,7 +186,8 @@
   fields: { }
 - model: eo_engine.EOGroup
   pk: 49
-  fields: { }
+  fields:
+    description: 'Sentinel KZN'
 - model: eo_engine.EOGroup
   pk: 50
   fields: { }
@@ -256,3 +257,7 @@
 - model: eo_engine.EOGroup
   pk: 72
   fields: { }
+- model: eo_engine.EOGroup
+  pk: 73
+  fields:
+    description: 'Sentinel BAG'

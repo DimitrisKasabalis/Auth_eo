@@ -100,12 +100,13 @@
     crawler_type: 'SCRAPY_SPIDER'
     name: 'S06P01_WB_100M_V1_GLOB_CGLS'
     date_regex: 'c_gls_WB100_(?P<YYYYMMDD>\d{8})0000_GLOBE_S2_V1\.0\.1\.nc'
-#- model: eo_engine.EOSourceGroup
-#  pk: 49
-#  name: S06P01_S1_10M
-#  fields:
-#    name: 'S06P01_S1_10M'
-#    date_regex: ''
+- model: eo_engine.EOSourceGroup
+  pk: 49
+  name: S06P01_S1_10M_KZN
+  fields:
+    crawler_type: 'OTHER (SENTINEL)'
+    name: 'S06P01_S1_10M_KZN'
+    date_regex: '^S1(A|B)_IW_GRDH_1SDV_(?P<YYYYMMDD>\d{8})T\d{6}_\d{8}T\d{6}_[A-Z0-9]+_[A-Z0-9]+_[A-Z0-9]+(\.zip)?$'
 - model: eo_engine.EOSourceGroup
   pk: 50
   fields:
@@ -244,3 +245,10 @@
     crawler_type: 'OTHER (WAPOR)'
     name: 'S06P04_WAPOR_L2_QUAL_NDVI_D_GHA'
     date_regex: 'L2_QUAL_NDVI_D_(?P<YYKK>\d{4})_GHA.tif'
+- model: eo_engine.EOSourceGroup
+  pk: 73
+  name: S06P01_S1_10M_BAG
+  fields:
+    crawler_type: 'OTHER (SENTINEL)'
+    name: 'S06P01_S1_10M_BAG'
+    date_regex: '^S1(A|B)_IW_GRDH_1SDV_(?P<YYYYMMDD>\d{8})T\d{6}_\d{8}T\d{6}_[A-Z0-9]+_[A-Z0-9]+_[A-Z0-9]+(\.zip)?$'
