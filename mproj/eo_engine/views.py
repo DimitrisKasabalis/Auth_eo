@@ -215,6 +215,15 @@ def submit_task(request):
         # task_name = request.
 
     task = get_task_ref_from_name(task_name).s(**task_kwargs)
+    # if the task that we are about to submit is to download something,
+    # mark it as scheduled
+    from eo_engine.tasks import task_download_file
+    if task_download_file == get_task_ref_from_name(task_name):
+        from eo_engine.models import EOSourceStateChoices
+        eo_source = EOSource.objects.get(pk=task_kwargs['eo_source_pk'])
+        eo_source.state = EOSourceStateChoices.SCHEDULED_FOR_DOWNLOAD
+        eo_source.save()
+
     job = task.apply_async()
     messages.add_message(
         request=request, level=messages.SUCCESS,
