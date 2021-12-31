@@ -6,6 +6,7 @@ import tempfile
 from celery import group
 from celery.app import shared_task
 from celery.utils.log import get_task_logger
+from datetime import date as dt_date
 from django.core.files import File
 from django.core.files.temp import NamedTemporaryFile
 from django.db import connections as django_connections
@@ -21,10 +22,10 @@ from typing import List, Optional, Literal
 from eo_engine.common.tasks import get_task_ref_from_name
 from eo_engine.common.verify import check_file_exists
 from eo_engine.errors import AfriCultuReSRetriableError, AfriCultuReSError
-from eo_engine.models import Credentials, EOSourceGroup
-from eo_engine.models import EOProduct, EOProductStateChoices
-from eo_engine.models import EOSource, EOSourceStateChoices
-from eo_engine.models import EOSourceGroupChoices
+from eo_engine.models import (Credentials, EOSourceGroup,
+                              EOProduct, EOProductStateChoices,
+                              EOSource, EOSourceStateChoices,
+                              EOSourceGroupChoices)
 
 logger: Logger = get_task_logger(__name__)
 
@@ -80,7 +81,7 @@ def task_init_spider(spider_name):
     return "Spider {} finished crawling".format(spider_name)
 
 
-# utils
+# These tasks are util tasks, made here to accommodate automation.
 @shared_task(bind=True)
 def create_wapor_entry(self, level_id: Literal['L1', 'L2'], product_id: Literal['AETI', 'QUAL_LST', 'QUAL_NDVI'],
                        dimension_id: Literal['D'], dimension_member: str, area_id: str = None):
@@ -130,7 +131,7 @@ def task_sftp_parse_remote_dir(group_name: str):
                                       username=credentials.username,
                                       password=credentials.password)
     for entry in list_dir_entries(remotepath=path, connection=sftp_connection):
-        add_to_db(entry, eo_source_group_name=group_name)
+        add_to_db(entry, eo_source_group=group_name)
 
 
 @shared_task(bind=True)

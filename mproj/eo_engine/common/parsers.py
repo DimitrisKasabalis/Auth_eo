@@ -6,7 +6,7 @@ from functools import cache
 from pytz import utc
 
 from eo_engine.errors import AfriCultuReSError
-from eo_engine.common.copernicus import copernicus_name_elements
+from eo_engine.common import CopernicusNameElements
 
 punctuation_chars = re.escape(string.punctuation)
 ascii_letters = string.ascii_letters
@@ -41,11 +41,11 @@ def parse_dt_from_generic_string(timestr: str) -> datetime:
         raise AfriCultuReSError(f'Could not extract datetime from string: {timestr}') from e
 
 
-def parse_copernicus_name(filename: str) -> copernicus_name_elements:
+def parse_copernicus_name(filename: str) -> CopernicusNameElements:
     match = COPERNICUS_REGEX.match(filename)
     if match:
         match_dict = match.groupdict()
-        return copernicus_name_elements(
+        return CopernicusNameElements(
             product=match_dict['PRODUCT'],
             datetime=parse_dt_from_generic_string(match_dict['YYYYMMDDHHMM']),
             area=match_dict['AREA'],

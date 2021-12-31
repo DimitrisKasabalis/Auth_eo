@@ -11,7 +11,7 @@ from typing import List
 from eo_engine.errors import AfriCultuReSRetriableError, AfriCultuReSError
 from eo_engine.models import EOSource, EOSourceStateChoices
 
-logger = get_task_logger(__name__)
+logger: Logger = get_task_logger(__name__)
 
 
 def download_http_eosource(pk_eosource: int) -> str:

@@ -2,10 +2,10 @@ from logging import Logger
 
 from celery.utils.log import get_task_logger
 from django.utils.timezone import now
-from typing import TypedDict
+from typing import TypedDict, Union
 
 from eo_engine.common.misc import str_to_date
-from eo_engine.common.sftp import SftpFile
+from eo_engine.common import RemoteFile
 from eo_engine.errors import AfriCultuReSFileDoesNotExist, AfriCultuReSFileInUse
 from eo_engine.models import CrawlerConfiguration
 from eo_engine.models import Credentials, EOSourceGroup
@@ -122,26 +122,24 @@ def delete_eo_source(eo_source_pk: int) -> DeletedReport:
     return {"eo_source": 1, "eo_product": deleted_eo_products}
 
 
-def add_to_db(data: SftpFile, eo_source_group_name: str):
-    """ Adds entry in the database. Checks if entry exists based on filename and date of reference. """
-    group = EOSourceGroup.objects.get(name=eo_source_group_name)
-    crawler_config = CrawlerConfiguration.objects.get(group=group.name)
-    reference_date = str_to_date(data.filename, group.date_regex)
-    if crawler_config.from_date > reference_date:
-        logger.info(
-            f'Skipping {data.filename} because it\'s reference_date is lse from teh from date {crawler_config.from_date.isoformat()}')
-        return
+def add_to_db(remote_file: RemoteFile, eo_source_group: Union[str, EOSourceGroup]):
+    """ Adds entry in the database. Checks if entry exists based on filename"""
+    if isinstance(eo_source_group, EOSourceGroup):
+        group = eo_source_group
+    else:
+        group = EOSourceGroup.objects.get(name=eo_source_group)
+    reference_date = str_to_date(remote_file.filename, group.date_regex)
 
     obj, created = EOSource.objects.get_or_create(
-        filename=data.filename,
+        filename=remote_file.filename,
         defaults={
-            'domain': data.domain,
-            'url': data.url,
+            'domain': remote_file.domain,
+            'url': remote_file.url,
             'reference_date': reference_date,
-            'credentials': Credentials.objects.get(domain=data.domain),
+            'credentials': Credentials.objects.get(domain=remote_file.domain),
             'datetime_seen': now(),
-            'filesize_reported': data.filesize_reported,
+            'filesize_reported': remote_file.filesize_reported,
         }
     )
-    if created:
-        obj.group.add(group)
+
+    obj.group.add(group)

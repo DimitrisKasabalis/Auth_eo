@@ -1,13 +1,7 @@
 import pysftp
 from pathlib import Path
-from typing import NamedTuple
 
-SftpFile = NamedTuple('SftpFile', (
-    ('domain', str),
-    ('url', str),
-    ('filename', str),
-    ('filesize_reported', int)
-))
+from eo_engine.common import RemoteFile
 
 
 def sftp_connection(host, username, password) -> pysftp.Connection:
@@ -31,7 +25,7 @@ def list_dir_entries(remotepath: str, connection: pysftp.Connection):
         for entry in c.listdir_attr(remotepath):
             filename = entry.filename
             path = Path(remotepath) / filename
-            yield SftpFile(
+            yield RemoteFile(
                 domain=domain,
                 filename=filename,
                 filesize_reported=entry.st_size,
