@@ -59,6 +59,19 @@ class WaporForm(forms.Form):
                                          'max': datetime.date.today().strftime('%Y-%m-%d')}))
 
 
+class SentinelForm(forms.Form):
+    from_date = forms.DateField(required=True,
+                                widget=forms.widgets.DateInput(
+                                    attrs={'type': 'date',
+                                           'min': settings.MIN_SENTINEL_DATE,
+                                           'max': datetime.date.today().strftime('%Y-%m-%d')}))
+    to_date = forms.DateField(required=True,
+                              widget=forms.widgets.DateInput(
+                                  attrs={'type': 'date',
+                                         'min': settings.MIN_WAPOR_DATE,
+                                         'max': datetime.date.today().strftime('%Y-%m-%d')}))
+
+
 class WaporNdviForm(forms.Form):
     level = forms.ChoiceField(required=True, choices=(('L1', 'Level-1'), ('L2', 'Level-2')),
                               initial='L2')

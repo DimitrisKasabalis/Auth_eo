@@ -24,6 +24,9 @@ def _file_storage_path(instance: 'EOSource', filename: str):
         product_id = var.product_id
         # wapor/<product_id>/<filename>
         full_path = f"{o.scheme}/{product_id}"
+    elif o.scheme.lower() == 'sentinel':
+        # sentinel/<UUID>.zip
+        full_path = 'sentinel'
     else:
         # .parent removes the filename (for normalisation)
         full_path = Path(f'{instance.domain}/{o.path[1:] if o.path.startswith(r"/") else o.path}').parent.as_posix()

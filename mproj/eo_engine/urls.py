@@ -15,7 +15,8 @@ urlpatterns = [
     path('tasks/submit', views.submit_task, name='submit-task'),
     path('utilities/delete_file/<str:resource_type>/<int:pk>', views.delete_file, name='delete-file'),
     path('utilities/refresh-rows', views.utilities_save_rows, name='refresh-rows'),
-    path('utilties/create-wapor/<str:product>', views.create_wapor_entry, name='create-wapor'),
+    path('utilties/create-wapor/<str:group_name>', views.create_wapor_entry, name='create-wapor'),
+    path('utilties/create-sentinel/<str:group_name>', views.create_sentinel_entry, name='create-sentinel'),
 
     # json responses
     # 'c/task/done/<task_pattern:task_id>/'

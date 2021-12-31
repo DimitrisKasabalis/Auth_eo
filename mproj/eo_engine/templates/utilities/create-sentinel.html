@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block Title %}Add WAPOR entries{% endblock %}
+{% block header %}WAPOR entries{% endblock %}
+{% block body %}
+    <div class="container-fluid">
+        <div class="container-fluid">
+            <h1 class="display-6">Add Wapor Entries</h1>
+            {% lorem 3 p %}
+            <p>You want to Generate:</p>
+            <dl class="row">
+                <dt class="col-sm-3">Product</dt>
+                <dd class="col-sm-9">{{ group_name }}</dd>
+                <dt class="col-sm-3">Location</dt>
+                <dd class="col-sm-9">{{ location }}</dd>
+            </dl>
+        </div>
+
+        <form action="{% url "eo_engine:create-sentinel" group_name=group_name %}" method="post">{% csrf_token %}
+            {{ form }}
+            <br>
+            <input type="submit" value="OK">
+        </form>
+        <a href="{% url "eo_engine:main-page" %}">Home</a>
+    </div>
+{% endblock %}

@@ -32,12 +32,6 @@ logger: Logger = get_task_logger(__name__)
 now = timezone.now()
 
 
-def random_name_gen(length=10) -> str:
-    import random
-    import string
-    return ''.join(random.choice(string.ascii_uppercase) for i in range(10))
-
-
 # Notes:
 #  task should use the kwargs eo_source_pk and eo_product_pk.
 #  these kw are picked up to tie the task with the element
@@ -108,6 +102,47 @@ def create_wapor_entry(self, level_id: Literal['L1', 'L2'], product_id: Literal[
     return
 
 
+@shared_task
+def task_scan_sentinel_hub(from_date: dt_date = None, to_date: dt_date = None, location: Literal['KZN', 'BAG'] = None,
+                           **kwargs):
+    from eo_engine.common.db_ops import add_to_db
+    from sentinelsat import SentinelAPI, geojson_to_wkt, read_geojson
+    from eo_engine.common import RemoteFile
+
+    credentials = Credentials.objects.get(domain='sentinel')
+    if location == "KZN":
+        geojson_path = Path('/aux_files/Geojson/KZN_extent_forS1.geojson')
+        eo_source_group = EOSourceGroup.objects.get(name=EOSourceGroupChoices.S06P01_S1_10M_KZN)
+    elif location == 'BAG':
+        geojson_path = Path('/aux_files/Geojson/BAG_extent_forS1.geojson')
+        eo_source_group = EOSourceGroup.objects.get(name=EOSourceGroupChoices.S06P01_S1_10M_BAG)
+    else:
+        raise AfriCultuReSError(f'Unknown location: {location}')
+    check_file_exists(geojson_path)
+
+    area = geojson_to_wkt(read_geojson(geojson_path))
+    api_kwargs = {
+        'platformname': 'Sentinel-1',
+        'date': (from_date, to_date),
+        'swathidentifier': 'IW',
+        'producttype': 'GRD',
+        'orbitdirection': 'ASCENDING'
+    }
+    api_kwargs.update(kwargs)
+    api = SentinelAPI(user=credentials.username, password=credentials.password)
+    for uuid, payload in api.query(
+            area=area, **api_kwargs
+    ).items():
+        remote_file = RemoteFile(
+            domain='sentinel',
+            url=f'sentinel://{uuid}',
+            # XXX: number exists, but need to parse it
+            filesize_reported=-1,
+            filename=payload['identifier']+'.zip'
+        )
+        add_to_db(remote_file=remote_file, eo_source_group=eo_source_group)
+
+
 # SFTP
 @shared_task
 def task_sftp_parse_remote_dir(group_name: str):
@@ -169,7 +204,9 @@ def task_download_file(self, eo_source_pk: int):
     from eo_engine.common.download import (download_http_eosource,
                                            download_ftp_eosource,
                                            download_sftp_eosource,
-                                           download_wapor_eosource)
+                                           download_wapor_eosource,
+                                           download_sentinel_resource)
+
     eo_source = EOSource.objects.get(pk=eo_source_pk)
     eo_source.state = EOSourceStateChoices.DOWNLOADING
     eo_source.save()
@@ -187,6 +224,8 @@ def task_download_file(self, eo_source_pk: int):
             return download_sftp_eosource(eo_source_pk)
         elif scheme.startswith('wapor'):
             return download_wapor_eosource(eo_source_pk)
+        elif scheme.startswith('sentinel'):
+            return download_sentinel_resource(eo_source_pk)
         else:
             raise Exception(f'There was no defined method for scheme: {scheme}')
     except AfriCultuReSRetriableError as exc:

@@ -6,7 +6,7 @@ from django.contrib import messages
 from django.http import QueryDict
 from django.shortcuts import render, redirect
 from django.urls import reverse
-from django.utils.datetime_safe import date
+from django.utils.datetime_safe import date, datetime
 from django.utils.http import urlencode
 from more_itertools import collapse
 from typing import Literal, Callable, Optional, Dict, Union
@@ -312,14 +312,49 @@ def utilities_view_post_credentials(request):
             return redirect(reverse('credentials-list'))
 
 
-def create_wapor_entry(request, product: str):
+def create_sentinel_entry(request, group_name: str):
+    from .forms import SentinelForm
+    pattern = re.compile(r'S06P01_S1_10M_(?P<LOCATION>KZN|BAG)', re.IGNORECASE)
+    match = pattern.match(group_name)
+    if match is None:
+        raise
+
+    group_dict = match.groupdict()
+    location = group_dict['LOCATION']
+
+    context = {
+        'group_name': group_name,
+        'location': location
+    }
+    form_class = SentinelForm
+
+    if request.method == 'GET':
+        context.update(form=form_class())
+        return render(request, 'utilities/create-sentinel.html', context=context)
+    if request.method == 'POST':
+        from eo_engine.tasks import task_scan_sentinel_hub
+        form = form_class(request.POST)
+        if form.is_valid():
+            data = form.data
+            from_date_str = data['from_date']
+            to_date_str = data['to_date']
+            from_date = datetime.strptime(from_date_str, '%Y-%m-%d')
+            to_date = datetime.strptime(to_date_str, '%Y-%m-%d')
+
+            task_scan_sentinel_hub(from_date=from_date, to_date=to_date, location=location)
+            group = EOSourceGroup.objects.get(name=group_name)
+            pipeline = group.pipelines_from_input.get()
+            return redirect('eo_engine:pipeline-inputs-list', pipeline_pk=pipeline.pk)
+
+
+def create_wapor_entry(request, group_name: str):
     from eo_engine.common.time import month_dekad_to_running_decad, day2dekad
     from .forms import WaporForm
 
     pat = re.compile(
         r'S06P04_WAPOR_(?P<LEVEL>(L1|L2))_(?P<PROD>(AETI|QUAL_LST|QUAL_NDVI))_D_(?P<LOCATION>(AFRICA|\w{3}|))',
         re.IGNORECASE)
-    match = pat.match(product)
+    match = pat.match(group_name)
     if match is None:
         raise
 
@@ -330,7 +365,7 @@ def create_wapor_entry(request, product: str):
     product_dimension = 'D'  # it's always D (DEKAD) at this stage
 
     context = {
-        'product': product,
+        'product': group_name,
         'product_name': product_name,
         'product_level': product_level,
         'product_location': location,
@@ -377,7 +412,7 @@ def create_wapor_entry(request, product: str):
             context.update(form=form)
             return render(request, 'utilities/create-wapor.html', context=context)
 
-        return redirect(reverse('eo_engine:create-wapor', kwargs={'product': product}))
+        return redirect(reverse('eo_engine:create-wapor', kwargs={'product': group_name}))
 
 
 def configure_crawler(request, group_name: str):

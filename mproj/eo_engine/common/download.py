@@ -1,5 +1,8 @@
-import os
+from logging import Logger
 
+import os
+from sentinelsat import InvalidChecksumError
+from tempfile import TemporaryDirectory
 from celery.utils.log import get_task_logger
 from copy import copy
 from django.core.files import File
@@ -165,7 +168,6 @@ def download_wapor_eosource(pk_eosource: int) -> str:
                 logger.info('LOG:INFO:File downloaded in a temp file.')
                 content = File(file_handle)
                 eosource = EOSource.objects.get(pk=pk_eosource)
-                print(eosource.filename)
                 eosource.file.save(name=eosource.filename, content=content, save=False)
 
                 eosource.filesize = eosource.file.size
@@ -177,3 +179,36 @@ def download_wapor_eosource(pk_eosource: int) -> str:
             eo_source.url = 'wapor://'
             eo_source.save()
             raise AfriCultuReSError(f'Unhandled case!!. Job_url: {remoteJob.job_url()}')
+
+
+def download_sentinel_resource(pk_eosource: int) -> str:
+    from sentinelsat import SentinelAPI
+    eo_source = EOSource.objects.get(pk=pk_eosource)
+    credentials = eo_source.credentials
+    username = credentials.username
+    password = credentials.password
+
+    api = SentinelAPI(username, password, show_progressbars=False)
+    # download the file to a temp dir, and then save it properly
+    with TemporaryDirectory() as temp_dir:
+        try:
+            uuid = eo_source.url.split(r'//')[1]
+            res = api.download(uuid, temp_dir)
+        except InvalidChecksumError as e:
+            logger.error('The download file failed the checksum')
+            raise AfriCultuReSError('Failed to download') from e
+        except BaseException as e:
+            raise AfriCultuReSError(f'Unhandled case!!.')
+        # close all the connections as they could be stale.
+        connections.close_all()
+        logger.info('LOG:INFO:File downloaded in a temp file.')
+        file_handle = res["path"]
+        content = File(open(file_handle, 'rb'))
+        eosource = EOSource.objects.get(pk=pk_eosource)
+        eosource.file.save(name=eosource.filename, content=content, save=False)
+
+        eosource.filesize = eosource.file.size
+        eosource.state = EOSourceStateChoices.AVAILABLE_LOCALLY
+        eosource.save()
+
+    return eo_source.filename
