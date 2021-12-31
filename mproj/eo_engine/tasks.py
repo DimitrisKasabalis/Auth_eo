@@ -138,7 +138,7 @@ def task_scan_sentinel_hub(from_date: dt_date = None, to_date: dt_date = None, l
             url=f'sentinel://{uuid}',
             # XXX: number exists, but need to parse it
             filesize_reported=-1,
-            filename=payload['identifier']+'.zip'
+            filename=payload['identifier'] + '.zip'
         )
         add_to_db(remote_file=remote_file, eo_source_group=eo_source_group)
 
@@ -857,6 +857,16 @@ def task_s06p01_wb300m_v2(eo_product_pk: int):
         eo_product.save()
 
     return 0
+
+
+@shared_task
+def task_s06p01_wb10m_kzn(eo_product_pk: int):
+    raise AfriCultuReSError() from NotImplementedError('Not done yet!')
+
+
+@shared_task
+def task_s06p01_wb10m_bag(eo_product_pk: int):
+    raise AfriCultuReSError() from NotImplementedError('Not done yet!')
 
 
 @shared_task

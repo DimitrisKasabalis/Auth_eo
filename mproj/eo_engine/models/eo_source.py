@@ -142,7 +142,10 @@ def eosource_post_save_handler(instance: EOSource, **kwargs):
         # but pipelines could have multiple input groups
         for input_group in pipeline.input_groups.all():
             input_group_eosource = input_group.as_eosource_group()
-            assert input_group_eosource is not None
+
+            if input_group_eosource is None:
+                from eo_engine.errors import AfriCultuReSError
+                raise AfriCultuReSError('All eo_source group should be castable as eo_source_group')
 
             # so cast to Product grp
             if hasattr(output_group, 'as_eo_product_group'):
@@ -155,31 +158,16 @@ def eosource_post_save_handler(instance: EOSource, **kwargs):
                 group=output_group,
                 reference_date=eo_source.reference_date
             )
-            if created:
+            # generalised solution
+            # are all the files that are supposed to be available ?
+            all_of_this_kind = EOSource.objects.filter(group=input_group_eosource,
+                                                       reference_date=eo_source.reference_date)
+            all_of_this_kind_that_are_available = all_of_this_kind.filter(state=EOSourceStateChoices.AVAILABLE_LOCALLY)
+            if all_of_this_kind.count() == all_of_this_kind_that_are_available.count():
                 prod.state = EOProductStateChoices.AVAILABLE
+            else:
+                prod.state = EOProductStateChoices.MISSING_SOURCE
 
-            # these bellow, are a batches, multiple files that create one input
-            if [EOSourceGroupChoices.S02P02_NDVIA_250M_ETH_GMOD, EOSourceGroupChoices.S02P02_NDVIA_250M_GHA_GMOD,
-                EOSourceGroupChoices.S02P02_NDVIA_250M_KEN_GMOD, EOSourceGroupChoices.S02P02_NDVIA_250M_MOZ_GMOD,
-                EOSourceGroupChoices.S02P02_NDVIA_250M_NER_GMOD, EOSourceGroupChoices.S02P02_NDVIA_250M_RWA_GMOD,
-                EOSourceGroupChoices.S02P02_NDVIA_250M_TUN_GMOD, EOSourceGroupChoices.S02P02_NDVIA_250M_ZAF_GMOD
-                ].count(input_group_eosource.name):
-                if is_gmod09q1_batch_complete_for_group(eo_source, input_group_eosource):
-                    prod.state = EOProductStateChoices.AVAILABLE
-                else:
-                    prod.state = EOProductStateChoices.MISSING_SOURCE
-            # hack
-            if input_group_eosource.name.startswith('S06P04_WAPOR'):
-                if is_s06p04_wapor_batch_complete_for_group(eo_source, pipeline):
-                    prod.state = EOProductStateChoices.AVAILABLE
-                else:
-                    prod.state = EOProductStateChoices.MISSING_SOURCE
-
-            if input_group_eosource.name == EOSourceGroupChoices.S04P03_FLD_375M_1D_VIIRS:
-                if is_s04p03_fld_complete_for_group(eo_source, input_group_eosource):
-                    prod.state = EOProductStateChoices.AVAILABLE
-                else:
-                    prod.state = EOProductStateChoices.MISSING_SOURCE
             prod.save()
 
 
