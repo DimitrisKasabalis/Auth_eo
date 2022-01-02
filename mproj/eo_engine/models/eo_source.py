@@ -27,6 +27,11 @@ def _file_storage_path(instance: 'EOSource', filename: str):
     elif o.scheme.lower() == 'sentinel':
         # sentinel/<UUID>.zip
         full_path = 'sentinel'
+        if instance.group == EOSourceGroupChoices.S06P01_S1_10M_KZN:
+            full_path = 'sentinel/KZN'
+        if instance.group == EOSourceGroupChoices.S06P01_S1_10M_BAG:
+            full_path = 'sentinel/BAG'
+
     else:
         # .parent removes the filename (for normalisation)
         full_path = Path(f'{instance.domain}/{o.path[1:] if o.path.startswith(r"/") else o.path}').parent.as_posix()
