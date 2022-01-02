@@ -7,10 +7,16 @@
     <div class="container">
         <div class="row">
             <div class="col">
-                Group Name: <b>{{ group_name }}</b>
+                Group Name: <b>{{ group.get_name_display }}</b>
             </div>
             <div class="col">
                 Task Name: <b>{{ task_name }}</b>
+                {% if group.submit_schedule_for_generation %}
+                    <a class="btn btn-primary"
+                       href="{{ group.submit_schedule_for_generation.url }}"
+                       role="button">{{ group.submit_schedule_for_generation.label }}
+                    </a>
+                {% endif %}
             </div>
         </div>
         <div class="row">

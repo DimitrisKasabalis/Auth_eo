@@ -5,6 +5,7 @@ import subprocess
 import tempfile
 from celery import group
 from celery.app import shared_task
+from celery.result import GroupResult
 from celery.utils.log import get_task_logger
 from datetime import date as dt_date
 from django.core.files import File
@@ -25,7 +26,7 @@ from eo_engine.errors import AfriCultuReSRetriableError, AfriCultuReSError
 from eo_engine.models import (Credentials, EOSourceGroup,
                               EOProduct, EOProductStateChoices,
                               EOSource, EOSourceStateChoices,
-                              EOSourceGroupChoices)
+                              EOSourceGroupChoices, EOProductGroup)
 
 logger: Logger = get_task_logger(__name__)
 
@@ -170,7 +171,7 @@ def task_sftp_parse_remote_dir(group_name: str):
 
 
 @shared_task
-def task_utils_schedule_download_eogroup(eo_source_group_id: int):
+def task_utils_schedule_download_eogroup(eo_source_group_id: int) -> str:
     """Schedule to download remote sources from eo_source groups"""
     eo_source_group = EOSourceGroup.objects.get(pk=eo_source_group_id)
 
@@ -183,19 +184,29 @@ def task_utils_schedule_download_eogroup(eo_source_group_id: int):
         qs.update(state=EOSourceStateChoices.SCHEDULED_FOR_DOWNLOAD)
         job = group(tasks)
 
-        result = job.apply_async()
+        result: GroupResult = job.apply_async()
 
-        return result
+        return result.id
 
 
 # noinspection SpellCheckingInspection
 @shared_task
-def task_schedule_create_eoproduct():
-    qs = EOProduct.objects.filter(status=EOProductStateChoices.AVAILABLE)
-    if qs.exists():
-        logger.info(f'Found {qs.count()} EOProducts that are ready')
+def task_utils_schedule_create_eoproducts_for_group(eo_product_id: int) -> str:
+    eo_product_group = EOProductGroup.objects.get(pk=eo_product_id)
+    qs_eo_product = EOProduct.objects.filter(group=eo_product_group,
+                                             state=EOProductStateChoices.AVAILABLE)
+    if qs_eo_product.exists():
+        logger.info(f'Found {qs_eo_product.count()} EOProducts that are ready for baking')
+        pipeline = eo_product_group.pipelines_from_output.get()
+        task_name = pipeline.task_name
+        task_kwargs = pipeline.task_kwargs
+        task = get_task_ref_from_name(task_name)
+        tasks = [task.s(eo_product_pk=eo_product.pk, **task_kwargs) for eo_product in qs_eo_product]
+        qs_eo_product.update(state=EOProductStateChoices.SCHEDULED)
+        job = group(tasks)
+        result: GroupResult = job.apply_async()
 
-        return job.id
+        return result.id
 
 
 @shared_task(bind=True, autoretry_for=(AfriCultuReSRetriableError,), max_retries=100)

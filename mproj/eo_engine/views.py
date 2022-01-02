@@ -496,7 +496,7 @@ def pipeline_outputs(request, pipeline_pk: int):
 
     group = pipeline.output_group
     output_group = group.eoproductgroup
-    qs = EOProduct.objects.filter(group=output_group).order_by('-reference_date')
+    output_eo_product_qs = EOProduct.objects.filter(group=output_group).order_by('-reference_date')
 
     task_name = pipeline.task_name
     task_kwargs = pipeline.task_kwargs
@@ -504,7 +504,7 @@ def pipeline_outputs(request, pipeline_pk: int):
     context = {
         'task_name': pipeline.task_name,
         "pipeline_pk": pipeline_pk,
-        'group_name': output_group.get_name_display,
+        'group': output_group,
         'data': [
             {'pk': eo_product.pk,
              'filename': eo_product.filename,
@@ -517,5 +517,5 @@ def pipeline_outputs(request, pipeline_pk: int):
                                                   EOProductStateChoices.FAILED].count(
                  eo_product.state) == 1 else None,
              'file_url': eo_product.file.url if eo_product.file else None,
-             } for eo_product in qs]}
+             } for eo_product in output_eo_product_qs]}
     return render(request, 'list_eoproducts.html', context=context)

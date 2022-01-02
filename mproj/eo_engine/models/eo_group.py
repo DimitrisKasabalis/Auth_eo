@@ -139,6 +139,17 @@ class EOProductGroup(EOGroup):
     def discover_url(self) -> Optional[dict]:
         return None
 
+    def submit_schedule_for_generation(self) -> Optional[dict]:
+        from eo_engine.tasks import task_utils_schedule_create_eoproducts_for_group as task
+        return {
+            'label': f'Generate All',
+            'url': '?'.join((
+                reverse('eo_engine:submit-task'),
+                urlencode({'task_name': task.__name__,
+                           'eo_product_id': self.id})
+            ))
+        }
+
 
 class EOSourceGroup(EOGroup):
     class CrawlerTypeChoices(models.TextChoices):
