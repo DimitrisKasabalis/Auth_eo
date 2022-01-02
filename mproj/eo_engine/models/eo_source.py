@@ -125,9 +125,6 @@ class EOSource(models.Model):
 @receiver(post_save, sender=EOSource, weak=False, dispatch_uid='eosource_post_save_handler')
 def eosource_post_save_handler(instance: EOSource, **kwargs):
     """ Post save logic goes here. ie an asset is now available locally, are there products that can be made?"""
-    from eo_engine.common.s02p04 import is_gmod09q1_batch_complete_for_group
-    from eo_engine.common.s06p04 import is_s06p04_wapor_batch_complete_for_group
-    from eo_engine.common.s04p03 import is_s04p03_fld_complete_for_group
     from eo_engine.models import EOProduct, EOProductStateChoices, Pipeline
 
     eo_source = instance

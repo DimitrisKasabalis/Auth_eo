@@ -22,6 +22,7 @@ billiard==3.6.4.0
 celery==5.2.1
     # via
     #   -r requirements.in
+    #   django-celery-beat
     #   django-celery-results
 certifi==2021.10.8
     # via
@@ -65,9 +66,16 @@ cssselect==1.1.0
 decorator==5.1.0
     # via jsonpath-ng
 django==3.2.9
+    # via
+    #   -r requirements.in
+    #   django-celery-beat
+    #   django-timezone-field
+django-celery-beat==2.2.1
     # via -r requirements.in
 django-celery-results==2.2.0
     # via -r requirements.in
+django-timezone-field==4.2.1
+    # via django-celery-beat
 ftputil==5.0.2
     # via -r requirements.in
 geojson==2.5.0
@@ -157,14 +165,18 @@ pyproj==3.3.0
     # via -r requirements.in
 pysftp==0.2.9
     # via -r requirements.in
+python-crontab==2.6.0
+    # via django-celery-beat
 python-dateutil==2.8.2
     # via
     #   -r requirements.in
     #   pandas
+    #   python-crontab
 pytz==2021.3
     # via
     #   celery
     #   django
+    #   django-timezone-field
     #   pandas
 pyyaml==6.0
     # via -r requirements.in

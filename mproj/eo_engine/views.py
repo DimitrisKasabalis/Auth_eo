@@ -470,7 +470,7 @@ def pipeline_inputs(request, pipeline_pk: int):
     input_eo_source_data = [
         {"idx": idx,
          "type": 'source',
-         "group_name": eo_source_group.get_name_display,
+         "group": eo_source_group,
          'discover_url': eo_source_group.discover_url(),
          'entries': EOSource.objects.filter(group=eo_source_group).order_by('-reference_date', '-id')}
         for idx, eo_source_group in enumerate(input_eo_source_groups)

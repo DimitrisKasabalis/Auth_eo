@@ -169,13 +169,23 @@ def task_sftp_parse_remote_dir(group_name: str):
         add_to_db(entry, eo_source_group=group_name)
 
 
-@shared_task(bind=True)
-def task_schedule_download_eosource(self):
-    qs = EOSource.objects.filter(status=EOSourceStateChoices.AVAILABLE_REMOTELY)
+@shared_task
+def task_utils_schedule_download_eogroup(eo_source_group_id: int):
+    """Schedule to download remote sources from eo_source groups"""
+    eo_source_group = EOSourceGroup.objects.get(pk=eo_source_group_id)
+
+    qs = EOSource.objects.filter(
+        group=eo_source_group,
+        state=EOSourceStateChoices.AVAILABLE_REMOTELY)
     if qs.exists():
-        qs.update(status=EOSourceStateChoices.SCHEDULED_FOR_DOWNLOAD)
-        job = group(task_download_file.s(eo_source_pk=eo_source.pk) for eo_source in qs.only('pk'))
-        return job.apply_async()
+        logger.info(f'Found {qs.count()} EOProducts that are ready to download')
+        tasks = [task_download_file.s(eo_source_pk=eo_source.pk) for eo_source in qs]
+        qs.update(state=EOSourceStateChoices.SCHEDULED_FOR_DOWNLOAD)
+        job = group(tasks)
+
+        result = job.apply_async()
+
+        return result
 
 
 # noinspection SpellCheckingInspection
@@ -185,13 +195,7 @@ def task_schedule_create_eoproduct():
     if qs.exists():
         logger.info(f'Found {qs.count()} EOProducts that are ready')
 
-        job = group(
-            get_task_ref_from_name(eo_product.task_name).s(eo_product_pk=eo_product.pk, **eo_product.task_kwargs) for
-            eo_product in qs)
-        qs.update(status=EOProductStateChoices.SCHEDULED)
-        return job.apply_async()
-
-    return
+        return job.id
 
 
 @shared_task(bind=True, autoretry_for=(AfriCultuReSRetriableError,), max_retries=100)

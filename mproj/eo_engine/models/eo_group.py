@@ -3,6 +3,7 @@ from django.shortcuts import reverse
 from django.utils.functional import cached_property
 
 from typing import Optional
+from urllib.parse import urlencode
 
 
 class EOProductGroupChoices(models.TextChoices):
@@ -152,6 +153,17 @@ class EOSourceGroup(EOGroup):
         help_text='RegEx that extracts the date element (as the yymmdd or yyyymmdd named group). '
                   'If not provided the ref date field must have a way to be populated')
     crawler_type = models.TextField(choices=CrawlerTypeChoices.choices, default=CrawlerTypeChoices.NONE)
+
+    def submit_schedule_for_download(self) -> Optional[dict]:
+        from eo_engine.tasks import task_utils_schedule_download_eogroup
+        return {
+            'label': f'Download Remote Files',
+            'url': '?'.join((
+                reverse('eo_engine:submit-task'),
+                urlencode({'task_name': task_utils_schedule_download_eogroup.__name__,
+                           'eo_source_group_id': self.id})
+            ))
+        }
 
     def discover_url(self) -> Optional[dict]:
         if self.crawler_type == self.CrawlerTypeChoices.SCRAPY_SPIDER:

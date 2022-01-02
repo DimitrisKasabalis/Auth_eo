@@ -1,23 +1,24 @@
 # pip-compile
-django~=3.2.0
 celery~=5.2.0
+django-celery-beat
 django-celery-results~=2.2.0
-more-itertools~=8.12
-python-dateutil
-scrapy~=2.5.0
-psycopg2-binary
-pandas
-xarray~=0.18.0
-scipy~=1.7.3
-netcdf4
-requests
+django~=3.2.0
 ftputil
+jsonpath-ng
+more-itertools~=8.12
+netcdf4
+pandas
+psycopg2-binary
 pyproj
 pysftp
-sentinelsat
+python-dateutil
 pyyaml
-jsonpath-ng
-rasterio
+# rasterio
+requests
+scipy~=1.7.3
+scrapy~=2.5.0
+sentinelsat
+xarray~=0.18.0
 
 # for testing
 responses
