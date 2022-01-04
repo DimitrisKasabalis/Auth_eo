@@ -68,6 +68,7 @@ class NDVIAnomaly(Spider, AfricultureCrawlerMixin):
                     elif resp_doy >= self.min_doy:
                         # catalog page, that has all the links to the files
                         yield response.follow(target_url, callback=self.parse_catalog)
+            yield None
 
     def is_expected_filename(self, filename: str) -> bool:
         group_settings = self.get_group_settings()

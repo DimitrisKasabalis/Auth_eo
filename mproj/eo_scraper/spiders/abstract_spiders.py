@@ -4,24 +4,21 @@ import re
 from celery.utils.log import get_task_logger
 from datetime import datetime, date as dt_date
 from django.core.exceptions import ObjectDoesNotExist
+from django.utils.datetime_safe import datetime
 from pytz import utc
 from scrapy import Request, FormRequest
 from scrapy.http import Response
-from scrapy.linkextractors import LinkExtractor
 from scrapy.loader import ItemLoader
 from scrapy.selector.unified import Selector
-from scrapy.spiders import CrawlSpider, Spider
-from scrapy.spiders import Rule
+from scrapy.spiders import Spider
 from scrapy.spiders.init import InitSpider
-from typing import List, Pattern, Optional
+from typing import Optional
 from urllib.parse import urlsplit, urlparse
 
 from eo_engine.models import EOSourceGroup
 from eo_engine.models.other import CrawlerConfiguration
 from eo_scraper.items import RemoteSourceItem
 from eo_scraper.utils import get_credentials, credentials
-
-logger = get_task_logger(__name__)
 
 '''
 https://docs.scrapy.org/en/latest/topics/spiders.html
@@ -54,6 +51,8 @@ There are multiple variation of Spiders, The simplest one is the scrapy.Spider.
         - CrawlSpider
         - InitSpider
 '''
+
+logger = get_task_logger(__name__)
 
 
 class AfricultureCrawlerMixin:
@@ -101,66 +100,58 @@ class AfricultureCrawlerMixin:
         return True
 
 
-class CopernicusVgtDatapool(InitSpider, CrawlSpider, AfricultureCrawlerMixin):
-    allowed_domains: List[str] = ['land.copernicus.vgt.vito.be']
-    login_page: str = 'https://land.copernicus.vgt.vito.be/PDF/datapool'
+class AfricultureSpider(Spider, AfricultureCrawlerMixin):
 
-    credentials: [str, str]  # username, password
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.crawler_settings = self.get_crawler_settings()
+        self.group_settings = self.get_group_settings()
+        self.start_date = self.crawler_settings.from_date
+        self.min_year = self.start_date.year
+        self.min_doy = int(self.start_date.strftime('%j'))
 
-    browse_page_regex: Pattern[str] = re.compile(r"^https.*/$")
-    catalog_page_regex: Pattern[str] = re.compile(r"^https.*\d{4}/\d{2}/\d{2}/.*/$")
 
-    rules: List[Rule] = (
-        Rule(LinkExtractor(allow=(browse_page_regex,), deny=(catalog_page_regex,)), follow=True, callback='parse'),
-        Rule(LinkExtractor(allow=(catalog_page_regex,)), callback='parse_catalog', follow=True)
-    )
+class AfricultureSpiderLogin(InitSpider, AfricultureSpider):
 
-    def init_request(self):
+    def __init__(self, login_page: str, **kwargs):
+        super().__init__(**kwargs)
+        self.logger.info(f"initing {self.__class__.__name__}!")
+        self.login_page = login_page
+
         url_split = urlsplit(self.login_page)
         domain = url_split.netloc
-        self.credentials = get_credentials(domain)
-        return Request(url=self.login_page, callback=self.login)
+        try:
+            self.credentials = get_credentials(domain)
+        except ObjectDoesNotExist:
+            print(f'Could not find domain for {self.login_page}')
+            self.credentials = None
 
-    def login(self, response):
+    def init_request(self):
+        self.logger.info("Init login")
+        return Request(url=self.login_page, callback=self._do_login)
+
+    def _do_login(self, response):
+        def check_login_response(login_response):
+            if "Authentication failure" in login_response.css('#loginDiv *::text').getall():
+                self.logger.error("Authentication Failed")
+                return None
+            # after we return this, operates as normal
+            self.logger.info("Log in Successful")
+            return self.initialized()
+
         return FormRequest.from_response(
-            response, formdata={"login": self.credentials[0],
-                                "password": self.credentials[1]},
-            formid='loginForm', callback=self.check_login_response)
+            response, formdata={
+                "login": self.credentials.username,
+                "password": self.credentials.password},
+            formid='loginForm', callback=check_login_response)
 
-    def check_login_response(self, response):
-        print(response)
-        if "Authentication failure" in response.css('#loginDiv *::text').getall():
-            self.logger.error("Authentication Failed")
-            return
+    @property
+    def login_page(self) -> str:
+        return self._login_page
 
-        return self.initialized()
-
-    def parse(self, response, **kwargs):
-        # https://docs.scrapy.org/en/latest/topics/spiders.html#scrapy.spiders.Spider.parse
-        pass
-
-    def parse_catalog(self, response):
-        # if not need to process the response further, yield nothing
-        if not self.should_process_response(response):
-            yield
-
-        tableRow: Selector
-        for idx, tableRow in enumerate(response.xpath('//tr[count(td)=4]')):
-            filename = str(tableRow.xpath('.//td[1]/text()').get()).strip()
-            if not self.is_expected_filename(filename=filename):
-                return
-            dt_reference = self.date_reference_from_filename(filename)
-            loader = ItemLoader(item=RemoteSourceItem(), selector=tableRow)
-            loader.add_xpath('size', 'td[position()=2]/text()', pos=2)
-
-            loader.add_value('datetime_reference', dt_reference)
-            loader.add_value('filename', filename)
-            loader.add_value('datetime_seen', datetime.utcnow())
-            loader.add_value('domain', response.url)
-            loader.add_value('url', response.url)
-            loader.add_xpath('url', 'td/a/@href')
-
-            yield loader.load_item()
+    @login_page.setter
+    def login_page(self, val):
+        self._login_page = val
 
 
 class FtpRequest(Request, AfricultureCrawlerMixin):
@@ -226,3 +217,77 @@ class FtpSpider(Spider, AfricultureCrawlerMixin):
                 filename = result['filename']
                 if self.should_process_filename(filename=filename):
                     yield result
+
+
+class CopernicusSpider(AfricultureSpiderLogin):
+    allowed_domains = ['land.copernicus.vgt.vito.be']
+
+    def __init__(self, **kwargs):
+        super().__init__(
+            login_page='https://land.copernicus.vgt.vito.be/PDF/datapool',
+            **kwargs
+        )
+
+    def parse(self, response: Response, **kwargs):
+        # https://regex101.com/r/XalJaa/1
+        all_hrefs = list(response.copy().xpath('//a/@href').getall())
+
+        href: str
+        for href in all_hrefs:
+            url_date_pat = re.compile(
+                r'https?://.+/(?P<YEAR>\d{4})/?(?P<MONTH>\d{2})?/?(?P<DAY>\d{2})?/?(?P<PRODUCT_NAME>.*)?/$',
+                re.IGNORECASE)
+            target_url = href
+            match = url_date_pat.match(target_url)
+            if match is None:
+                self.logger.info(f'{target_url} did not match pat ++{url_date_pat.pattern}++')
+                continue
+            self.logger.debug(f'PROCESSING URL: {target_url}')
+            groupdict = match.groupdict()
+            year = int(groupdict.get('YEAR'))
+            month = int(groupdict.get('MONTH')) if groupdict.get('MONTH') else None
+            day = int(groupdict.get('DAY')) if groupdict.get('DAY') else None
+            product_name = groupdict.get('PRODUCT_NAME')
+            if year is not None and year >= self.from_date.year:
+                if month is None:
+                    yield response.follow(url=target_url, callback=self.parse)
+                elif month >= self.from_date.month:
+                    if day is None:
+                        yield response.follow(url=target_url, callback=self.parse)
+                    elif day >= self.from_date.day:
+                        if product_name:
+                            yield response.follow(url=target_url, callback=self.parse_catalog)
+                        yield response.follow(url=target_url, callback=self.parse)
+                    else:
+                        self.logger.info(
+                            f'Response year {day} is older than the requested day {self.from_date.day}')
+                else:
+                    self.logger.info(f'Response year {month} is older than the requested month {self.from_date.month}')
+            else:
+                self.logger.info(f'Response year {year} is older than the requested year {self.from_date.year}')
+
+            yield None
+
+    def should_process_filename(self, filename: str) -> bool:
+        if filename.endswith('.nc'):
+            return True
+        return False
+
+    def parse_catalog(self, response):
+        self.logger.info(f'hi from parse_catalog: {response}')
+        tableRow: Selector
+        for idx, tableRow in enumerate(response.xpath('//tr[count(td)=4]')):
+            filename = tableRow.xpath('.//a/@href').get()
+            if not self.should_process_filename(filename):
+                continue
+
+            loader = ItemLoader(item=RemoteSourceItem(), selector=tableRow)
+
+            loader.add_value('filename', filename)
+            loader.add_xpath('size', 'td[position()=2]/text()', pos=2)
+            loader.add_value('datetime_seen', datetime.utcnow())
+            loader.add_value('domain', response.url)
+            loader.add_value('url', response.url)
+            loader.add_xpath('url', 'td/a/@href')
+
+            yield loader.load_item()

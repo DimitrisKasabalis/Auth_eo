@@ -3,10 +3,10 @@ from re import Match
 from scrapy.http.response import Response
 
 from eo_engine.models import EOSourceGroupChoices
-from eo_scraper.spiders.abstract_spiders import CopernicusVgtDatapool
+from eo_scraper.spiders.abstract_spiders import CopernicusSpider
 
 
-class NDVISpider(CopernicusVgtDatapool):
+class NDVISpider(CopernicusSpider):
     pass
     # product_group = EOSourceProductGroupChoices.NDVI
 
