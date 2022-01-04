@@ -21,7 +21,7 @@
             </dl>
         </div>
 
-        <form action="{% url "eo_engine:create-wapor" product=product %}" method="post">{% csrf_token %}
+        <form action="{% url "eo_engine:create-wapor" group_name=group_name %}" method="post">{% csrf_token %}
             {{ form }}
             <br>
             <input type="submit" value="OK">

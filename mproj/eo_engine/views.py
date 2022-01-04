@@ -374,7 +374,7 @@ def create_wapor_entry(request, group_name: str):
     product_dimension = 'D'  # it's always D (DEKAD) at this stage
 
     context = {
-        'product': group_name,
+        'group_name': group_name,
         'product_name': product_name,
         'product_level': product_level,
         'product_location': location,
@@ -421,7 +421,7 @@ def create_wapor_entry(request, group_name: str):
             context.update(form=form)
             return render(request, 'utilities/create-wapor.html', context=context)
 
-        return redirect(reverse('eo_engine:create-wapor', kwargs={'product': group_name}))
+        return redirect(reverse('eo_engine:create-wapor', kwargs={'group_name': group_name}))
 
 
 def configure_crawler(request, group_name: str):
