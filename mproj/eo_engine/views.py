@@ -3,7 +3,7 @@ import re
 from celery.result import AsyncResult
 from celery.utils.serialization import strtobool
 from django.contrib import messages
-from django.http import QueryDict
+from django.http import QueryDict, HttpRequest
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.utils.datetime_safe import date, datetime
@@ -16,6 +16,8 @@ from eo_engine.errors import AfriCultuReSError
 from eo_engine.models import EOSource, EOProduct, EOProductStateChoices, EOSourceGroup, EOProductGroup
 from eo_engine.models.factories import create_or_get_wapor_object_from_filename
 from eo_engine.models.other import CrawlerConfiguration, Pipeline
+
+from eo_engine import forms
 
 logger = logging.getLogger('eo_engine.frontend_ops')
 url_template = '{base_url}?{querystring}'
@@ -209,9 +211,8 @@ def submit_task(request):
             task_kwargs[k] = param[0] if len(param) == 1 else tuple(param)
 
     if request.method == 'POST':
-        from .forms import RunTaskForm
         # TODO: finish submit task through form
-        task_data = RunTaskForm(request.POST)
+        task_data = forms.RunTaskForm(request.POST)
         # task_name = request.
 
     task = get_task_ref_from_name(task_name).s(**task_kwargs)
@@ -299,30 +300,28 @@ def utilities_view_post_credentials(request):
     if request.method == "GET":
         context = {}
         from .models import Credentials
-        from .forms import CredentialsUsernamePassowordForm, CredentialsAPIKEYForm
         all_credentials = Credentials.objects.all()
-        forms = []
+        forms_list = []
         for c in all_credentials.filter(type=Credentials.CredentialsTypeChoices.USERNAME_PASSWORD):
-            forms.append(CredentialsUsernamePassowordForm(instance=c))
-        context['userpass_forms'] = forms
+            forms_list.append(forms.CredentialsUsernamePassowordForm(instance=c))
+        context['userpass_forms'] = forms_list
 
-        forms = []
+        forms_list = []
         for c in all_credentials.filter(type=Credentials.CredentialsTypeChoices.API_KEY):
-            forms.append(CredentialsAPIKEYForm(instance=c))
-        context['apikey_forms'] = forms
+            forms_list.append(forms.CredentialsAPIKEYForm(instance=c))
+        context['apikey_forms'] = forms_list
         return render(request, "credentials.html", context=context)
 
     if request.method == "POST":
         try:
             messages.success(request, 'change submitted')
-        except Exception:
+        except BaseException:
             messages.error(request, 'error')
         finally:
             return redirect(reverse('credentials-list'))
 
 
 def create_sentinel_entry(request, group_name: str):
-    from .forms import SentinelForm
     pattern = re.compile(r'S06P01_S1_10M_(?P<LOCATION>KZN|BAG)', re.IGNORECASE)
     match = pattern.match(group_name)
     if match is None:
@@ -335,7 +334,7 @@ def create_sentinel_entry(request, group_name: str):
         'group_name': group_name,
         'location': location
     }
-    form_class = SentinelForm
+    form_class = forms.SimpleFromToDateForm
 
     if request.method == 'GET':
         context.update(form=form_class())
@@ -358,7 +357,6 @@ def create_sentinel_entry(request, group_name: str):
 
 def create_wapor_entry(request, group_name: str):
     from eo_engine.common.time import month_dekad_to_running_decad, day2dekad
-    from .forms import WaporForm
 
     pat = re.compile(
         r'S06P04_WAPOR_(?P<LEVEL>(L1|L2))_(?P<PROD>(AETI|QUAL_LST|QUAL_NDVI))_D_(?P<LOCATION>(AFRICA|\w{3}|))',
@@ -381,7 +379,7 @@ def create_wapor_entry(request, group_name: str):
         'product_dimension': 'D'
     }
 
-    form_class = WaporForm
+    form_class = forms.WaporForm
 
     if request.method == 'GET':
         context.update(form=form_class())
@@ -425,20 +423,19 @@ def create_wapor_entry(request, group_name: str):
 
 
 def configure_crawler(request, group_name: str):
-    from .forms import EOSourceMetaForm
     group = EOSourceGroup.objects.get(name=group_name)
     context = {}
     instance, created = CrawlerConfiguration.objects.get_or_create(group=group_name,
                                                                    defaults={'from_date': date(2017, 1, 1)})
     if request.method == 'GET':
-        form = EOSourceMetaForm(instance=instance)
+        form = forms.EOSourceMetaForm(instance=instance)
         context.update(form=form)
         return render(request, 'configure/crawler.html', context=context)
     if request.method == 'POST':
         if 'cancel' in request.POST:
             return redirect(reverse("eo_engine:main-page"))
 
-        f = EOSourceMetaForm(request.POST, instance=instance)
+        f = forms.EOSourceMetaForm(request.POST, instance=instance)
         f.save()
         if 'save_and_run' in request.POST:
             # fire a scrapy_spider
@@ -460,35 +457,50 @@ def configure_crawler(request, group_name: str):
         return redirect(reverse("eo_engine:main-page"))
 
 
-def pipeline_inputs(request, pipeline_pk: int):
+def pipeline_inputs(request: HttpRequest, pipeline_pk: int):
     pipeline = Pipeline.objects.get(pk=pipeline_pk)
 
     input_eo_source_groups = EOSourceGroup.objects.filter(id__in=pipeline.input_groups.all().values_list('id'))
     # EOSource.objects.filter(group__in=pipeline.input_group.all())
     input_eo_product_groups = EOProductGroup.objects.filter(id__in=pipeline.input_groups.all().values_list('id'))
 
+    if request.method == 'POST':
+        if 'download_available_remote_files_for_pipeline' in request.POST:
+            from eo_engine.tasks import task_utils_download_eo_sources_for_pipeline
+            task = task_utils_download_eo_sources_for_pipeline.s(pipeline_pk=pipeline_pk, eager=True)
+            task.apply()
+
+        return redirect('eo_engine:pipeline-inputs-list', pipeline_pk=pipeline_pk)
+
+    # remove sources that are that
+
     input_eo_source_data = [
         {"idx": idx,
          "type": 'source',
+         'group_id': eo_source_group.pk,
          "group": eo_source_group,
          'discover_url': eo_source_group.discover_url(),
          'entries': EOSource.objects.filter(group=eo_source_group).order_by('-reference_date', '-id')}
-        for idx, eo_source_group in enumerate(input_eo_source_groups)
+        for idx, eo_source_group in enumerate(input_eo_source_groups) if
+        eo_source_group.pk not in input_eo_product_groups.values_list('id', flat=True)
     ]
     # todo: properly
     input_eo_product_data = [
         {"idx": idx,
          "type": 'product',
+         'group': eo_product_group,
+         'group_id': eo_product_group.pk,
          "group_name": eo_product_group.get_name_display,
          # 'discover_url': eo_product_group.discover_url(),
          'entries': EOProduct.objects.filter(group=eo_product_group).order_by('-reference_date', '-id')}
         for idx, eo_product_group in enumerate(input_eo_product_groups)
     ]
     context = {
-        "pipeline_pk": pipeline_pk,
-        "data": input_eo_source_data + input_eo_product_data
+        'pipeline': pipeline,
+        'input_eo_source_list': input_eo_source_data,
+        'input_eo_product_list': input_eo_product_data
     }
-    return render(request, 'list_eosources.html', context=context)
+    return render(request, 'list_pipeline_sources.html', context=context)
 
 
 def pipeline_outputs(request, pipeline_pk: int):
@@ -519,3 +531,37 @@ def pipeline_outputs(request, pipeline_pk: int):
              'file_url': eo_product.file.url if eo_product.file else None,
              } for eo_product in output_eo_product_qs]}
     return render(request, 'list_eoproducts.html', context=context)
+
+
+def discover_inputs_for_pipeline(request: HttpRequest, pipeline_pk: int):
+    form_klass = forms.SimpleFromDateForm
+    pipeline = Pipeline.objects.get(pk=pipeline_pk)
+    input_groups = pipeline.input_groups
+    if request.method == 'GET':
+        context = {
+            'pipeline': pipeline,
+            'pipeline_pk': pipeline_pk,
+            'page_title': f'Create Inputs for Pipeline: {pipeline.pk}',
+            'page_header': pipeline.description,
+            'form': form_klass(),
+            'input_groups': input_groups
+        }
+        return render(request=request, template_name='utilities/create-inputs-for-pipeline.html', context=context)
+    if request.method == 'POST':
+        if 'cancel' in request.POST:
+            return redirect('eo_engine:pipeline-inputs-list', pipeline_pk=pipeline_pk)
+        from eo_engine.tasks import task_utils_discover_inputs_for_eo_source_group
+        form = form_klass(request.POST)
+        if form.is_valid():
+            from_date = datetime.strptime(form.data.get('from_date'), '%Y-%m-%d')
+            for input_group in input_groups.all():
+                task = task_utils_discover_inputs_for_eo_source_group.s(eo_source_group_pk=input_group.pk,
+                                                                        from_date=from_date)
+                # apply locally
+                job = task.apply()
+
+        return redirect('eo_engine:pipeline-inputs-list', pipeline_pk=pipeline_pk)
+
+
+def download_available_remote_files_for_pipeline(request):
+    return None

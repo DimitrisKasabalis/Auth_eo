@@ -50,25 +50,12 @@ class WaporForm(forms.Form):
     from_date = forms.DateField(required=True,
                                 widget=forms.widgets.DateInput(
                                     attrs={'type': 'date',
-                                           'min': settings.MIN_WAPOR_DATE,
+                                           'min': settings.FORMS_MIN_DATE,
                                            'max': datetime.date.today().strftime('%Y-%m-%d')}))
     to_date = forms.DateField(required=True,
                               widget=forms.widgets.DateInput(
                                   attrs={'type': 'date',
-                                         'min': settings.MIN_WAPOR_DATE,
-                                         'max': datetime.date.today().strftime('%Y-%m-%d')}))
-
-
-class SentinelForm(forms.Form):
-    from_date = forms.DateField(required=True,
-                                widget=forms.widgets.DateInput(
-                                    attrs={'type': 'date',
-                                           'min': settings.MIN_SENTINEL_DATE,
-                                           'max': datetime.date.today().strftime('%Y-%m-%d')}))
-    to_date = forms.DateField(required=True,
-                              widget=forms.widgets.DateInput(
-                                  attrs={'type': 'date',
-                                         'min': settings.MIN_WAPOR_DATE,
+                                         'min': settings.FORMS_MIN_DATE,
                                          'max': datetime.date.today().strftime('%Y-%m-%d')}))
 
 
@@ -97,6 +84,22 @@ class WaporNdviForm(forms.Form):
         area = cleaned_data.get('area')
         if area == 'africa' and level == 'L2':
             self.add_error('level', "You can only select Level-1 if Africa is selected")
+
+
+class SimpleFromDateForm(forms.Form):
+    from_date = forms.DateField(required=True,
+                                widget=forms.widgets.DateInput(
+                                    attrs={'type': 'date',
+                                           'min': settings.FORMS_MIN_DATE,
+                                           'max': datetime.date.today().strftime('%Y-%m-%d')}))
+
+
+class SimpleFromToDateForm(SimpleFromDateForm):
+    to_date = forms.DateField(required=True,
+                              widget=forms.widgets.DateInput(
+                                  attrs={'type': 'date',
+                                         'min': settings.FORMS_MIN_DATE,
+                                         'max': datetime.date.today().strftime('%Y-%m-%d')}))
 
 
 class EOSourceMetaForm(forms.ModelForm):

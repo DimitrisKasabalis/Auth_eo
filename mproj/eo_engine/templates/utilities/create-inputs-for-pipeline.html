@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block Title %} {{ page_title }}{% endblock %}
+{% block header %}Discover inputs for pipeline: {{ pipeline.name }}{% endblock %}
+{% block body %}
+    <p>
+    <span>
+        {{ pipeline.description }}
+    </span>
+    </p>
+    <p>
+        This pipeline is made by: {{ input_groups.count }} input groups
+    </p>
+    <form method="post">
+        {% csrf_token %}
+        {{ form }}
+        <br>
+        <input type="submit" value="Ok" name="ok">
+        <input type="submit" value="cancel" name="cancel">
+    </form>
+
+{% endblock %}

@@ -140,7 +140,7 @@ class EOProductGroup(EOGroup):
         return None
 
     def submit_schedule_for_generation(self) -> Optional[dict]:
-        from eo_engine.tasks import task_utils_schedule_create_eoproducts_for_group as task
+        from eo_engine.tasks import task_utils_generate_eoproducts_for_eo_product_group as task
         return {
             'label': f'Generate All',
             'url': '?'.join((
@@ -166,12 +166,12 @@ class EOSourceGroup(EOGroup):
     crawler_type = models.TextField(choices=CrawlerTypeChoices.choices, default=CrawlerTypeChoices.NONE)
 
     def submit_schedule_for_download(self) -> Optional[dict]:
-        from eo_engine.tasks import task_utils_schedule_download_eogroup
+        from eo_engine.tasks import task_utils_download_eo_sources_for_eo_source_group
         return {
             'label': f'Download Remote Files',
             'url': '?'.join((
                 reverse('eo_engine:submit-task'),
-                urlencode({'task_name': task_utils_schedule_download_eogroup.__name__,
+                urlencode({'task_name': task_utils_download_eo_sources_for_eo_source_group.__name__,
                            'eo_source_group_id': self.id})
             ))
         }
@@ -206,14 +206,3 @@ class EOSourceGroup(EOGroup):
     @cached_property
     def date_regex_cached(self):
         return self.date_regex
-
-    def crawler_kwargs(self) -> dict:
-        if self.crawler_type == self.CrawlerTypeChoices.SCRAPY_SPIDER:
-            return {'spider_name': self.name}
-        if self.crawler_type == self.CrawlerTypeChoices.OTHER_SFTP:
-            if self.name == EOSourceGroupChoices.S06P04_ETAnom_5KM_M_GLOB_SSEBOP:
-                return {
-                    'remote_dir': 'sftp://safmil.ipma.pt/home/safpt/OperationalChain/LSASAF_Products/DMET',
-                    'group_name': self.name
-                }
-        raise

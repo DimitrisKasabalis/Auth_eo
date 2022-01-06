@@ -154,5 +154,4 @@ MESSAGE_TAGS = {
     messages.WARNING: 'alert-warning',
     messages.ERROR: 'alert-danger',
 }
-MIN_WAPOR_DATE = dt_date(2020, 7, 1)
-MIN_SENTINEL_DATE = dt_date(2019, 1, 1)
+FORMS_MIN_DATE = dt_date(2019, 1, 1)

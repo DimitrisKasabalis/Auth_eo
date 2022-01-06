@@ -160,9 +160,10 @@ def eosource_post_save_handler(instance: EOSource, **kwargs):
                 group=output_group,
                 reference_date=eo_source.reference_date
             )
+
             # generalised solution
             # are all the files that are supposed to be available ?
-            all_of_this_kind = EOSource.objects.filter(group=input_group_eosource,
+            all_of_this_kind = EOSource.objects.filter(group__in=pipeline.input_groups.all(),
                                                        reference_date=eo_source.reference_date)
             all_of_this_kind_that_are_available = all_of_this_kind.filter(state=EOSourceStateChoices.AVAILABLE_LOCALLY)
             if all_of_this_kind.count() == all_of_this_kind_that_are_available.count():

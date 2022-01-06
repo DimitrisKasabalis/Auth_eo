@@ -1,11 +1,12 @@
 from celery import Task
+from celery.exceptions import MaxRetriesExceededError
 from celery.states import SUCCESS, FAILURE, REVOKED
 from celery.utils.log import get_task_logger
 from django.utils import timezone
 
 from eo_engine.common.tasks import is_process_task
 from eo_engine.errors import AfriCultuReSError
-from eo_engine.models import GeopTask, EOProduct, EOProductStateChoices
+from eo_engine.models import GeopTask, EOProduct, EOProductStateChoices, EOSource, EOSourceStateChoices
 
 logger = get_task_logger(__name__)
 
@@ -114,7 +115,7 @@ class BaseTaskWithRetry(Task):
         task.status = task.TaskTypeChoices.FAILURE
         task.save()
 
-        # mark generating product as failed
+        # if the failed task is a process task, mark the failed product as failed to be made
         if is_process_task(self.name):
             eo_product_pk = kwargs['eo_product_pk']
             eo_product = EOProduct.objects.get(pk=eo_product_pk)

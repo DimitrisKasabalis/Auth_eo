@@ -68,4 +68,4 @@ def create_or_get_wapor_object_from_filename(filename: str) -> (EOSource, bool):
     if created:
         obj.group.add(group)
 
-    return obj, bool
+    return obj, created

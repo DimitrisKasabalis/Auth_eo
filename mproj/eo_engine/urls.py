@@ -17,6 +17,9 @@ urlpatterns = [
     path('utilities/refresh-rows', views.utilities_save_rows, name='refresh-rows'),
     path('utilties/create-wapor/<str:group_name>', views.create_wapor_entry, name='create-wapor'),
     path('utilties/create-sentinel/<str:group_name>', views.create_sentinel_entry, name='create-sentinel'),
+    path('utilties/discover-inputs-for-pipeline/<int:pipeline_pk>',
+         views.discover_inputs_for_pipeline,
+         name='discover-inputs-for-pipeline'),
 
     # json responses
     # 'c/task/done/<task_pattern:task_id>/'

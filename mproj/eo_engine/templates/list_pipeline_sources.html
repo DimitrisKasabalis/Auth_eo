@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block Title %}
+    Earth Observation Sources
+{% endblock %}
+{% block header %}
+    Earth Observation Sources
+{% endblock %}
+{% block body %}
+    <div class="container">
+        <div class="row">
+            <div class="col d-grid gap-2 d-md-block">
+                <a class="btn btn-primary"
+                   href="{% url "eo_engine:main-page" %}">MainPage</a>
+                <a class="btn btn-primary"
+                   href="{% url "eo_engine:discover-inputs-for-pipeline" pipeline_pk=pipeline.pk %}">Discover Remote
+                    Sources</a>
+                <form class="btn btn-primary"
+                      style="padding: 0; margin: 0; border: 0;"
+                      method="post">{% csrf_token %}
+                    <input class="btn btn-primary"
+                           type="submit"
+                           name='download_available_remote_files_for_pipeline'
+                           value="Fetch Remote Files">
+                </form>
+            </div>
+            <div class="col">
+                <a class="btn btn-dark"
+                   href="{% url "eo_engine:pipeline-outputs-list" pipeline_pk=pipeline.pk %}">
+                    Pipeline Outputs
+                </a>
+            </div>
+        </div>
+    </div>
+    {% if input_eo_source_list|length > 0 %}
+        <div class="container-fluid">
+            {% for entry in input_eo_source_list %}
+                <p>
+                    Name: {{ entry.group.get_name_display }}
+                </p><p>Description: {{ entry.group.description }} (change it in the database)</p>
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">Filename</th>
+                        <th scope="col">Reference Date</th>
+                        <th scope="col">State</th>
+                        <th scope="col">Fetch from remote Server</th>
+                        <th scope="col">Download (Locally)</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for entry in entry.entries %}
+                        <tr>
+                            <td>{{ entry.pk }}</td>
+                            <td>{{ entry.filename }}</td>
+                            <td>{{ entry.reference_date | date:"D d M Y" }}</td>
+                            <td>{{ entry.state }}</td>
+                            <td><a class="btn btn-primary"
+                                   href="{% url "eo_engine:submit-task" %}?task_name=task_download_file&eo_source_pk={{ entry.pk }} ">Submit-Task</a>
+                            </td>
+                            {% if entry.file %}
+                                <td><a href="/media/{{ entry.file }}"
+                                       download>Download</a>
+                                </td>
+                            {% else %}
+                                <td>-</td>
+                            {% endif %}
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+
+    {% if input_eo_product_list|length %}
+        <div class="container-fluid">
+            {% for entry in input_eo_product_list %}
+                <p>
+                    Name: {{ entry.group.get_name_display }}
+                </p><p>Description: {{ entry.group.description }} (change it in the database)</p>
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">Filename</th>
+                        <th scope="col">Reference Date</th>
+                        <th scope="col">State</th>
+                        <th scope="col">Download (Locally)</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for entry in entry.entries %}
+                        <tr>
+                            <td>{{ entry.pk }}</td>
+                            <td>{{ entry.filename }}</td>
+                            <td>{{ entry.reference_date | date:"D d M Y" }}</td>
+                            <td>{{ entry.state }}</td>
+                            {% if entry.file %}
+                                <td><a href="/media/{{ entry.file }}" download>Download</a></td>
+                            {% else %}
+                                <td>-</td>
+                            {% endif %}
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endblock %}

@@ -1,10 +1,12 @@
 from logging import Logger
 
+import datetime
 import os
+import re
 import subprocess
-import tempfile
 from celery import group
 from celery.app import shared_task
+from celery.exceptions import MaxRetriesExceededError
 from celery.result import GroupResult
 from celery.utils.log import get_task_logger
 from datetime import date as dt_date
@@ -16,7 +18,6 @@ from more_itertools import collapse
 from osgeo import gdal
 from pathlib import Path
 from scrapy import Spider
-from subprocess import run, CompletedProcess
 from tempfile import TemporaryDirectory
 from typing import List, Optional, Literal
 
@@ -26,7 +27,9 @@ from eo_engine.errors import AfriCultuReSRetriableError, AfriCultuReSError
 from eo_engine.models import (Credentials, EOSourceGroup,
                               EOProduct, EOProductStateChoices,
                               EOSource, EOSourceStateChoices,
-                              EOSourceGroupChoices, EOProductGroup)
+                              EOSourceGroupChoices, EOProductGroup,
+                              CrawlerConfiguration, Pipeline)
+from eo_engine.task_managers import BaseTaskWithRetry
 
 logger: Logger = get_task_logger(__name__)
 
@@ -76,49 +79,71 @@ def task_init_spider(spider_name):
     return "Spider {} finished crawling".format(spider_name)
 
 
-# These tasks are util tasks, made here to accommodate automation.
-@shared_task(bind=True)
-def create_wapor_entry(self, level_id: Literal['L1', 'L2'], product_id: Literal['AETI', 'QUAL_LST', 'QUAL_NDVI'],
-                       dimension_id: Literal['D'], dimension_member: str, area_id: str = None):
-    # don't try to be smart. Generate the filename per instructions
-    # and let the factory do the job
-    # L1_AETI_D_1904.tif
-    # L1_QUAL_LST_D_1904.tif
-    # L1_QUAL_NDVI_D_1904.tif
+@shared_task()
+def task_utils_create_wapor_entry(wapor_group_name: str, from_date: dt_date) -> str:
+    from dateutil.rrule import rrule, DAILY
+    from eo_engine.models.factories import create_or_get_wapor_object_from_filename
+    if isinstance(from_date, str):
+        from_date = datetime.datetime.fromisoformat(from_date).date()
 
-    # L2_AETI_D_1904_TUN.tif
-    # L2_QUAL_LST_D_1904_TUN.tif
-    # L2_QUAL_NDVI_D_1904_TUN.tif
-    from .models.factories import create_or_get_wapor_object_from_filename
+    to_date = dt_date.today()
+    pat = re.compile(
+        r'S06P04_WAPOR_(?P<LEVEL>(L1|L2))_(?P<PROD>(AETI|QUAL_LST|QUAL_NDVI))_D_(?P<LOCATION>(AFRICA|\w{3}|))',
+        re.IGNORECASE)
+    match = pat.match(wapor_group_name)
+    if match is None:
+        raise
+    group_dict = match.groupdict()
+    product_level = group_dict['LEVEL']
+    product_name = group_dict['PROD']
+    location = group_dict['LOCATION']
+    product_dimension = 'D'
+    obj_created = 0
+    obj_exist = 0
+    dt: datetime
+    for idx, dt in enumerate(rrule(DAILY, dtstart=from_date, until=to_date), 1):
+        year = dt.year
+        month = dt.month
+        day = dt.day
+        from eo_engine.common.time import month_dekad_to_running_decad
+        from eo_engine.common.time import day2dekad
+        yearly_dekad = month_dekad_to_running_decad(month, day2dekad(day))
+        YYKK = f'{str(year)[2:]}{yearly_dekad}'  # last two digits of the year + running dekad
+        if location:
+            filename = f'{product_level}_{product_name}_{product_dimension}_{YYKK}_{location}.tif'
+        else:
+            # if location is missing, it's AFRICA
+            filename = f'{product_level}_{product_name}_{product_dimension}_{YYKK}.tif'
+        obj, created = create_or_get_wapor_object_from_filename(filename)
 
-    if area_id is None and level_id == "L2":
-        raise AttributeError('L2 can not be choosen without and area')
-    if area_id:
-        wapor_filename = f'{level_id.upper()}_{product_id.upper()}_{dimension_id.upper()}_{dimension_member.upper()}_{area_id.upper()}.tif'
-    else:
-        wapor_filename = f'{level_id.upper()}_{product_id.upper()}_{dimension_id.upper()}_{dimension_member.upper()}.tif'
+        if created:
+            obj_created += 1
 
-    logger.info(f'fun: {self.name}, generated filename: {wapor_filename}')
-    create_or_get_wapor_object_from_filename(wapor_filename)
-    return
+    return f'created {obj_created} entries for {wapor_group_name}'
 
 
 @shared_task
-def task_scan_sentinel_hub(from_date: dt_date = None, to_date: dt_date = None, location: Literal['KZN', 'BAG'] = None,
-                           **kwargs):
+def task_scan_sentinel_hub(
+        from_date: dt_date = None,
+        to_date: dt_date = None,
+        group_name: Literal[
+            EOSourceGroupChoices.S06P01_S1_10M_BAG,
+            EOSourceGroupChoices.S06P01_S1_10M_KZN
+        ] = None,
+        **kwargs):
     from eo_engine.common.db_ops import add_to_db
     from sentinelsat import SentinelAPI, geojson_to_wkt, read_geojson
     from eo_engine.common import RemoteFile
 
     credentials = Credentials.objects.get(domain='sentinel')
-    if location == "KZN":
+    if group_name == EOSourceGroupChoices.S06P01_S1_10M_KZN:
         geojson_path = Path('/aux_files/Geojson/KZN_extent_forS1.geojson')
         eo_source_group = EOSourceGroup.objects.get(name=EOSourceGroupChoices.S06P01_S1_10M_KZN)
-    elif location == 'BAG':
+    elif group_name == EOSourceGroupChoices.S06P01_S1_10M_BAG:
         geojson_path = Path('/aux_files/Geojson/BAG_extent_forS1.geojson')
         eo_source_group = EOSourceGroup.objects.get(name=EOSourceGroupChoices.S06P01_S1_10M_BAG)
     else:
-        raise AfriCultuReSError(f'Unknown location: {location}')
+        raise AfriCultuReSError(f'Unknown Group: {group_name}')
     check_file_exists(geojson_path)
 
     area = geojson_to_wkt(read_geojson(geojson_path))
@@ -171,7 +196,7 @@ def task_sftp_parse_remote_dir(group_name: str):
 
 
 @shared_task
-def task_utils_schedule_download_eogroup(eo_source_group_id: int) -> str:
+def task_utils_download_eo_sources_for_eo_source_group(eo_source_group_id: int) -> str:
     """Schedule to download remote sources from eo_source groups"""
     eo_source_group = EOSourceGroup.objects.get(pk=eo_source_group_id)
 
@@ -189,9 +214,84 @@ def task_utils_schedule_download_eogroup(eo_source_group_id: int) -> str:
         return result.id
 
 
-# noinspection SpellCheckingInspection
 @shared_task
-def task_utils_schedule_create_eoproducts_for_group(eo_product_id: int) -> str:
+def task_utils_discover_eo_sources_for_pipeline(
+        pipeline_pk: int,
+        eager=False):
+    pipeline = Pipeline.objects.get(pk=pipeline_pk)
+    input_groups = pipeline.input_groups.all()
+    for input_group in input_groups:
+        task = task_utils_discover_inputs_for_eo_source_group.s(eo_source_group_id=input_group.pk)
+        if eager:
+            task.apply()
+        else:
+            task.apply_async()
+
+
+@shared_task
+def task_utils_download_eo_sources_for_pipeline(
+        pipeline_pk: int,
+        eager=False):
+    """ Use eager to do apply the task locally """
+    pipeline = Pipeline.objects.get(pk=pipeline_pk)
+    input_groups = pipeline.input_groups.all()
+    for input_group in input_groups:
+        task = task_utils_download_eo_sources_for_eo_source_group.s(eo_source_group_id=input_group.pk)
+        if eager:
+            task.apply()
+        else:
+            task.apply_async()
+
+
+@shared_task
+def task_utils_discover_inputs_for_eo_source_group(
+        eo_source_group_pk: int,
+        from_date: dt_date,
+        eager: bool = False
+) -> str:
+    try:
+        eo_source_group = EOSourceGroup.objects.get(pk=eo_source_group_pk)
+    except EOSourceGroup.DoesNotExist:
+        logger.info('this PK does not correspond to an EOSOURCE group. If it\'s EOPRODUCTGroup its ok')
+        return ''
+    group_name = eo_source_group.name
+    crawler_type_choices = EOSourceGroup.CrawlerTypeChoices
+    crawler_type = eo_source_group.crawler_type
+    to_date = dt_date.today()
+
+    task: BaseTaskWithRetry
+    if crawler_type == crawler_type_choices.SCRAPY_SPIDER:
+        crawler_config, created = CrawlerConfiguration.objects.get_or_create(group=group_name,
+                                                                             defaults={'from_date': from_date})
+        if not created:
+            crawler_config.from_date = from_date
+            crawler_config.save()
+        task = task_init_spider.s(spider_name=group_name)
+
+    elif crawler_type == crawler_type_choices.OTHER_SFTP:
+        task = task_sftp_parse_remote_dir.s(group_name=group_name)
+
+    elif crawler_type == crawler_type_choices.OTHER_SENTINEL:
+        task = task_scan_sentinel_hub(from_date=from_date, to_date=to_date, group_name=group_name)
+    elif crawler_type == crawler_type_choices.OTHER_WAPOR:
+        task = task_utils_create_wapor_entry.s(wapor_group_name=group_name, from_date=from_date)
+
+    else:
+        raise AfriCultuReSError(f'Unknown crawler_type: {crawler_type} for eo_source_group_pk: {eo_source_group_pk}')
+
+    if eager:
+        job = task.apply()
+        return job.task_id
+    else:
+        job = task.apply_async()
+
+        return f'{job.task_id}'
+
+
+# Each pipeline has only one output product,
+# so not needed to make 'for pipeline'
+@shared_task
+def task_utils_generate_eoproducts_for_eo_product_group(eo_product_id: int) -> str:
     eo_product_group = EOProductGroup.objects.get(pk=eo_product_id)
     qs_eo_product = EOProduct.objects.filter(group=eo_product_group,
                                              state=EOProductStateChoices.AVAILABLE)
@@ -228,7 +328,7 @@ def task_download_file(self, eo_source_pk: int):
     url_parse = urlparse(eo_source.url)
     scheme = url_parse.scheme
 
-    logger.info(f'LOG:INFO: Downloading file {eo_source.filename} using scheme: {scheme}')
+    logger.info(f'LOG:INFO:Downloading file {eo_source.filename} using scheme: {scheme}')
 
     try:
         if scheme.startswith('ftp'):
@@ -247,7 +347,13 @@ def task_download_file(self, eo_source_pk: int):
         eo_source.refresh_from_db()
         eo_source.state = EOSourceStateChoices.DEFERRED
         eo_source.save()
-        raise self.retry(countdown=10)
+        try:
+            raise self.retry(countdown=10)
+        except MaxRetriesExceededError as e:
+            logger.info(f'LOG:INFO:DOWNLOADING_FILE. Maximum attempts exceeded. Failing.')
+            eo_source.refresh_from_db()
+            eo_source.state = EOSourceStateChoices.DOWNLOAD_FAILED
+            eo_source.save()
     except BaseException as e:
         eo_source.refresh_from_db()
         eo_source.state = EOSourceStateChoices.DOWNLOAD_FAILED
@@ -258,8 +364,9 @@ def task_download_file(self, eo_source_pk: int):
 #############################
 # TASKS
 
-# rules
-# tasks that make products must start with 'task_s??p??*
+# RULES:
+# TASKS THAT THAT MAKE PRODUCTS must be pass this filter: task_s??p??*
+# TASKS THAT THAT MAKE PRODUCTS must have the argument eo_product_pk: int in their signature
 
 ###########
 # s02p02
@@ -601,7 +708,7 @@ def task_s02p02_lai300m_v1(eo_product_pk: int):
         clipped: Path = clip(data=data, out_file=out_file.as_posix(), geom=geom)
 
         try:
-            cp: CompletedProcess = run(
+            cp: subprocess.CompletedProcess = subprocess.run(
                 ['ncatted',
                  '-a', f'Consolidation_period,LAI,o,c,{rt}',
                  '-a', f'LAI_version,LAI,o,c,{ver}',
@@ -723,7 +830,7 @@ def task_s02p02_ndvianom250m(eo_product_pk: int, iso: str):
     if not f_shp_path.exists():
         raise AfriCultuReSError(f'Shapefile {f_shp_path.as_posix()} does not exist')
 
-    with tempfile.TemporaryDirectory() as temp_dir:
+    with TemporaryDirectory() as temp_dir:
         input_files_path: List[Path] = [Path(x.file.path) for x in input_files_qs]
         temp_dir_path = Path(temp_dir)
 
