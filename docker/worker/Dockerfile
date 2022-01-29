@@ -67,5 +67,9 @@ USER root
 RUN pip install tables  rasterio
 
 
+#### 29/01/2022 add pymodis
+USER root
+RUN pip install pymodis
+
 ##### END
 USER ${NB_USER}
