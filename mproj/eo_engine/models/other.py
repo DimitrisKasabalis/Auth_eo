@@ -1,5 +1,6 @@
 from django.db import models
 from typing import Optional
+from eo_engine.errors import AfriCultuReSError
 
 from eo_engine.models import EOSourceGroupChoices
 
@@ -44,7 +45,8 @@ class Pipeline(RuleMixin):
     name = models.TextField(default='No Name')
     package = models.TextField(choices=PackageChoices.choices)
     description = models.TextField(default='No-Description')
-    input_groups = models.ManyToManyField('EOGroup', related_name='pipelines_from_input', related_query_name='pipelines')
+    input_groups = models.ManyToManyField('EOGroup', related_name='pipelines_from_input',
+                                          related_query_name='pipelines')
     output_group = models.ForeignKey('EOGroup', on_delete=models.DO_NOTHING, related_name='pipelines_from_output')
     output_filename_template = models.TextField()
     output_folder = models.TextField()
@@ -52,7 +54,10 @@ class Pipeline(RuleMixin):
     task_kwargs = models.JSONField(default=dict)
 
     def output_filename(self, **kwargs) -> str:
-        return self.output_filename_template.format(**kwargs)
+        try:
+            return self.output_filename_template.format(**kwargs)
+        except KeyError as e:
+            raise AfriCultuReSError(f'Could not interpolate template sting {self.output_filename_template}') from e
 
     def urls(self) -> dict:
         from django.shortcuts import reverse

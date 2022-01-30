@@ -138,3 +138,7 @@
   pk: 35
   fields:
     name: 'S06P04_L1_AETI_D_GHA'
+- model: eo_engine.EOProductGroup
+  pk: 74
+  fields:
+    name: 'S04P01_LULC_500M_AFR'

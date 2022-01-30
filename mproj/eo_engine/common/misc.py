@@ -47,7 +47,7 @@ def str_to_date(token: str, regex_string: str, re_flags=re.IGNORECASE) -> dt_dat
         YYYYMM_str = groupdict.get('YYYYMM', None)
         YYYYMMDD_str = groupdict.get('YYYYMMDD', None)
         YYKK_str = groupdict.get('YYKK', None)
-        YYYYDOY_str = groupdict.get('YYYYDOY')
+        YYYYDOY_str = groupdict.get('YYYYDOY', None)
         if len(list(filter(lambda x: x is not None, [YYMMDD_str, YYYYMMDD_str, YYKK_str, YYYYDOY_str]))) > 1:
             raise AfriCultuReSError(
                 'More than one date token was captured, please change the regEx to only capture one.')

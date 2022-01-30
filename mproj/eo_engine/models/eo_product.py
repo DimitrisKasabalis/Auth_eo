@@ -52,15 +52,17 @@ class EOProduct(models.Model):
 def eoproduct_post_save_handler(instance: EOProduct, **kwargs):
     from eo_engine.models import Pipeline
 
-    # some output piplines dfds
     eo_product = instance
     if eo_product.state != EOProductStateChoices.READY:
         return
 
     yyyymmdd = eo_product.reference_date.strftime('%Y%m%d')
+    yyyy = eo_product.reference_date.strftime('%Y')
     pipelines = Pipeline.objects.filter(input_groups__eoproduct=eo_product)
     for pipeline in pipelines:
-        output_filename = pipeline.output_filename(YYYYMMDD=yyyymmdd)
+        # output templates could be YYYYMMDD or YYYY
+        output_filename = pipeline.output_filename(**{'YYYYMMDD': yyyymmdd, 'YYYY': yyyy})
+
         output_group = pipeline.output_group.as_eoproduct_group()
 
         prod, created = EOProduct.objects.get_or_create(

@@ -134,6 +134,7 @@ def eosource_post_save_handler(instance: EOSource, **kwargs):
 
     # it's used for the output filenames
     yyyymmdd = eo_source.reference_date.strftime('%Y%m%d')
+    yyyy = eo_source.reference_date.strftime('%Y')
 
     # pipelines that are using this source as input:
     pipelines = Pipeline.objects.filter(input_groups__in=eo_source.group.all())
@@ -153,7 +154,7 @@ def eosource_post_save_handler(instance: EOSource, **kwargs):
             if hasattr(output_group, 'as_eo_product_group'):
                 output_group = output_group.as_eo_product_group()
 
-            output_filename = pipeline.output_filename(YYYYMMDD=yyyymmdd)
+            output_filename = pipeline.output_filename(**{'YYYYMMDD': yyyymmdd, 'YYYY': yyyy})
 
             prod, created = EOProduct.objects.get_or_create(
                 filename=output_filename,

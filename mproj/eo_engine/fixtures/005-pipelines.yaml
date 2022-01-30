@@ -11,7 +11,7 @@
     input_groups: [ 36 ]
     output_group: 1
     output_filename_template: '{YYYYMMDD}_SE3_AFR_0300m_0010_NDVI.nc'
-    output_folder: 'S2_P02/NDVI_300_v2'
+    output_folder: 'S2_P02/NDVI_300/v2'
     task_name: 'task_s02p02_ndvi300m_v2'
     task_kwargs: { "aoi": [ -30, 40, 60, -40 ] }
 - model: eo_engine.Pipeline
@@ -25,7 +25,7 @@
     last_modified: 2021-12-10T19:10:20Z
     input_groups: [ 1 ]
     output_group: 2
-    output_folder: 'S2_P02/NDVI_1km_v3'
+    output_folder: 'S2_P02/NDVI_1km/v3'
     output_filename_template: '{YYYYMMDD}_SE3_AFR_1000m_0010_NDVI.nc'
     task_name: 'task_s02p02_nvdi1km_v3'
     task_kwargs: { }
@@ -85,7 +85,7 @@
     last_modified: 2021-12-10T19:10:20Z
     input_groups: [ 38 ]
     output_group: 6
-    output_folder: 'S2_P02/NDVI_anom'
+    output_folder: 'S2_P02/NDVI_anom/TUN'
     output_filename_template: '{YYYYMMDD}_MOD_TUN_0250m_0008_NDVI_anom.nc'
     task_name: 'task_s02p02_ndvianom250m'
     task_kwargs: { "iso": "TUN" }
@@ -101,7 +101,7 @@
     last_modified: 2021-12-10T19:10:20Z
     input_groups: [ 39 ]
     output_group: 7
-    output_folder: 'S2_P02/NDVI_anom'
+    output_folder: 'S2_P02/NDVI_anom/RWA'
     output_filename_template: '{YYYYMMDD}_MOD_RWA_0250m_0008_NDVI_anom.nc'
     task_name: 'task_s02p02_ndvianom250m'
     task_kwargs: { "iso": "RWA" }
@@ -117,7 +117,7 @@
     last_modified: 2021-12-10T19:10:20Z
     input_groups: [ 40 ]
     output_group: 8
-    output_folder: 'S2_P02/NDVI_anom'
+    output_folder: 'S2_P02/NDVI_anom/ETH'
     output_filename_template: '{YYYYMMDD}_MOD_ETH_0250m_0008_NDVI_anom.nc'
     task_name: 'task_s02p02_ndvianom250m'
     task_kwargs: { "iso": "ETH" }
@@ -133,7 +133,7 @@
     last_modified: 2021-12-10T19:10:20Z
     input_groups: [ 41 ]
     output_group: 9
-    output_folder: 'S2_P02/NDVI_anom'
+    output_folder: 'S2_P02/NDVI_anom/ZAF'
     output_filename_template: '{YYYYMMDD}_MOD_ZAF_0250m_0008_NDVI_anom.nc'
     task_name: 'task_s02p02_ndvianom250m'
     task_kwargs: { "iso": "ZAF" }
@@ -149,7 +149,7 @@
     last_modified: 2021-12-10T19:10:20Z
     input_groups: [ 42 ]
     output_group: 10
-    output_folder: 'S2_P02/NDVI_anom'
+    output_folder: 'S2_P02/NDVI_anom/NER'
     output_filename_template: '{YYYYMMDD}_MOD_NER_0250m_0008_NDVI_anom.nc'
     task_name: 'task_s02p02_ndvianom250m'
     task_kwargs: { "iso": "NER" }
@@ -165,7 +165,7 @@
     last_modified: 2021-12-10T19:10:20Z
     input_groups: [ 43 ]
     output_group: 11
-    output_folder: 'S2_P02/NDVI_anom'
+    output_folder: 'S2_P02/NDVI_anom/GHA'
     output_filename_template: '{YYYYMMDD}_MOD_GHA_0250m_0008_NDVI_anom.nc'
     task_name: 'task_s02p02_ndvianom250m'
     task_kwargs: { "iso": "GHA" }
@@ -181,7 +181,7 @@
     last_modified: 2021-12-10T19:10:20Z
     input_groups: [ 44 ]
     output_group: 12
-    output_folder: 'S2_P02/NDVI_anom'
+    output_folder: 'S2_P02/NDVI_anom/MOZ'
     output_filename_template: '{YYYYMMDD}_MOD_MOZ_0250m_0008_NDVI_anom.nc'
     task_name: 'task_s02p02_ndvianom250m'
     task_kwargs: { "iso": "MOZ" }
@@ -197,7 +197,7 @@
     last_modified: 2021-12-10T19:10:20Z
     input_groups: [ 45 ]
     output_group: 13
-    output_folder: 'S2_P02/NDVI_anom'
+    output_folder: 'S2_P02/NDVI_anom/KEN'
     output_filename_template: '{YYYYMMDD}_MOD_KEN_0250m_0008_NDVI_anom.nc'
     task_name: 'task_s02p02_ndvianom250m'
     task_kwargs: { "iso": "KEN" }
@@ -491,7 +491,22 @@
     last_modified: 2021-12-10T19:10:20Z
     input_groups: [ 73 ]
     output_group: 26
-    output_filename_template: '{YYYYMMDD}_SE1_BAG_0010m_0006_WBMA.ncc'
-    output_folder: 'S6_P01/WB_HR/KZN'
+    output_filename_template: '{YYYYMMDD}_SE1_BAG_0010m_0006_WBMA.nc'
+    output_folder: 'S6_P01/WB_HR/BAG'
     task_name: 'task_s06p01_wb10m_bag'
     task_kwargs: { 'aoi': 'BAG' }
+
+- model: eo_engine.Pipeline
+  pk: null
+  fields:
+    name: "Sentinel BAG"
+    description: "Mosaic MODIS LandCover 500m"
+    package: 'S04P01'
+    timestamp: 2022-01-29T17:42:42Z
+    last_modified: 2022-01-29T17:42:42Z
+    input_groups: [ 75 ]
+    output_group: 74
+    output_filename_template: '{YYYY}_MOD_AFR_0500m_0365_LULC.nc'
+    output_folder: 'S4_P01/LULC_MR'
+    task_name: 'task_s04p01_lulc500m'
+    task_kwargs: { }

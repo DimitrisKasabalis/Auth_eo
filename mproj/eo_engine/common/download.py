@@ -1,6 +1,7 @@
 from logging import Logger
 
 import os
+from requests import HTTPError, Response
 from sentinelsat import InvalidChecksumError
 from tempfile import TemporaryDirectory
 from celery.utils.log import get_task_logger
@@ -24,41 +25,50 @@ def download_http_eosource(pk_eosource: int) -> str:
     remote_url = eo_source.url
     credentials = eo_source.get_credentials
 
-    response = requests.get(
-        url=remote_url,
-        auth=credentials,
-        stream=True
-    )
-    response.raise_for_status()
-    headers = response.headers
-    FILE_LENGTH = headers.get('Content-Length', None)
-    logger.info(f'LOG:INFO: File length is {FILE_LENGTH} bytes')
+    with requests.Session() as session:
 
-    eo_source.set_status(EOSourceStateChoices.DOWNLOADING)
+        response = session.request('get', remote_url, stream=True)
+        try:
+            response.raise_for_status()
+        except HTTPError as e:
+            err_response: Response = e.response
+            if err_response.status_code == 401:
+                logger.info(f'LOG:INFO: HTTPError, retrying with authentication')
+                logger.info(f'LOG:INFO: authentication: {credentials}')
+                response = session.request('get', err_response.url, auth=credentials, stream=True)
+            else:
+                raise e
+        response.raise_for_status()
 
-    with NamedTemporaryFile() as file_handle:
-        # TemporaryFile has noname, and will cease to exist when it is closed.
+        headers = response.headers
+        FILE_LENGTH = headers.get('Content-Length', None)
+        logger.info(f'LOG:INFO: File length is {FILE_LENGTH} bytes')
 
-        bytes_processed = 0
-        for chunk in response.iter_content(chunk_size=2 * 1024):
-            bytes_processed += 2 * 1024
+        eo_source.set_status(EOSourceStateChoices.DOWNLOADING)
 
-            file_handle.write(chunk)
-            file_handle.flush()
-        logger.info(f'LOG:INFO: Downloaded file {eo_source.filename} to a temporary file.')
-        logger.info(f'LOG:INFO: Downloaded file has filesize {os.stat(file_handle.name).st_size}.')
+        with NamedTemporaryFile() as file_handle:
+            # TemporaryFile has noname, and will cease to exist when it is closed.
 
-        content = File(file_handle)
-        for conn in connections.all():
-            conn.close_if_unusable_or_obsolete()
-        eo_source = EOSource.objects.get(pk=pk_eosource)
-        eo_source.file.save(name=eo_source.filename, content=content, save=False)
+            bytes_processed = 0
+            for chunk in response.iter_content(chunk_size=2 * 1024):
+                bytes_processed += 2 * 1024
 
-        eo_source.filesize = eo_source.file.size
-        eo_source.state = EOSourceStateChoices.AVAILABLE_LOCALLY
-        eo_source.save()
+                file_handle.write(chunk)
+                file_handle.flush()
+            logger.info(f'LOG:INFO: Downloaded file {eo_source.filename} to a temporary file.')
+            logger.info(f'LOG:INFO: Downloaded file has filesize {os.stat(file_handle.name).st_size}.')
 
-    return eo_source.file.name
+            content = File(file_handle)
+            for conn in connections.all():
+                conn.close_if_unusable_or_obsolete()
+            eo_source = EOSource.objects.get(pk=pk_eosource)
+            eo_source.file.save(name=eo_source.filename, content=content, save=False)
+
+            eo_source.filesize = eo_source.file.size
+            eo_source.state = EOSourceStateChoices.AVAILABLE_LOCALLY
+            eo_source.save()
+
+        return eo_source.file.name
 
 
 def download_ftp_eosource(pk_eosource: int) -> str:

@@ -261,3 +261,11 @@
   pk: 73
   fields:
     description: 'Sentinel BAG'
+- model: eo_engine.EOGroup
+  pk: 74
+  fields:
+    description: 'LLULC 500 Metres Africa'
+- model: eo_engine.EOGroup
+  pk: 75
+  fields:
+    description: 'S04P01_LULC_500M_MCD12Q1_v6'

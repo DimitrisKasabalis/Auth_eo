@@ -24,6 +24,13 @@ class EOProductGroupChoices(models.TextChoices):
 
     AGRO_VCI_1KM_V2_AFR = 'AGRO_VCI_1KM_V2_AFR', 'AUTH/AGRO/VCI 1km, V2 Africa'
 
+    # S04P03
+    S04P03_FLD_375M_1D_AFR = 'S04P03_FLD_375M_1D_AFR', 'FLD 375M 1D AFR'
+    S04P03_FLD_10m_BAG = 'S04P03_FLD_10m_BAG', 'FLD 10m BAG'
+
+    # S04P01
+    S04P01_LULC_500M_AFR = 'S04P01_LULC_500M_AFR', 'Land Cover 500m Africa'
+
     # S06P01
     S06P01_WB_100M_V1_ETH = 'S06P01_WB_100M_V1_ETH', 'WaterBodies 100Mv1 (ETH)'
     S06P01_WB_100M_V1_GHA = 'S06P01_WB_100M_V1_GHA', 'WaterBodies 100Mv1 (GHA)'
@@ -48,10 +55,6 @@ class EOProductGroupChoices(models.TextChoices):
     S06P04_AETI_100M_D_ETH = 'S06P04_AETI_100M_D_ETH', 'S06P04_AETI_100M_D_ETH'
     S06P04_L1_AETI_D_GHA = 'S06P04_L1_AETI_D_GHA', 'S06P04_L1_AETI_D_GHA'
 
-    # S04P03
-    S04P03_FLD_375M_1D_AFR = 'S04P03_FLD_375M_1D_AFR', 'FLD 375M 1D AFR'
-    S04P03_FLD_10m_BAG = 'S04P03_FLD_10m_BAG', 'FLD 10m BAG'
-
 
 class EOSourceGroupChoices(models.TextChoices):
     # Naming convention:
@@ -72,18 +75,21 @@ class EOSourceGroupChoices(models.TextChoices):
     S02P02_NDVIA_250M_MOZ_GMOD = 'S02P02_NDVIA_250M_MOZ_GMOD', 'MODIS GMOD09Q1 NDVI Anomaly (MOZ)'
     S02P02_NDVIA_250M_KEN_GMOD = 'S02P02_NDVIA_250M_KEN_GMOD', 'MODIS GMOD09Q1 NDVI Anomaly (KEN)'
 
+    # S04P01
+    S04P01_LULC_500M_MCD12Q1_v6 = 'S04P01_LULC_500M_MCD12Q1_v6', '(MODIS S04P01) Land Cover 500M v6'
+
     #  S04P03
     S04P03_FLD_375M_1D_VIIRS = 'S04P03_FLD_375M_1D_VIIRS', 'FLD 375M 1D VIIRS'
     S04P03_WB_10m_BAG = 'S04P03_WB_10m_BAG', 'WB 10m BAG'
 
-    #  S0601
+    #  S06P01
     S06P01_WB_100M_V1_GLOB_CGLS = 'S06P01_WB_100M_V1_GLOB_CGLS', "Copernicus Global Land Service Water Bodies Collection 100m Version 2"
     S06P01_WB_300M_V2_GLOB_CGLS = 'S06P01_WB_300M_V2_GLOB_CGLS', "Copernicus Global Land Service Water Bodies Collection 300m Version 2"
 
     S06P01_S1_10M_KZN = 'S06P01_S1_10M_KZN', 'Sentinel 10m KZN'
     S06P01_S1_10M_BAG = 'S06P01_S1_10M_BAG', 'Sentinel 10m BAG'
 
-    #  S0604
+    # S06P04
     S06P04_ETAnom_5KM_M_GLOB_SSEBOP = 'S06P04_ETAnom_5KM_M_GLOB_SSEBOP', 'S06P04: ETAnom 5KM M GLOB SSEBOP'
     S06P04_ET_3KM_GLOB_MSG = 'S06P04_ET_3KM_GLOB_MSG', 'S06P04: LSAF 3KM DMET'
 
@@ -153,11 +159,12 @@ class EOProductGroup(EOGroup):
 
 class EOSourceGroup(EOGroup):
     class CrawlerTypeChoices(models.TextChoices):
-        SCRAPY_SPIDER = 'SCRAPY_SPIDER', 'Using Scrappy Spider'
-        OTHER_SFTP = 'OTHER (SFTP)', 'Using sftp Crawler'
-        OTHER_WAPOR = 'OTHER (WAPOR)', 'Wapor on demand'
-        OTHER_SENTINEL = 'OTHER (SENTINEL)', 'Wapor on demand'
         NONE = 'NONE', 'Not using crawling'
+        OTHER_PYMODIS = 'OTHER (PYMODIS)', 'PYMODIS API'
+        OTHER_SENTINEL = 'OTHER (SENTINEL)', 'Sentinel'
+        OTHER_SFTP = 'OTHER (SFTP)', 'SFTP Crawler'
+        OTHER_WAPOR = 'OTHER (WAPOR)', 'Wapor on demand'
+        SCRAPY_SPIDER = 'SCRAPY_SPIDER', 'Scrappy Spider'
 
     name = models.TextField(choices=EOSourceGroupChoices.choices, unique=True)
     date_regex = models.TextField(

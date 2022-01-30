@@ -847,6 +847,14 @@ def task_s02p02_ndvianom250m(eo_product_pk: int, iso: str):
 
 
 ###########
+# s04p01
+##########
+@shared_task
+def task_s04p01_lulc500m(eo_product_pk):
+    pass
+
+
+###########
 # s04p03
 ##########
 @shared_task
@@ -1214,10 +1222,14 @@ def task_s06p04_et250m(eo_product_pk: int, iso: str):
             raise AfriCultuReSError("No file was produced")
         else:
             et_meta = et_band.meta.copy()
-            et_meta.update({'crs': rasterio.crs.CRS({'init': 'epsg:4326'})})
+            et_meta.update(
+                {'crs': rasterio.crs.CRS({'init': 'epsg:4326'})})
 
             logger.info('Writing output file....')
-            with rasterio.open(file_out_path, 'w', compress='lzw', **et_meta) as file:
+            with rasterio.open(
+                    file_out_path, 'w',
+                    compress='lzw',
+                    **et_meta) as file:
                 file.write(et_ql, 1)
 
     file_in_path_et = Path(et_file.file.path)

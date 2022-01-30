@@ -247,8 +247,13 @@
     date_regex: 'L2_QUAL_NDVI_D_(?P<YYKK>\d{4})_GHA.tif'
 - model: eo_engine.EOSourceGroup
   pk: 73
-  name: S06P01_S1_10M_BAG
   fields:
     crawler_type: 'OTHER (SENTINEL)'
     name: 'S06P01_S1_10M_BAG'
     date_regex: '^S1(A|B)_IW_GRDH_1SDV_(?P<YYYYMMDD>\d{8})T\d{6}_\d{8}T\d{6}_[A-Z0-9]+_[A-Z0-9]+_[A-Z0-9]+(\.zip)?$'
+- model: eo_engine.EOSourceGroup
+  pk: 75
+  fields:
+    crawler_type: 'SCRAPY_SPIDER'
+    name: 'S04P01_LULC_500M_MCD12Q1_v6'
+    date_regex: '^MCD12Q1\.A(?P<YYYYDOY>\d{7})\.h\d{2}v\d{2}\.00\d\.\d{13}\.hdf$'
