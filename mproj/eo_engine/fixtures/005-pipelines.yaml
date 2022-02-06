@@ -470,8 +470,8 @@
 - model: eo_engine.Pipeline
   pk: null
   fields:
-    name: "Sentinel KZN"
-    description: "Sentinel KAZ"
+    name: "WB 10m Sentinel KZN (ZAF)"
+    description: "Downloading of Sentinel-1 data and producing WB at 10m over KZN (South Africa). Download with sentinelAPI of sentinelsat. Pre-processing with snappy."
     package: 'S06P01'
     timestamp: 2021-12-10T19:10:20Z
     last_modified: 2021-12-10T19:10:20Z
@@ -484,23 +484,23 @@
 - model: eo_engine.Pipeline
   pk: null
   fields:
-    name: "Sentinel BAG"
-    description: "Sentinel BAG"
+    name: "WB 10m Sentinel BAG (GHA)"
+    description: "Downloading of Sentinel-1 data and producing WB at 10m over BAG (GHA). Download with sentinelAPI of sentinelsat. Pre-processing with snappy."
     package: 'S06P01'
     timestamp: 2021-12-10T19:10:20Z
     last_modified: 2021-12-10T19:10:20Z
     input_groups: [ 73 ]
     output_group: 26
     output_filename_template: '{YYYYMMDD}_SE1_BAG_0010m_0006_WBMA.nc'
-    output_folder: 'S6_P01/WB_HR/BAG'
+    output_folder: 'S6_P01/WB_HR/KZN'
     task_name: 'task_s06p01_wb10m_bag'
-    task_kwargs: { 'aoi': 'BAG' }
+    task_kwargs: { 'aoi': 'BAG', 'raster': 'hand_GH.tif'}
 
 - model: eo_engine.Pipeline
   pk: null
   fields:
-    name: "Sentinel BAG"
-    description: "Mosaic MODIS LandCover 500m"
+    name: "LULC 500m (Africa)"
+    description: "Download and Mosaic all MODIS (MDC12Q1 v6) LULC tiles over Africa."
     package: 'S04P01'
     timestamp: 2022-01-29T17:42:42Z
     last_modified: 2022-01-29T17:42:42Z
@@ -510,3 +510,17 @@
     output_folder: 'S4_P01/LULC_MR'
     task_name: 'task_s04p01_lulc500m'
     task_kwargs: { }
+- model: eo_engine.Pipeline
+  pk: null
+  fields:
+    name: "Floods HR BAG (GHA)"
+    description: "NOTE YET IMPLEMENTED!! Floods mapping at 10m over BAG (GHA). Input used from \"WB 10m Sentinel BAG\"."
+    package: 'S04P03'
+    timestamp: 2021-12-10T19:10:20Z
+    last_modified: 2021-12-10T19:10:20Z
+    input_groups: [ 26 ]
+    output_group: 15
+    output_filename_template: '{YYYYMMDD}_SE1_BAG_0010m_0365_FAMA.nc'
+    output_folder: 'S4_P03/Floods_HR/Ghana'
+    task_name: 'task_s04p03_floods10m'
+    task_kwargs: { 'aoi': 'BAG' }

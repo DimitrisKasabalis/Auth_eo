@@ -744,7 +744,7 @@ def task_s02p02_ndvianom250m(eo_product_pk: int, iso: str):
         logger.info(f'task_s02p02_process_ndvia:mosaic_f:datasets:{datasets}')
         mosaic, out_trans = rio_merge(
             datasets=datasets,
-            nodata=0,
+            nodata=255,
             method='max')
 
         # Update the metadata
@@ -773,6 +773,7 @@ def task_s02p02_ndvianom250m(eo_product_pk: int, iso: str):
             cutlineDSName=shp_file_path.as_posix(), cropToCutline=True,
             dstSRS="EPSG:4326",
             format='netCDF',
+            dstNodata=255,
             outputType=gdal.GDT_UInt16, options=['COMPRESS=LZW'])
         gdal.Warp(
             srcDSOrSrcDSTab=file_in.as_posix(),
@@ -796,6 +797,9 @@ def task_s02p02_ndvianom250m(eo_product_pk: int, iso: str):
             da.attrs['_FillValue'] = 0
             da.attrs['scale_factor'] = 0.008
             da.attrs['add_offset'] = -1
+            da.attrs['flag_masks'] = 253, 254, 255
+            da.attrs['flag_meanings'] = "invalid water no_data"
+            da.attrs['valid_range'] = 0, 250  # meaning -1 to 1
             prmts = dict({'NDVIA': {'dtype': 'f4', 'zlib': 'True', 'complevel': 4}})
             da.to_netcdf(file_out, encoding=prmts)
         except Exception as ex:
@@ -1260,6 +1264,15 @@ def task_s06p04_et250m(eo_product_pk: int, iso: str):
         print('nccopy')
         subprocess.run(['nccopy', '-k', 'nc4', '-d8', (Path(temp_dir) / 'out3.nc').as_posix(),
                         (Path(temp_dir) / 'final.nc').as_posix()], check=True)
+        # set outfile metadata
+        print('Adding Metadata')
+        cp = subprocess.run(['ncatted',
+                             '-a', "scale_factor,Band1,o,d,0.1",
+                             (Path(temp_dir) / 'final.nc').as_posix()])
+        if cp.returncode != 0:
+            raise Exception(f'EXIT CODE: {cp.returncode}, ERROR: {cp.stderr} ')
+
+
         with open((Path(temp_dir) / 'final.nc').as_posix(), 'rb') as file_handler:
             content = File(file_handler)
             eo_product.file.save(name=eo_product.filename, content=content, save=False)
@@ -1360,6 +1373,14 @@ def task_s06p04_et100m(eo_product_pk: int, iso: str):
             '-of', 'netCDF',
             (Path(temp_dir) / 'out2.tif').as_posix(),
             (Path(temp_dir) / 'final.nc').as_posix()], check=True)
+
+        # set outfile metadata
+        print('Adding Metadata')
+        cp = subprocess.run(['ncatted',
+                             '-a', "scale_factor,Band1,o,d,0.1",
+                             (Path(temp_dir) / 'final.nc').as_posix()])
+        if cp.returncode != 0:
+            raise Exception(f'EXIT CODE: {cp.returncode}, ERROR: {cp.stderr} ')
 
         with open((Path(temp_dir) / 'final.nc').as_posix(), 'rb') as file_handler:
             content = File(file_handler)
