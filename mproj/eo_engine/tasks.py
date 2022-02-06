@@ -555,8 +555,8 @@ def task_s02p02_vci1km_v2(eo_product_pk):
         print("Merged Bands:   %s" % (list(band_names)))
         return merged
 
-    # noinspection PyUnresolvedReferences
-    def get_VCI(data, file, dir):
+    # noinspection PyUnresolvedReferences,PyPep8Naming
+    def get_vci(data):
         GPF.getDefaultInstance().getOperatorSpiRegistry().loadOperatorSpis()
         BandDescriptor = snappy.jpy.get_type('org.esa.snap.core.gpf.common.BandMathsOp$BandDescriptor')
         targetBand = BandDescriptor()
@@ -574,27 +574,28 @@ def task_s02p02_vci1km_v2(eo_product_pk):
         # write_product(vci_float, os.path.join(dir, file))
         return vci_float
 
-    def VCI_to_int(data, file, dir):
+    def vci_to_int(data, file, dir):
         # band_names = data.getBandNames()
         # print("Bands:   %s" % (list(band_names)))
 
         GPF.getDefaultInstance().getOperatorSpiRegistry().loadOperatorSpis()
-        BandDescriptor = snappy.jpy.get_type('org.esa.snap.core.gpf.common.BandMathsOp$BandDescriptor')
-        targetBand = BandDescriptor()
-        targetBand.name = 'VCI'
-        targetBand.type = 'int32'
-        targetBand.noDataValue = 255
-        targetBand.expression = 'if (VCI == 255) then 255 else ( ' \
-                                'if (VCI > 1.125) then 250 else ( ' \
-                                'if (VCI<-0.125) then 0  else rint((VCI + 0.125)/0.005)))'  # 250 is the max value, 0 is the min value
-        targetBands = snappy.jpy.array('org.esa.snap.core.gpf.common.BandMathsOp$BandDescriptor', 1)
-        targetBands[0] = targetBand
+        band_descriptor = snappy.jpy.get_type('org.esa.snap.core.gpf.common.BandMathsOp$BandDescriptor')
+        target_band = band_descriptor()
+        target_band.name = 'VCI'
+        target_band.type = 'int32'
+        target_band.noDataValue = 255
+        target_band.expression = 'if (VCI == 255) then 255 else ( ' \
+                                 'if (VCI > 1.125) then 250 else ( ' \
+                                 'if (VCI<-0.125) then 0  else rint((VCI + 0.125)/0.005)))'  # 250 is the max value, 0 is the min value
+        target_bands = snappy.jpy.array('org.esa.snap.core.gpf.common.BandMathsOp$BandDescriptor', 1)
+        target_bands[0] = target_band
         params = HashMap()
-        params.put('targetBands', targetBands)
+        params.put('targetBands', target_bands)
         vci = GPF.createProduct('BandMaths', params, data)
         write_product(vci, os.path.join(dir, file))
         return vci
 
+    # noinspection DuplicatedCode,SpellCheckingInspection
     def process(f_ndvi, lts_dir, dir_out):
         # Get the dekad number
 
@@ -603,12 +604,12 @@ def task_s02p02_vci1km_v2(eo_product_pk):
 
         f_lts_min = f_lts[:-3] + '_min.nc'
         f_lts_max = f_lts[:-3] + '_min.nc'
-        print('\n== Processing ==')
-        print('NDVI file: ', f_ndvi)
-        print('with LTS min: ', f_lts_min)
-        print('with LTS max: ', f_lts_max)
+        logger.info('\n== Processing ==')
+        logger.info('NDVI file: ', f_ndvi)
+        logger.info('with LTS min: ', f_lts_min)
+        logger.info('with LTS max: ', f_lts_max)
 
-        print(Path(f_lts_max).is_file())
+        logger.info(Path(f_lts_max).is_file())
 
         data = ProductIO.readProduct(f_ndvi)
         data1 = ProductIO.readProduct(f_lts[:-3] + '_min.nc')
@@ -620,15 +621,15 @@ def task_s02p02_vci1km_v2(eo_product_pk):
             print('Problem merging the bands')
             raise e
         try:
-            vci_float = get_VCI(merged, f_ndvi[:-3] + '_VCI_temp.nc', dir_out)
+            vci_float = get_vci(merged)
         except Exception:
             print('Problem computing VCI')
         try:
             date = os.path.basename(f_ndvi).split('_')[0]
             filename = 'g2_BIOPAR_VCI_' + date + '_AFRI_OLCI_V2.0.nc'
-            vci = VCI_to_int(vci_float, filename, dir_out)
+            vci = vci_to_int(vci_float, filename, dir_out)
         except Exception as e:
-            print('Problem transforming VCI')
+            logger.error('Problem transforming VCI')
             raise e
         return os.path.join(dir_out, filename)
 
@@ -667,9 +668,6 @@ def task_s02p02_vci1km_v2(eo_product_pk):
 
 @shared_task
 def task_s02p02_lai300m_v1(eo_product_pk: int):
-    import snappy
-    from snappy import ProductIO, GPF, HashMap, WKTReader
-
     produced_file = EOProduct.objects.get(id=eo_product_pk)
     input_eo_source_group = produced_file.group.eoproductgroup.pipelines_from_output.get().input_groups.get().eosourcegroup
     input_files_qs = EOSource.objects.filter(group=input_eo_source_group, reference_date=produced_file.reference_date)
@@ -677,38 +675,29 @@ def task_s02p02_lai300m_v1(eo_product_pk: int):
     eo_source_input: EOSource = input_files_qs.get()
 
     filename_in = eo_source_input.filename
-
-    HashMap = snappy.jpy.get_type('java.util.HashMap')
-    GPF.getDefaultInstance().getOperatorSpiRegistry().loadOperatorSpis()
-    wkt = "POLYGON((-19.5848214278419448 37.738, 54.2276785724937156 37.738, 54.2276785724937156 -35.4776785714023148, -19.5848214278419448 -35.4776785714023148, -19.5848214278419448 37.738, -19.5848214278419448 37.738))"  # Africa by DK
     rt = filename_in.split('-')[1][:3]
     ver = filename_in.split('_V')[1][:5]
 
-    def clip(data, out_file, geom):
-        # Read the file
-        params = HashMap()
-        # params.put('sourceBands', 'LAI') #'QUAL' all layers are kept!
-        params.put('region', '0, 0, 0, 0')
-        params.put('geoRegion', geom)
-        params.put('subSamplingX', 1)
-        params.put('subSamplingY', 1)
-        params.put('fullSwath', False)
-        params.put('copyMetadata', True)
-        clipped = GPF.createProduct('Subset', params, data)
-
-        ProductIO.writeProduct(clipped, out_file, 'NetCDF4-CF')  # 'GeoTIFF'
-        return_path = Path(str(clipped.getFileLocation()))
-        print(return_path)
+    def clip(in_file, out_file, geom):
+        lat_str = "lat," + str(geom[0]) + "," + str(geom[1])
+        lon_str = "lon," + str(geom[2]) + "," + str(geom[3])
+        subprocess.run(['ncks',
+                        '-v', 'LAI',
+                        '-d', lat_str,
+                        '-d', lon_str,
+                        in_file,
+                        out_file], check=True)
+        return_path = out_file  # Path(str(clipped.getFileLocation()))
+        logger.info(return_path)
         return return_path
 
+    # noinspection DuplicatedCode
     with TemporaryDirectory(prefix='task_s0p02_clip_lai300m_v1_afr_') as temp_dir:
-        data = ProductIO.readProduct(eo_source_input.file.path)
-        geom = WKTReader().read(wkt)
+        geom = [14200, 38800, 53900, 78700]
         out_file = Path(temp_dir) / produced_file.filename
-        clipped: Path = clip(data=data, out_file=out_file.as_posix(), geom=geom)
-
+        clipped: Path = clip(in_file=eo_source_input.file.path, out_file=out_file.as_posix(), geom=geom)
         try:
-            cp: subprocess.CompletedProcess = subprocess.run(
+            subprocess.CompletedProcess = subprocess.run(
                 ['ncatted',
                  '-a', f'Consolidation_period,LAI,o,c,{rt}',
                  '-a', f'LAI_version,LAI,o,c,{ver}',
@@ -728,6 +717,7 @@ def task_s02p02_lai300m_v1(eo_product_pk: int):
     return
 
 
+# noinspection DuplicatedCode
 @shared_task
 def task_s02p02_ndvianom250m(eo_product_pk: int, iso: str):
     produced_file = EOProduct.objects.get(id=eo_product_pk)
@@ -737,6 +727,7 @@ def task_s02p02_ndvianom250m(eo_product_pk: int, iso: str):
     import rasterio
     from rasterio.merge import merge as rio_merge
 
+    # noinspection SpellCheckingInspection
     def mosaic_f(in_files: List[Path], outfile: Path) -> Path:
         # prepend vsigzip if filename ends in .gz
 
@@ -769,7 +760,7 @@ def task_s02p02_ndvianom250m(eo_product_pk: int, iso: str):
         # clip using the shapefile ot a netcdf format
         print("\nClipping file: %s" % file_in)
 
-        warpOptions = gdal.WarpOptions(
+        warp_options = gdal.WarpOptions(
             cutlineDSName=shp_file_path.as_posix(), cropToCutline=True,
             dstSRS="EPSG:4326",
             format='netCDF',
@@ -778,7 +769,7 @@ def task_s02p02_ndvianom250m(eo_product_pk: int, iso: str):
         gdal.Warp(
             srcDSOrSrcDSTab=file_in.as_posix(),
             destNameOrDestDS=file_out_path.as_posix(),
-            options=warpOptions)
+            options=warp_options)
         return Path(file_out_path)
 
     def add_metadata(file_in: Path, file_out: Path) -> Path:
@@ -800,12 +791,12 @@ def task_s02p02_ndvianom250m(eo_product_pk: int, iso: str):
             da.attrs['flag_masks'] = 253, 254, 255
             da.attrs['flag_meanings'] = "invalid water no_data"
             da.attrs['valid_range'] = 0, 250  # meaning -1 to 1
-            prmts = dict({'NDVIA': {'dtype': 'f4', 'zlib': 'True', 'complevel': 4}})
-            da.to_netcdf(file_out, encoding=prmts)
+            parameters = dict({'NDVIA': {'dtype': 'f4', 'zlib': 'True', 'complevel': 4}})
+            da.to_netcdf(file_out, encoding=parameters)
         except Exception as ex:
             template = "An exception of type {0} occurred while resampling. Arguments:\n{1!r}"
             message = template.format(type(ex).__name__, ex.args)
-            logger.err(message)
+            logger.error(message)
             raise AfriCultuReSError(message)
         return Path(file_out)
 
@@ -853,9 +844,10 @@ def task_s02p02_ndvianom250m(eo_product_pk: int, iso: str):
 ###########
 # s04p01
 ##########
+# noinspection SpellCheckingInspection
 @shared_task
 def task_s04p01_lulc500m(eo_product_pk):
-    pass
+    raise AfriCultuReSError() from NotImplementedError('Not done yet!')
 
 
 ###########
@@ -912,7 +904,7 @@ def task_s04p03_floods375m(eo_product_pk: int):
         dst_path = temp_dir_path / 'mosaic.tif'
         out_nc = Path(temp_dir) / 'out.nc'
 
-        datasets: List[str] = list(map(Path, [x.file.path for x in input_files_qs]))
+        datasets: List[Path] = list(map(Path, [x.file.path for x in input_files_qs]))
 
         merge(datasets=datasets, dst_path=dst_path, nodata=0)
 
@@ -949,40 +941,26 @@ def task_s04p03_floods10m(eo_product_pk: int):
 ##########
 @shared_task
 def task_s06p01_wb300m_v2(eo_product_pk: int):
-    import snappy
-    from snappy import ProductIO, GPF, HashMap, WKTReader
-
     eo_product = EOProduct.objects.get(id=eo_product_pk)
     input_eo_source_group = eo_product.group.eoproductgroup.pipelines_from_output.get().input_groups.get().eosourcegroup
     input_files_qs = EOSource.objects.filter(group=input_eo_source_group, reference_date=eo_product.reference_date)
     input_file = input_files_qs.get()
 
-    wkt = "POLYGON((-30 40, 60 40, 60 -40, -30 -40, -30 40, -30 40))"  # Africa
-    HashMap = snappy.jpy.get_type('java.util.HashMap')
-    # Get snappy Operators
-    GPF.getDefaultInstance().getOperatorSpiRegistry().loadOperatorSpis()
-
     def clip(file_in, file_out, geom) -> Path:
-        # Read the file
-        data = ProductIO.readProduct(file_in)
-
-        params = HashMap()
-        # params.put('sourceBands', 'WB') #'QUAL'
-        params.put('region', '0, 0, 0, 0')
-        params.put('geoRegion', geom)
-        params.put('subSamplingX', 1)
-        params.put('subSamplingY', 1)
-        params.put('fullSwath', False)
-        params.put('copyMetadata', True)
-        clipped = GPF.createProduct('Subset', params, data)
-
-        ProductIO.writeProduct(clipped, file_out.as_posix(), 'NetCDF4-CF')
-        return Path(str(clipped.getFileLocation()))
+        lat_str = "lat," + str(geom[0]) + "," + str(geom[1])
+        lon_str = "lon," + str(geom[2]) + "," + str(geom[3])
+        subprocess.run(['ncks',
+                        '-d', lat_str,
+                        '-d', lon_str,
+                        file_in,
+                        file_out], check=True)
+        return Path(file_out)
 
     with TemporaryDirectory(prefix='task_s06p01_clip_to_africa_') as temp_dir:
         date = input_file.filename.split('_')[3][:8]
         f_out = date + '_SE2_AFR_0300m_0030_WBMA.nc'
-        clipped = clip(input_file.file.path, Path(temp_dir).joinpath(f_out), WKTReader().read(wkt))
+        geom = [16904, 46189, 64166, 93689]
+        clipped = clip(input_file.file.path, Path(temp_dir).joinpath(f_out), geom)
 
         content = File(clipped.open('rb'))
         eo_product.file.save(name=eo_product.filename, content=content, save=False)
@@ -1203,7 +1181,7 @@ def task_s06p04_et250m(eo_product_pk: int, iso: str):
         group=EOSourceGroup.objects.get(
             name=EOSourceGroupChoices.S06P04_WAPOR_L1_QUAL_LST_D_AFRICA)).get()
 
-    def get_AETI_qual(file_in_path_et: Path,
+    def get_aeti_qual(file_in_path_et: Path,
                       file_in_path_lst: Path,
                       file_in_path_ndvi: Path,
                       file_out_path: Path):
@@ -1243,7 +1221,7 @@ def task_s06p04_et250m(eo_product_pk: int, iso: str):
     file_in_path_ndvi = Path(qual_ndvi_file.file.path)
     check_file_exists(file_in_path_ndvi)
     with TemporaryDirectory() as temp_dir:
-        get_AETI_qual(file_in_path_et=file_in_path_et, file_in_path_lst=file_in_path_lst,
+        get_aeti_qual(file_in_path_et=file_in_path_et, file_in_path_lst=file_in_path_lst,
                       file_in_path_ndvi=file_in_path_ndvi, file_out_path=Path(temp_dir) / 'out1.tif')
 
         logger.info('cutting/warping')
@@ -1272,7 +1250,6 @@ def task_s06p04_et250m(eo_product_pk: int, iso: str):
         if cp.returncode != 0:
             raise Exception(f'EXIT CODE: {cp.returncode}, ERROR: {cp.stderr} ')
 
-
         with open((Path(temp_dir) / 'final.nc').as_posix(), 'rb') as file_handler:
             content = File(file_handler)
             eo_product.file.save(name=eo_product.filename, content=content, save=False)
@@ -1283,6 +1260,7 @@ def task_s06p04_et250m(eo_product_pk: int, iso: str):
     return '+++Finished+++'
 
 
+# noinspection SpellCheckingInspection
 @shared_task
 def task_s06p04_et100m(eo_product_pk: int, iso: str):
     import rasterio
@@ -1325,7 +1303,7 @@ def task_s06p04_et100m(eo_product_pk: int, iso: str):
         group=EOSourceGroup.objects.get(
             name=f'S06P04_WAPOR_L2_QUAL_LST_D_{iso}')).get()
 
-    def get_AETI_qual(file_in_path_et: Path,
+    def get_aeti_qual(file_in_path_et: Path,
                       file_in_path_lst: Path,
                       file_in_path_ndvi: Path,
                       file_out_path: Path):
@@ -1347,6 +1325,7 @@ def task_s06p04_et100m(eo_product_pk: int, iso: str):
             raise AfriCultuReSError("No file was produced")
         else:
             et_meta = et_band.meta.copy()
+            # noinspection PyUnresolvedReferences
             et_meta.update({'crs': rasterio.crs.CRS({'init': 'epsg:4326'})})
 
             print('Writing output file....')
@@ -1357,17 +1336,17 @@ def task_s06p04_et100m(eo_product_pk: int, iso: str):
     file_in_path_lst = Path(qual_lst_file.file.path)
     file_in_path_ndvi = Path(qual_ndvi_file.file.path)
     with TemporaryDirectory() as temp_dir:
-        get_AETI_qual(file_in_path_et=file_in_path_et, file_in_path_lst=file_in_path_lst,
+        get_aeti_qual(file_in_path_et=file_in_path_et, file_in_path_lst=file_in_path_lst,
                       file_in_path_ndvi=file_in_path_ndvi, file_out_path=Path(temp_dir) / 'out1.tif')
 
-        print('Cutting/Warping')
+        logger.info('Cutting/Warping')
         subprocess.run(['gdalwarp',
                         '-cutline', border_shp.as_posix(),
                         '-co', 'COMPRESS=LZW',
                         (Path(temp_dir) / 'out1.tif').as_posix(),
                         (Path(temp_dir) / 'out2.tif').as_posix()], check=True)
 
-        print('Translating')
+        logger.info('Translating')
         subprocess.run([
             'gdal_translate',
             '-of', 'netCDF',
@@ -1375,7 +1354,7 @@ def task_s06p04_et100m(eo_product_pk: int, iso: str):
             (Path(temp_dir) / 'final.nc').as_posix()], check=True)
 
         # set outfile metadata
-        print('Adding Metadata')
+        logger.info('Adding Metadata')
         cp = subprocess.run(['ncatted',
                              '-a', "scale_factor,Band1,o,d,0.1",
                              (Path(temp_dir) / 'final.nc').as_posix()])
