@@ -1090,10 +1090,10 @@ def task_s06p04_et3km(eo_product_pk: int):
             cp = subprocess.run(['ncatted',
                                  '-a', 'short_name,Band1,o,c,Daily_ET',
                                  '-a', "long_name,Band1,o,c,Daily_Evapotranspiration_3km",
-                                 '-a', "ET_UNITS,Band1,o,c,[mm/day]",
-                                 '-a', "ET_SCALING_FACTOR,Band1,o,d,1000",
-                                 '-a', "ET_OFFSET,Band1,o,d,0",
-                                 '-a', "ET_MISSING_VALUE,Band1,o,d,-1",
+                                 '-a', "units,Band1,o,c,[mm/day]",
+                                 '-a', "scale_factor,Band1,o,d,1000",
+                                 '-a', "add_offset,Band1,o,d,0",
+                                 '-a', "missing_value,Band1,o,d,-1",
                                  '-a', "_FillValue,Band1,o,d,-0.001",
                                  final_file.name], check=True)
         except BaseException as e:
