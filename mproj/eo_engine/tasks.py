@@ -1025,9 +1025,9 @@ def task_s06p04_et3km(eo_product_pk: int):
                                  '-a', 'short_name,Band1,o,c,Daily_ET',
                                  '-a', "long_name,Band1,o,c,Daily_Evapotranspiration_3km",
                                  '-a', "units,Band1,o,c,[mm/day]",
-                                 '-a', "scale_factor,Band1,o,d,1000",
-                                 '-a', "add_offset,Band1,o,d,0",
-                                 '-a', "missing_value,Band1,o,d,-1",
+                               #  '-a', "scale_factor,Band1,o,d,1000", # if enabled the scale_factor is applied twice reading the netcdf file
+                               #  '-a', "add_offset,Band1,o,d,0",
+                                 '-a', "missing_value,Band1,o,d,-0.001",
                                  '-a', "_FillValue,Band1,o,d,-0.001",
                                  final_file.name], check=True)
         except BaseException as e:
