@@ -372,96 +372,58 @@ def task_download_file(self, eo_source_pk: int):
 # s02p02
 ###########
 @shared_task
-def task_s02p02_ndvi300m_v2(eo_product_pk: int, aoi: List[int]):
-    aoi = [-30, 40, 60, -40]
+def task_s02p02_ndvi300m_v2(eo_product_pk: int):
+    
     produced_file = EOProduct.objects.get(id=eo_product_pk)
     input_eo_source_group = produced_file.group.eoproductgroup.pipelines_from_output.get().input_groups.get().eosourcegroup
     input_files_qs = EOSource.objects.filter(group=input_eo_source_group, reference_date=produced_file.reference_date)
-    input_file = input_files_qs.get()
+    # only has one input
+    eo_source_input: EOSource = input_files_qs.get()
 
-    input_file_path = Path(input_file.file.path)
-    print(f'file {input_file_path.as_posix()} exists?', input_file_path.exists())
+    filename_in = eo_source_input.filename
 
-    import xarray as xr
-    import numpy as np
+    def clip(in_file, out_file, geom):
+        lat_str="lat,"+str(geom[0])+","+str(geom[1])
+        lon_str="lon,"+str(geom[2])+","+str(geom[3])
+        cp = subprocess.run(['ncks',
+                             '-v', 'NDVI',
+                             '-d', lat_str,
+                             '-d', lon_str,
+#                              '-d', "lat,13439,40320",
+#                             '-d', "lon,50390,80640",
+                             in_file,
+                             out_file],check=True)
+        return_path = Path(out_file) #Path(str(clipped.getFileLocation()))
+        print(return_path)
+        return return_path
 
-    def find_nearest(array, value):
-        array = np.asarray(array)
-        idx = (np.abs(array - value)).argmin()
-        return array[idx]
+    with TemporaryDirectory(prefix='task_s0p02_clip_ndvi300m_v2_afr_') as temp_dir:
+        geom = [13439,40320,50390,80640]
 
-    def bnd_box_adj(my_ext):
-        lat_1k = np.round(np.arange(80., -60., -1. / 112), 8)
-        lon_1k = np.round(np.arange(-180., 180., 1. / 112), 8)
+        out_file = Path(temp_dir) / produced_file.filename
+        clipped: Path = clip(in_file=eo_source_input.file.path, out_file=out_file.as_posix(), geom=geom)
+        try:
+            cp: subprocess.CompletedProcess = subprocess.run(
+                ['ncatted',
+                 '-a', f'short_name,NDVI,o,c,Normalized_difference_vegetation_index',
+                 '-a', f'long_name,NDVI,o,c,Normalized Difference Vegetation Index Resampled 1 Km',
+                 '-a', f'grid_mapping,NDVI,o,c,crs',
+                 '-a', f'flag_meanings,NDVI,o,c,Missing cloud snow sea background',
+                 '-a', f'flag_values,NDVI,o,c,[251 252 253 254 255]',
+                 clipped.as_posix()], check=True)
+        except subprocess.CalledProcessError as e:
 
-        lat_300 = ds.lat.values
-        lon_300 = ds.lon.values
-        ext_1k = np.zeros(4)
+            logger.info(f'EXIT CODE: {e.returncode}')
+            logger.info(f'EXIT CODE: {e.stderr}')
+            logger.info(f'EXIT CODE: {e.stdout}')
+            raise e
 
-        # UPL Long 1K
-        ext_1k[0] = find_nearest(lon_1k, my_ext[0]) - 1. / 336
-        # UPL Lat 1K
-        ext_1k[1] = find_nearest(lat_1k, my_ext[1]) + 1. / 336
-
-        # LOWR Long 1K
-        ext_1k[2] = find_nearest(lon_1k, my_ext[2]) + 1. / 336
-        # LOWR Lat 1K
-        ext_1k[3] = find_nearest(lat_1k, my_ext[3]) - 1. / 336
-
-        # UPL
-        my_ext[0] = find_nearest(lon_300, ext_1k[0])
-        my_ext[1] = find_nearest(lat_300, ext_1k[1])
-
-        # LOWR
-        my_ext[2] = find_nearest(lon_300, ext_1k[2])
-        my_ext[3] = find_nearest(lat_300, ext_1k[3])
-        return my_ext
-
-    def _date_extr(name: str):
-
-        pos = [pos for pos, char in enumerate(name) if char == '_'][2]
-        date_str = name[pos + 1: pos + 9]
-        return date_str
-
-    ds = xr.open_dataset(input_file_path, mask_and_scale=False)
-    da, param = ds.NDVI, {'product': 'NDVI',
-                          'short_name': 'Normalized_difference_vegetation_index',
-                          'long_name': 'Normalized Difference Vegetation Index Resampled 1 Km',
-                          'grid_mapping': 'crs',
-                          'flag_meanings': 'Missing cloud snow sea background',
-                          'flag_values': '[251 252 253 254 255]',
-                          'units': '',
-                          'PHYSICAL_MIN': -0.08,
-                          'PHYSICAL_MAX': 0.92,
-                          'DIGITAL_MAX': 250,
-                          'SCALING': 1. / 250,
-                          'OFFSET': -0.08}
-    adj_ext = bnd_box_adj(aoi)
-    da = da.sel(lon=slice(adj_ext[0], adj_ext[2]), lat=slice(adj_ext[1], adj_ext[3]))
-    try:
-        prmts = {param['product']: {'dtype': 'i4', 'zlib': 'True', 'complevel': 4}}
-        name = param['product']  # 'NDVI'
-        date_str = _date_extr(input_file.filename)
-        # file_name = f'CGLS_{name}_{date}_300m_Africa.nc'
-        with TemporaryDirectory() as tmp_dir:
-            file = Path(tmp_dir) / f'tmp.nc'
-            da.to_netcdf(file, encoding=prmts)
-            # refresh connection just in case
-            django_connections.close_all()
-            content = File(file.open('rb'))
-            produced_file.file.save(name=produced_file.filename, content=content, save=False)
-            produced_file.filesize = produced_file.file.size
-            produced_file.state = EOProductStateChoices.READY
-
-    except Exception as ex:
-        template = "An exception of type {0} occurred. Arguments:\n{1!r}"
-        message = template.format(type(ex).__name__, ex.args)
-        raise AfriCultuReSError from ex
-
-    produced_file.state = EOProductStateChoices.READY
-    produced_file.datetime_creation = now
-    produced_file.save()
-    return produced_file.file.path
+        content = File(clipped.open('rb'))
+        produced_file.file.save(name=produced_file.filename, content=content, save=False)
+        produced_file.state = EOProductStateChoices.READY
+        produced_file.datetime_creation = now
+        produced_file.save()
+    return
 
 
 @shared_task
@@ -491,10 +453,8 @@ def task_s02p02_nvdi1km_v3(eo_product_pk):
             '-tr', f'{target_resolution}', f'{target_resolution}',
             '-te', f'{xmin}', f'{ymin}', f'{xmax}', f'{ymax}',
             f'{input_obj.file.path}', output_temp_file
-        ])
+        ], check=True)
 
-        if cp.returncode != 0:
-            raise Exception(f'EXIT CODE: {cp.returncode}, ERROR: {cp.stderr} ')
         # metadata fine tuning using NCO tools
         # for usuage details see:
         # http://nco.sourceforge.net/nco.html#ncatted-netCDF-Attribute-Editor
@@ -503,9 +463,7 @@ def task_s02p02_nvdi1km_v3(eo_product_pk):
         print('Rename Variable')
         cp = subprocess.run(['ncrename',
                              '-v', 'Band1,NDVI',
-                             output_temp_file])
-        if cp.returncode != 0:
-            raise Exception(f'EXIT CODE: {cp.returncode}, ERROR: {cp.stderr} ')
+                             output_temp_file], check=True)
 
         # ncatted is for nc attribute editor
         print('Editing metadata')
@@ -513,9 +471,7 @@ def task_s02p02_nvdi1km_v3(eo_product_pk):
                              '-a', 'short_name,NDVI,o,c,normalized_difference_vegetation_index',
                              '-a', "long_name,NDVI,o,c,Normalized Difference Vegetation Index Resampled 1 Km",
 
-                             output_temp_file])
-        if cp.returncode != 0:
-            raise Exception(f'EXIT CODE: {cp.returncode}, ERROR: {cp.stderr} ')
+                             output_temp_file], check=True)
 
         with open(output_temp_file, 'rb') as fh:
             content = File(fh)
@@ -540,8 +496,7 @@ def task_s02p02_vci1km_v2(eo_product_pk):
     import os
     import snappy
     from snappy import ProductIO, GPF, HashMap
-    import subprocess
-
+    
     HashMap = snappy.jpy.get_type('java.util.HashMap')
     GPF.getDefaultInstance().getOperatorSpiRegistry().loadOperatorSpis()
 
@@ -555,8 +510,8 @@ def task_s02p02_vci1km_v2(eo_product_pk):
         print("Merged Bands:   %s" % (list(band_names)))
         return merged
 
-    # noinspection PyUnresolvedReferences,PyPep8Naming
-    def get_vci(data):
+    # noinspection PyUnresolvedReferences
+    def get_VCI(data, file, dir):
         GPF.getDefaultInstance().getOperatorSpiRegistry().loadOperatorSpis()
         BandDescriptor = snappy.jpy.get_type('org.esa.snap.core.gpf.common.BandMathsOp$BandDescriptor')
         targetBand = BandDescriptor()
@@ -574,28 +529,27 @@ def task_s02p02_vci1km_v2(eo_product_pk):
         # write_product(vci_float, os.path.join(dir, file))
         return vci_float
 
-    def vci_to_int(data, file, dir):
+    def VCI_to_int(data, file, dir):
         # band_names = data.getBandNames()
         # print("Bands:   %s" % (list(band_names)))
 
         GPF.getDefaultInstance().getOperatorSpiRegistry().loadOperatorSpis()
-        band_descriptor = snappy.jpy.get_type('org.esa.snap.core.gpf.common.BandMathsOp$BandDescriptor')
-        target_band = band_descriptor()
-        target_band.name = 'VCI'
-        target_band.type = 'int32'
-        target_band.noDataValue = 255
-        target_band.expression = 'if (VCI == 255) then 255 else ( ' \
-                                 'if (VCI > 1.125) then 250 else ( ' \
-                                 'if (VCI<-0.125) then 0  else rint((VCI + 0.125)/0.005)))'  # 250 is the max value, 0 is the min value
-        target_bands = snappy.jpy.array('org.esa.snap.core.gpf.common.BandMathsOp$BandDescriptor', 1)
-        target_bands[0] = target_band
+        BandDescriptor = snappy.jpy.get_type('org.esa.snap.core.gpf.common.BandMathsOp$BandDescriptor')
+        targetBand = BandDescriptor()
+        targetBand.name = 'VCI'
+        targetBand.type = 'int32'
+        targetBand.noDataValue = 255
+        targetBand.expression = 'if (VCI == 255) then 255 else ( ' \
+                                'if (VCI > 1.125) then 250 else ( ' \
+                                'if (VCI<-0.125) then 0  else rint((VCI + 0.125)/0.005)))'  # 250 is the max value, 0 is the min value
+        targetBands = snappy.jpy.array('org.esa.snap.core.gpf.common.BandMathsOp$BandDescriptor', 1)
+        targetBands[0] = targetBand
         params = HashMap()
-        params.put('targetBands', target_bands)
+        params.put('targetBands', targetBands)
         vci = GPF.createProduct('BandMaths', params, data)
         write_product(vci, os.path.join(dir, file))
         return vci
 
-    # noinspection DuplicatedCode,SpellCheckingInspection
     def process(f_ndvi, lts_dir, dir_out):
         # Get the dekad number
 
@@ -604,12 +558,12 @@ def task_s02p02_vci1km_v2(eo_product_pk):
 
         f_lts_min = f_lts[:-3] + '_min.nc'
         f_lts_max = f_lts[:-3] + '_min.nc'
-        logger.info('\n== Processing ==')
-        logger.info('NDVI file: ', f_ndvi)
-        logger.info('with LTS min: ', f_lts_min)
-        logger.info('with LTS max: ', f_lts_max)
+        print('\n== Processing ==')
+        print('NDVI file: ', f_ndvi)
+        print('with LTS min: ', f_lts_min)
+        print('with LTS max: ', f_lts_max)
 
-        logger.info(Path(f_lts_max).is_file())
+        print(Path(f_lts_max).is_file())
 
         data = ProductIO.readProduct(f_ndvi)
         data1 = ProductIO.readProduct(f_lts[:-3] + '_min.nc')
@@ -621,15 +575,15 @@ def task_s02p02_vci1km_v2(eo_product_pk):
             print('Problem merging the bands')
             raise e
         try:
-            vci_float = get_vci(merged)
+            vci_float = get_VCI(merged, f_ndvi[:-3] + '_VCI_temp.nc', dir_out)
         except Exception:
             print('Problem computing VCI')
         try:
             date = os.path.basename(f_ndvi).split('_')[0]
             filename = 'g2_BIOPAR_VCI_' + date + '_AFRI_OLCI_V2.0.nc'
-            vci = vci_to_int(vci_float, filename, dir_out)
+            vci = VCI_to_int(vci_float, filename, dir_out)
         except Exception as e:
-            logger.error('Problem transforming VCI')
+            print('Problem transforming VCI')
             raise e
         return os.path.join(dir_out, filename)
 
@@ -651,11 +605,10 @@ def task_s02p02_vci1km_v2(eo_product_pk):
                              '-a', 'short_name,VCI,o,c,vegetation_condition_index',
                              '-a', "long_name,VCI,o,c,Vegetation Condition Index 1 Km",
                              '-a', "units,VCI,o,c,-",
-                             '-a', "SCALING,VCI,o,d,0.005",
-                             '-a', "OFFSET,VCI,o,d,-0.125",
-                             outfile])
-        if cp.returncode != 0:
-            raise Exception(f'EXIT CODE: {cp.returncode}, ERROR: {cp.stderr} ')
+                             '-a', "scale_factor,VCI,o,d,0.005",
+                             '-a', "add_offset,VCI,o,d,-0.125",
+                             '-a', "missing_value,VCI,o,d,255",
+                             outfile], check=True)
 
         content = File(open(outfile, 'rb'))
 
@@ -664,7 +617,6 @@ def task_s02p02_vci1km_v2(eo_product_pk):
         output_obj.datetime_creation = now
         output_obj.save()
     return
-
 
 @shared_task
 def task_s02p02_lai300m_v1(eo_product_pk: int):
@@ -914,7 +866,7 @@ def task_s04p03_floods375m(eo_product_pk: int):
             '-of', 'netCDF',
             dst_path.as_posix(),
             out_nc.as_posix()
-        ])
+        ], check=True)
         subprocess.run(['ncrename',
                         '-v', 'Band1,Flood',
                         out_nc.as_posix()], check=True)
@@ -1237,7 +1189,7 @@ def task_s06p04_et250m(eo_product_pk: int, iso: str):
             '-of', 'netCDF',
             (Path(temp_dir) / 'out2.tif').as_posix(),
             (Path(temp_dir) / 'out3.nc').as_posix()
-        ])
+        ], check=True)
 
         print('nccopy')
         subprocess.run(['nccopy', '-k', 'nc4', '-d8', (Path(temp_dir) / 'out3.nc').as_posix(),
@@ -1246,9 +1198,7 @@ def task_s06p04_et250m(eo_product_pk: int, iso: str):
         print('Adding Metadata')
         cp = subprocess.run(['ncatted',
                              '-a', "scale_factor,Band1,o,d,0.1",
-                             (Path(temp_dir) / 'final.nc').as_posix()])
-        if cp.returncode != 0:
-            raise Exception(f'EXIT CODE: {cp.returncode}, ERROR: {cp.stderr} ')
+                             (Path(temp_dir) / 'final.nc').as_posix()], check=True)
 
         with open((Path(temp_dir) / 'final.nc').as_posix(), 'rb') as file_handler:
             content = File(file_handler)
@@ -1357,10 +1307,7 @@ def task_s06p04_et100m(eo_product_pk: int, iso: str):
         logger.info('Adding Metadata')
         cp = subprocess.run(['ncatted',
                              '-a', "scale_factor,Band1,o,d,0.1",
-                             (Path(temp_dir) / 'final.nc').as_posix()])
-        if cp.returncode != 0:
-            raise Exception(f'EXIT CODE: {cp.returncode}, ERROR: {cp.stderr} ')
-
+                             (Path(temp_dir) / 'final.nc').as_posix()], check=True)
         with open((Path(temp_dir) / 'final.nc').as_posix(), 'rb') as file_handler:
             content = File(file_handler)
             eo_product.file.save(name=eo_product.filename, content=content, save=False)
