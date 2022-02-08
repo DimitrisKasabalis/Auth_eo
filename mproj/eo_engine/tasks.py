@@ -687,7 +687,7 @@ def task_s02p02_lai300m_v1(eo_product_pk: int):
                         '-d', lon_str,
                         in_file,
                         out_file], check=True)
-        return_path = out_file  # Path(str(clipped.getFileLocation()))
+        return_path = Path(out_file)  # Path(str(clipped.getFileLocation()))
         logger.info(return_path)
         return return_path
 
