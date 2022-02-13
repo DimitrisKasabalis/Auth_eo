@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import logging
 import re
 from celery.result import AsyncResult
@@ -11,13 +13,12 @@ from django.utils.http import urlencode
 from more_itertools import collapse
 from typing import Literal, Callable, Optional, Dict, Union
 
+from eo_engine import forms
 from eo_engine.common.tasks import get_task_ref_from_name
 from eo_engine.errors import AfriCultuReSError
 from eo_engine.models import EOSource, EOProduct, EOProductStateChoices, EOSourceGroup, EOProductGroup
 from eo_engine.models.factories import create_or_get_wapor_object_from_filename
 from eo_engine.models.other import CrawlerConfiguration, Pipeline
-
-from eo_engine import forms
 
 logger = logging.getLogger('eo_engine.frontend_ops')
 url_template = '{base_url}?{querystring}'
@@ -521,6 +522,13 @@ def pipeline_outputs(request, pipeline_pk: int):
     task_name = pipeline.task_name
     task_kwargs = pipeline.task_kwargs
 
+    upload_task_name = 'task_upload_eo_product'  # reference by name
+
+    def task_url_generator(task_name: str, eo_product: EOProduct, **task_kwargs) -> str:
+        return '?'.join(
+            (reverse('eo_engine:submit-task'),
+             urlencode({'task_name': task_name, 'eo_product_pk': eo_product.pk, **task_kwargs})))
+
     context = {
         'task_name': pipeline.task_name,
         "pipeline_pk": pipeline_pk,
@@ -529,16 +537,21 @@ def pipeline_outputs(request, pipeline_pk: int):
             {'pk': eo_product.pk,
              'filename': eo_product.filename,
              'state': eo_product.get_state_display,
-             'generate_url': '?'.join((
-                 reverse('eo_engine:submit-task'),
-                 urlencode({'task_name': task_name,
-                            'eo_product_pk': eo_product.pk,
-                            **task_kwargs}))) if [EOProductStateChoices.AVAILABLE, EOProductStateChoices.READY,
-                                                  EOProductStateChoices.FAILED].count(
-                 eo_product.state) == 1 else None,
-             'file_url': eo_product.file.url if eo_product.file else None,
+             'generate_trigger_task': {
+                 "disabled": [EOProductStateChoices.AVAILABLE, EOProductStateChoices.READY,
+                              EOProductStateChoices.FAILED].count(eo_product.state) != 1,
+                 'url': task_url_generator(task_name=task_name, eo_product=eo_product, **task_kwargs)},
+             'download_file': {
+                 'disabled': not Path(eo_product.file.path).exists(),
+                 'url': eo_product.file.url if Path(eo_product.file.path).exists() else None,
+                 "last_uploaded_dt": eo_product.upload_set.filter(notification_send_return_code=200).latest(
+                     'notification_send_timestamp') if eo_product.upload_set.exists() else None
+             },
+             'upload_trigger_task': {
+                 "disabled": not Path(eo_product.file.path).exists(),
+                 'url': task_url_generator(task_name=upload_task_name, eo_product=eo_product)}
              } for eo_product in output_eo_product_qs]}
-    return render(request, 'list_eoproducts.html', context=context)
+    return render(request, 'list_pipeline_products.html', context=context)
 
 
 def discover_inputs_for_pipeline(request: HttpRequest, pipeline_pk: int):

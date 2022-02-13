@@ -1,7 +1,7 @@
 from django.db import models
-from typing import Optional
-from eo_engine.errors import AfriCultuReSError
+from typing import Optional, Dict
 
+from eo_engine.errors import AfriCultuReSError
 from eo_engine.models import EOSourceGroupChoices
 
 
@@ -22,8 +22,9 @@ class Credentials(models.Model):
 # general template of rules
 class RuleMixin(models.Model):
     enabled = models.BooleanField(default=True)
-    timestamp = models.DateTimeField(auto_now_add=True, editable=False)
-    last_modified = models.DateTimeField(auto_now=True, editable=False)
+    timestamp = models.DateTimeField(auto_now_add=True, editable=False, help_text='timestamp of when this row was made')
+    last_modified = models.DateTimeField(auto_now=True, editable=False,
+                                         help_text='timestamp of when this row last modified')
 
     class Meta:
         abstract = True
@@ -88,3 +89,29 @@ class Pipeline(RuleMixin):
             models.UniqueConstraint(fields=['task_name', 'task_kwargs'], name='unique task/kw_task')
         ]
         ordering = ['package', 'name']
+
+
+class Upload(RuleMixin):
+    eo_product = models.ForeignKey('EOProduct', unique=False, on_delete=models.CASCADE,
+                                   help_text='EO Product uploaded')
+    upload_endpoint = models.TextField(verbose_name='PRAXIS sftp URL', help_text='URL of PRAXIS endpoint', default='sftp://SS Needle')
+    upload_path = models.TextField(help_text='path uploaded')
+
+    upload_traceback_error = models.TextField(help_text='Traceback if upload failed', null=True)
+    upload_duration_seconds = models.IntegerField(help_text='Time needed to upload the file to praxis', null=True)
+
+    notification_endpoint = models.URLField(help_text='Praxis notification app endpoint')
+    notification_payload = models.JSONField(null=True, help_text='Notification payload')
+    notification_send_timestamp = models.DateTimeField(null=True,
+                                                       help_text='Timestamp of notification payload was sent')
+    notification_send_return_code = models.IntegerField(null=True)
+    notification_traceback_error = models.TextField(help_text='Traceback if upload failed', null=True)
+
+    def payload_generator(self) -> Dict[str, str]:
+        return {
+            'product_name': self.eo_product.filename
+        }
+
+    def payload_generator_json(self) -> str:
+        import json
+        return json.dumps(self.payload_generator())

@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block Title %}Products{% endblock %}
+{% block header %}
+    Generated Products
+{% endblock %}
+
+{% block body %}
+    <div class="container">
+        <div class="row">
+            <div class="col">
+                Group Name: <b>{{ group.get_name_display }}</b>
+            </div>
+            <div class="col">
+                Task Name: <b>{{ task_name }}</b>
+                {% if group.submit_schedule_for_generation %}
+                    <a class="btn btn-primary"
+                       href="{{ group.submit_schedule_for_generation.url }}"
+                       role="button">{{ group.submit_schedule_for_generation.label }}
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <a href="{% url "eo_engine:main-page" %}">MainPage</a></div>
+            <div class="col">
+                <a href="{% url "eo_engine:pipeline-inputs-list" pipeline_pk=pipeline_pk %}">Pipeline Inputs</a>
+            </div>
+        </div>
+    </div>
+    <table class="table table-striped table-hover table-sm">
+        <thead>
+        <tr>
+            <th scope="col">#</th>
+            <th scope="col">Filename</th>
+            <th scope="col">State</th>
+            <th scope="col">Generate</th>
+            <th scope="col">Download</th>
+            <th scope="col">Upload</th>
+            <th scope="col">Delete <sub>not functional yet</sub></th>
+        </tr>
+        </thead>
+        <tbody>
+            {% for eo_product in data %}
+                <tr>
+                    {# id #}
+                    <th scope="row">{{ eo_product.pk }}</th>
+
+                    {# filename #}
+                    <td >{{ eo_product.filename }}</td>
+                    {# State #}
+                    <td>{{ eo_product.state }}</td>
+
+                    {# generate #}
+                    <td class="text-center">
+                        <a href="{{ eo_product.generate_trigger_task.url }}"
+                           aria-disabled="true"
+                           class="btn
+                           btn-primary
+                           btn-lg
+                           {{ eo_product.generate_trigger_task.disabled|yesno:'disabled,""' }}">
+                            Generate
+                        </a>
+                    </td>
+
+                    {# Download #}
+                    <td >
+                        <a href="{{ eo_product.download_file.url }}" aria-disabled="true" download
+                           class="btn btn-primary btn-lg
+                                   {{ eo_product.download_file.disabled|yesno:'disabled,""' }}">Download</a>
+                    </td>
+                    {# upload #}
+                    <td >
+                        <a href="{{ eo_product.upload_trigger_task.url }}" aria-disabled="true"
+                           class="btn btn-primary btn-lg
+                                   {{ eo_product.upload_trigger_task.disabled|yesno:'disabled,""' }}">
+                            {% if eo_product.upload_trigger_task.last_uploaded_dt %}
+                                Upload (Uploaded successfully
+                                {{ eo_product.upload_trigger_task.last_uploaded_dt|timesince }})
+                            {% else %}
+                                Upload (Never uploaded before)
+                            {% endif %}
+                        </a>
+                    </td>
+                    {# delete #}
+                    <td >
+                        <a href="" aria-disabled="true"
+                           class="btn btn-primary btn-lg">Delete</a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
+{% block extra_header %}
+
+{% endblock %}

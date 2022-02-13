@@ -12,7 +12,6 @@ from celery.utils.log import get_task_logger
 from datetime import date as dt_date
 from django.core.files import File
 from django.core.files.temp import NamedTemporaryFile
-from django.db import connections as django_connections
 from django.utils import timezone
 from more_itertools import collapse
 from osgeo import gdal
@@ -24,11 +23,7 @@ from typing import List, Optional, Literal
 from eo_engine.common.tasks import get_task_ref_from_name
 from eo_engine.common.verify import check_file_exists
 from eo_engine.errors import AfriCultuReSRetriableError, AfriCultuReSError
-from eo_engine.models import (Credentials, EOSourceGroup,
-                              EOProduct, EOProductStateChoices,
-                              EOSource, EOSourceStateChoices,
-                              EOSourceGroupChoices, EOProductGroup,
-                              CrawlerConfiguration, Pipeline)
+from eo_engine.models import *
 from eo_engine.task_managers import BaseTaskWithRetry
 
 logger: Logger = get_task_logger(__name__)
@@ -39,6 +34,26 @@ now = timezone.now()
 # Notes:
 #  task should use the kwargs eo_source_pk and eo_product_pk.
 #  these kw are picked up to tie the task with the element
+
+
+@shared_task
+def task_upload_eo_product(eo_product_id: int):
+    eo_product = EOProduct.objects.get(id=eo_product_id)
+    upload_entry = Upload.objects.create(eo_product=eo_product)
+    try:
+        logger.info('MOCK UPLOAD')
+    except AfriCultuReSError as e:
+        upload_entry.upload_traceback_error = e
+        raise e
+
+    try:
+        logger.info('MOCK SEND NOTIFICATION')
+    except AfriCultuReSError as e:
+        upload_entry.notification_traceback_error = e
+        # or raise AfriCultuReSError from e
+        raise e
+    # upload
+    raise NotImplementedError()
 
 
 @shared_task
@@ -373,7 +388,6 @@ def task_download_file(self, eo_source_pk: int):
 ###########
 @shared_task
 def task_s02p02_ndvi300m_v2(eo_product_pk: int):
-    
     produced_file = EOProduct.objects.get(id=eo_product_pk)
     input_eo_source_group = produced_file.group.eoproductgroup.pipelines_from_output.get().input_groups.get().eosourcegroup
     input_files_qs = EOSource.objects.filter(group=input_eo_source_group, reference_date=produced_file.reference_date)
@@ -383,22 +397,22 @@ def task_s02p02_ndvi300m_v2(eo_product_pk: int):
     filename_in = eo_source_input.filename
 
     def clip(in_file, out_file, geom):
-        lat_str="lat,"+str(geom[0])+","+str(geom[1])
-        lon_str="lon,"+str(geom[2])+","+str(geom[3])
+        lat_str = "lat," + str(geom[0]) + "," + str(geom[1])
+        lon_str = "lon," + str(geom[2]) + "," + str(geom[3])
         cp = subprocess.run(['ncks',
                              '-v', 'NDVI',
                              '-d', lat_str,
                              '-d', lon_str,
-#                              '-d', "lat,13439,40320",
-#                             '-d', "lon,50390,80640",
+                             #                              '-d', "lat,13439,40320",
+                             #                             '-d', "lon,50390,80640",
                              in_file,
-                             out_file],check=True)
-        return_path = Path(out_file) #Path(str(clipped.getFileLocation()))
+                             out_file], check=True)
+        return_path = Path(out_file)  # Path(str(clipped.getFileLocation()))
         print(return_path)
         return return_path
 
     with TemporaryDirectory(prefix='task_s0p02_clip_ndvi300m_v2_afr_') as temp_dir:
-        geom = [13439,40320,50390,80640]
+        geom = [13439, 40320, 50390, 80640]
 
         out_file = Path(temp_dir) / produced_file.filename
         clipped: Path = clip(in_file=eo_source_input.file.path, out_file=out_file.as_posix(), geom=geom)
@@ -496,7 +510,7 @@ def task_s02p02_vci1km_v2(eo_product_pk):
     import os
     import snappy
     from snappy import ProductIO, GPF, HashMap
-    
+
     HashMap = snappy.jpy.get_type('java.util.HashMap')
     GPF.getDefaultInstance().getOperatorSpiRegistry().loadOperatorSpis()
 
@@ -617,6 +631,7 @@ def task_s02p02_vci1km_v2(eo_product_pk):
         output_obj.datetime_creation = now
         output_obj.save()
     return
+
 
 @shared_task
 def task_s02p02_lai300m_v1(eo_product_pk: int):
@@ -1025,8 +1040,8 @@ def task_s06p04_et3km(eo_product_pk: int):
                                  '-a', 'short_name,Band1,o,c,Daily_ET',
                                  '-a', "long_name,Band1,o,c,Daily_Evapotranspiration_3km",
                                  '-a', "units,Band1,o,c,[mm/day]",
-                               #  '-a', "scale_factor,Band1,o,d,1000", # if enabled the scale_factor is applied twice reading the netcdf file
-                               #  '-a', "add_offset,Band1,o,d,0",
+                                 #  '-a', "scale_factor,Band1,o,d,1000", # if enabled the scale_factor is applied twice reading the netcdf file
+                                 #  '-a', "add_offset,Band1,o,d,0",
                                  '-a', "missing_value,Band1,o,d,-0.001",
                                  '-a', "_FillValue,Band1,o,d,-0.001",
                                  final_file.name], check=True)
