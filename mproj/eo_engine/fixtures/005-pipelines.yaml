@@ -13,7 +13,7 @@
     output_filename_template: '{YYYYMMDD}_SE3_AFR_0300m_0010_NDVI.nc'
     output_folder: 'S2_P02/NDVI_300/v2'
     task_name: 'task_s02p02_ndvi300m_v2'
-    task_kwargs: { "aoi": [ -30, 40, 60, -40 ] }
+    task_kwargs: { }
 - model: eo_engine.Pipeline
   pk: null
   fields:
@@ -495,7 +495,6 @@
     output_folder: 'S6_P01/WB_HR/KZN'
     task_name: 'task_s06p01_wb10m_bag'
     task_kwargs: { 'aoi': 'BAG', 'raster': 'hand_GH.tif'}
-
 - model: eo_engine.Pipeline
   pk: null
   fields:
