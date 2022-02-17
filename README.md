@@ -1,8 +1,22 @@
+### Setting up
+#### Copy Auxilary Files from GoogleDrive to project folder
+1. Download (as zip ) the folder https://drive.google.com/drive/folders/1OsCWe63xhzlwZaStDM21xW3ePr2W9Dwy
+2. (unzip) the contents inside the local_files/aux_files folder
+
 ### Start the stack
 
+#### Database and Broker 
 ```powershell
 # start database worker broker
-docker-compose up
+# -d flag daemonise the process
+docker-compose up db rabbit -d  
+```
+
+
+```powershell
+# Start the a worker.
+# Workers connect at the broker and do all the work. We can have more than one worker
+docker-compose up worker 
 ```
 
 #### make the database tables
