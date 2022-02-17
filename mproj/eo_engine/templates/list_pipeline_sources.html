@@ -56,7 +56,7 @@
                             <td>{{ entry.reference_date | date:"D d M Y" }}</td>
                             <td>{{ entry.state }}</td>
                             <td><a class="btn btn-primary"
-                                   href="{% url "eo_engine:submit-task" %}?task_name=task_download_file&eo_source_pk={{ entry.pk }} ">Submit-Task</a>
+                                   href="{% url "eo_engine:submit-task" %}?task_name=task_download_file&eo_source_pk={{ entry.pk }} ">Submit Download Task</a>
                             </td>
                             {% if entry.file %}
                                 <td><a href="/media/{{ entry.file }}"

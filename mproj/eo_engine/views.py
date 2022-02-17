@@ -42,72 +42,59 @@ def main_page(request):
             "1": {
                 "name": 'Tools',
                 "section_elements": {
-                    "1": {'name': 'Refresh Database',
-                          'description': 'Refresh the database and trigger the '
-                                         'marking of any derivative products that not there yet',
+                    "1": {'name': 'Refresh the Database',
+                          'description': '(for Debugging) Refresh the database and trigger the '
+                                         'marking of any derivative products that not there yet.'
+                                         '\n Could take some time if there are entries already in hte database.',
                           'urls': {"1": {'label': 'Refresh', 'url_str': reverse('eo_engine:refresh-rows')}}},
-                    '2': {'name': 'Run Download-Available Task',
-                          'description': 'Trigger a task that would download all the known remote available file asynchronously',
-                          'urls': {"1": {'label': 'Refresh', 'url_str': 'url_str'}}},
+                    '2': {'name': 'Download all Remote files',
+                          'description': "Trigger a task that queues and  downloads all the known remotely available files",
+                          'urls': {"1": {'label': 'Start', 'url_str': 'url_str'}}},
                     '3': {
                         'name': 'Credential Manager',
-                        'descrition': 'Add View or remove credentials that are used by the system when fetchin remote sources.',
+                        'description': 'Add View or remove credentials that are used by the system when fetchin remote sources.',
                         'urls': {
-                            "1": {'label': 'Credential Manager', 'url_str': reverse('eo_engine:credentials-list')}}},
-                    '4': {'name': 'Retrieve/Crawl AETI WaPOR Products',
-                          'urls': {"1": {'label': 'Refresh', 'url_str': 'url_str'}}}
+                            "1": {'label': 'Credential Manager', 'url_str': reverse('eo_engine:credentials-list')}}}
                 },
-                # "files": {'name': 'files'},
-                # "crawlers": {'name': 'Spiders'},
-                # "others": {'name': 'Latest Tasks'}
+
             },
             # second section, work packages
             # each work package should have its own section
             "2": {
                 "name": "S02P02",
                 # pipelines for this section
-                "section_elements": {idx: {
-                    'name': v.name,
-                    'description': v.description,
-                    'urls': v.urls()
-                } for idx, v in enumerate(Pipeline.objects.filter(package='S02P02').order_by('name'))}
+                "section_elements":
+                    {idx: pipeline for idx, pipeline in
+                     enumerate(Pipeline.objects.filter(package='S02P02').order_by('name'))}
             },
             "3": {
                 "name": "S06P01",
-                "section_elements": {idx: {
-                    'name': v.name,
-                    'description': v.description,
-                    'urls': v.urls()
-                } for idx, v in enumerate(Pipeline.objects.filter(package='S06P01').order_by('name'))}
+                "section_elements":
+                    {idx: pipepile for idx, pipepile in
+                     enumerate(Pipeline.objects.filter(package='S06P01').order_by('name'))}
             },
             "4": {
                 "name": "S04P01",
-                "section_elements": {idx: {
-                    'name': v.name,
-                    'description': v.description,
-                    'urls': v.urls()
-                } for idx, v in enumerate(Pipeline.objects.filter(package='S04P01').order_by('name'))}
+                "section_elements":
+                    {idx: pipepile for idx, pipepile in
+                     enumerate(Pipeline.objects.filter(package='S04P01').order_by('name'))}
             },
             "5": {
                 "name": "S04P03",
-                "section_elements": {idx: {
-                    'name': v.name,
-                    'description': v.description,
-                    'urls': v.urls()
-                } for idx, v in enumerate(Pipeline.objects.filter(package='S04P03').order_by('name'))}
+                "section_elements":
+                    {idx: pipeline for idx, pipeline in
+                     enumerate(Pipeline.objects.filter(package='S04P03').order_by('name'))}
             },
             "6": {
                 "name": "S06P04",
-                "section_elements": {idx: {
-                    'name': v.name,
-                    'description': v.description,
-                    'urls': v.urls()
-                } for idx, v in enumerate(Pipeline.objects.filter(package='S06P04').order_by('name'))}
+                "section_elements":
+                    {idx: pipeline for idx, pipeline in
+                     enumerate(Pipeline.objects.filter(package='S06P04').order_by('name'))}
             }
         }
     }
 
-    return render(request, "homepage2.html", context=context)
+    return render(request, "homepage.html", context=context)
 
 
 def delete_file(request, resource_type: Literal['eo_source', 'eo_product'], pk: int):
@@ -542,13 +529,14 @@ def pipeline_outputs(request, pipeline_pk: int):
                               EOProductStateChoices.FAILED].count(eo_product.state) != 1,
                  'url': task_url_generator(task_name=task_name, eo_product=eo_product, **task_kwargs)},
              'download_file': {
-                 'disabled': not Path(eo_product.file.path).exists(),
-                 'url': eo_product.file.url if Path(eo_product.file.path).exists() else None,
+                 # bool(eo_product.file) is true if file exists
+                 'disabled': not bool(eo_product.file),
+                 'url': eo_product.file.url if bool(eo_product.file) else None,
                  "last_uploaded_dt": eo_product.upload_set.filter(notification_send_return_code=200).latest(
                      'notification_send_timestamp') if eo_product.upload_set.exists() else None
              },
              'upload_trigger_task': {
-                 "disabled": not Path(eo_product.file.path).exists(),
+                 "disabled": not bool(eo_product.file),
                  'url': task_url_generator(task_name=upload_task_name, eo_product=eo_product)}
              } for eo_product in output_eo_product_qs]}
     return render(request, 'list_pipeline_products.html', context=context)

@@ -2,93 +2,44 @@
 {% block Title %}Main Page{% endblock %}
 {% block header %}AfriCultuRes{% endblock %}
 {% block body %}
-    <div class="container">
-        <div class="row">
-            <div class="col">
-                <div class="card border-dark mb-3">
+    <div class="container-fluid">  <!-- container -->
+        {% for k,section in sections.items %}
+            <div class="row"> <!-- Main row-->
+                <div class="card">
                     <div class="card-header">
-                        <h3>File</h3>
+                        {{ section.name }}
                     </div>
-                    <div class="card-body text-primary">
-                        <div>
-                            <div class="dropdown">
-                                <label>EOSource</label>
-                                <a class="btn btn-secondary dropdown-toggle" href="#" role="button"
-                                   id="dropdownMenuLink"
-                                   data-bs-toggle="dropdown" aria-expanded="false">
-                                    Group
-                                </a>
-                                <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
-                                    {% for value,label in eo_sources_grps_value_label %}
-                                        <li><a class="dropdown-item"
-                                               href="{% url "eo_engine:list-eosources" product_group=value %}">{{ label }}</a>
-                                        </li>
+                    <div class="card-body">
+                        {% for k,section_element in section.section_elements.items %}
+                            <!-- item -->
+                            {% if forloop.counter|divisibleby:'2' == False and section.section_elements.items|length > 2 %}
+                                <div class="row">
+                            {% endif %}
+                        <div class="col-sm-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ section_element.name }}</h5>
+                                    {% if section_element.id %}
+                                        <h6 class="card-subtitle mb-2 text-muted">
+                                            pipeline_id: {{ section_element.id }}</h6>
+                                    {% endif %}
+                                    <p class="card-text">{{ section_element.description }}</p>
+                                    {% for id,url in section_element.urls.items %}
+                                        {% if url %}
+                                            <a href="{{ url.url_str }}" class="btn btn-primary">{{ url.label }}</a>
+                                        {% endif %}
                                     {% endfor %}
-                                </ul>
+
+                                </div>
                             </div>
                         </div>
-                        <div>
-                            <div class="dropdown">
-                                <label>EOProducts</label>
-                                <a class="btn btn-secondary dropdown-toggle" href="#" role="button"
-                                   id="dropdownMenuLink"
-                                   data-bs-toggle="dropdown" aria-expanded="false">
-                                    Group
-                                </a>
-                                <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
-                                    {% for value,label in eo_products_grps_value_label %}
-                                        <li><a class="dropdown-item"
-                                               href="{% url "eo_engine:list-eoproducts" product_group=value %} ">{{ label }}</a>
-                                        </li>
-                                    {% endfor %}
-                                </ul>
+                        {% if forloop.counter|divisibleby:'2' == True and section.section_elements.items|length > 2 %}
                             </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col">
-                <div class="card border-dark mb-3">
-                    <div class="card-header"><h3>Utilities</h3></div>
-                    <div class="card-body text-primary">
-                        <p><a href="{% url "eo_engine:refresh-rows" %}">Refresh Database</a></p>
-                        <p><a href="{% url "eo_engine:submit-task"%}?task_name=task_schedule_download_eosource">Run Download-Available Task</a></p>
-                        <p><a href="{% url "eo_engine:credentials" %}">Credential Manager</a></p>
-                        <p><a href="{% url "eo_engine:create-wapor" product='ndvi' %}">Retrieve/Crawl AETI WaPOR
-                            Products</a></p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col">
-                <div class="card border-dark mb-3">
-                    <div class="card-header"><h3>Crawlers</h3></div>
-                    <div class="card-body text-primary">
-                        {% for key,values in scrappers.items %}
-                            <p>
-                                {{ key| title }} -
-                                <a class="{{ values.is_configured|yesno:'btn,btn disabled' }}" href="{{ values.url }}">Trigger</a>
-                                <a class="btn" href="{% url "eo_engine:configure-eosource-meta" key %}">Configure</a>
-                            </p>
+                        {% endif %}
                         {% endfor %}
                     </div>
                 </div>
-            </div>
-            <div class="col">
-                <div class="card border-dark mb-3">
-                    <div class="card-header"><h3>Latest Tasks</h3></div>
-                    <div class="card-body text-primary">
-                        <p>mock1</p>
-                        <p>mock2</p>
-                        <p>mock3</p>
-                        <p>mock4</p>
-                        <p>mock5</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <ul>
-    </ul>
+            </div> <!-- end main row-->
+        {% endfor %}
+    </div> <!--end  container -->
 {% endblock %}
