@@ -1158,15 +1158,20 @@ def task_s06p04_et250m(eo_product_pk: int, iso: str):
         lst_band = rasterio.open(file_in_path_lst)
         logger.info('Reading Rasters.')
 
-        et = et_band.read(1).astype(rasterio.int16)
-        ndvi = ndvi_band.read(1).astype(rasterio.int16)
-        lst = lst_band.read(1).astype(rasterio.int16)
+        et = et_band.read(1).astype(rasterio.int8)
+        ndvi = ndvi_band.read(1).astype(rasterio.int8)
+        lst = lst_band.read(1).astype(rasterio.int8)
 
         check1 = np.logical_or(ndvi <= 10, ndvi == 250)
         check2 = np.logical_and(lst == 0, check1)
 
         et_ql = np.where(check2, et, -9999)  # Exclude pixels
-
+        
+        logger.info('Releasing memory')
+        et = None
+        ndvi = None
+        lst = None
+        
         if np.max(et_ql) == -9999:
             raise AfriCultuReSError("No file was produced")
         else:
