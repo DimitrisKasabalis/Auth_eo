@@ -6,7 +6,9 @@ dependencies:
   - python
   - snap=8.0.0
   - lxml
+  - pip
   - gdal
+  - proj=6.3.*
   - pip:
       - django~=3.2.0
       - celery~=5.1.0
@@ -21,3 +23,5 @@ dependencies:
       - netcdf4
       - requests
       - ftputil
+      - pymodis
+      - rasterio

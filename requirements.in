@@ -9,7 +9,7 @@ more-itertools~=8.12
 netcdf4
 pandas
 psycopg2-binary
-pyproj
+pyproj==3.2.*
 pysftp
 python-dateutil
 pyyaml

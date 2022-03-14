@@ -41,15 +41,15 @@
         </tr>
         </thead>
         <tbody>
-            {% for eo_product in data %}
-                <tr>
-                    {# id #}
-                    <th scope="row">{{ eo_product.pk }}</th>
+        {% for eo_product in data %}
+            <tr>
+                {# id #}
+                <th scope="row">{{ eo_product.pk }}</th>
 
-                    {# filename #}
-                    <td >{{ eo_product.filename }}</td>
-                    {# State #}
-                    <td>{{ eo_product.state }}</td>
+                {# filename #}
+                <td>{{ eo_product.filename }}</td>
+                {# State #}
+                <td>{{ eo_product.state }}</td>
 
                     {# generate #}
                     <td class="text-center">
@@ -59,39 +59,38 @@
                            btn-primary
                            btn-lg
                            {{ eo_product.generate_trigger_task.disabled|yesno:'disabled,""' }}">
-                            Generate
-                        </a>
-                    </td>
+                        Generate
+                    </a>
+                </td>
 
-                    {# Download #}
-                    <td >
-                        <a href="{{ eo_product.download_file.url }}" aria-disabled="true" download
-                           class="btn btn-primary btn-lg
+                {# Download #}
+                <td>
+                    <a href="{{ eo_product.download_file.url }}" aria-disabled="true" download
+                       class="btn btn-primary btn-lg
                                    {{ eo_product.download_file.disabled|yesno:'disabled,""' }}">Download</a>
-                    </td>
-                    {# upload #}
-                    <td >
-                        <a href="{{ eo_product.upload_trigger_task.url }}" aria-disabled="true"
-                           class="btn btn-primary btn-lg
+                </td>
+                {# upload #}
+                <td>
+                    <a href="{{ eo_product.upload_trigger_task.url }}" aria-disabled="true"
+                       class="btn btn-primary btn-lg
                                    {{ eo_product.upload_trigger_task.disabled|yesno:'disabled,""' }}">
-                            {% if eo_product.upload_trigger_task.last_uploaded_dt %}
-                                Upload (Uploaded successfully
-                                {{ eo_product.upload_trigger_task.last_uploaded_dt|timesince }})
-                            {% else %}
-                                Upload (Never uploaded before)
-                            {% endif %}
-                        </a>
-                    </td>
-                    {# delete #}
-                    <td >
-                        <a href="" aria-disabled="true"
-                           class="btn btn-primary btn-lg">Delete</a>
-                    </td>
-                </tr>
-            {% endfor %}
+                        {% if eo_product.upload_trigger_task.last_uploaded_dt %}
+                            Upload (Uploaded successfully
+                            {{ eo_product.upload_trigger_task.last_uploaded_dt|timesince }})
+                        {% else %}
+                            Upload (Never uploaded before)
+                        {% endif %}
+                    </a>
+                </td>
+                {# delete #}
+                <td>
+                    <a href="" aria-disabled="true"
+                       class="btn btn-primary btn-lg">Delete</a>
+                </td>
+            </tr>
+        {% endfor %}
         </tbody>
     </table>
 {% endblock %}
 {% block extra_header %}
-
 {% endblock %}

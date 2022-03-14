@@ -1,7 +1,7 @@
-from pathlib import Path
-
 import logging
 import re
+from typing import Literal, Callable, Optional, Dict, Union
+
 from celery.result import AsyncResult
 from celery.utils.serialization import strtobool
 from django.contrib import messages
@@ -11,7 +11,6 @@ from django.urls import reverse
 from django.utils.datetime_safe import date, datetime
 from django.utils.http import urlencode
 from more_itertools import collapse
-from typing import Literal, Callable, Optional, Dict, Union
 
 from eo_engine import forms
 from eo_engine.common.tasks import get_task_ref_from_name
@@ -67,12 +66,6 @@ def main_page(request):
                     {idx: pipeline for idx, pipeline in
                      enumerate(Pipeline.objects.filter(package='S02P02').order_by('name'))}
             },
-            "3": {
-                "name": "S06P01",
-                "section_elements":
-                    {idx: pipepile for idx, pipepile in
-                     enumerate(Pipeline.objects.filter(package='S06P01').order_by('name'))}
-            },
             "4": {
                 "name": "S04P01",
                 "section_elements":
@@ -84,6 +77,12 @@ def main_page(request):
                 "section_elements":
                     {idx: pipeline for idx, pipeline in
                      enumerate(Pipeline.objects.filter(package='S04P03').order_by('name'))}
+            },
+            "3": {
+                "name": "S06P01",
+                "section_elements":
+                    {idx: pipepile for idx, pipepile in
+                     enumerate(Pipeline.objects.filter(package='S06P01').order_by('name'))}
             },
             "6": {
                 "name": "S06P04",
@@ -210,6 +209,11 @@ def submit_task(request):
         # TODO: finish submit task through form
         task_data = forms.RunTaskForm(request.POST)
         # task_name = request.
+    if 'eager' in task_kwargs.keys():
+        eager = True
+        task_kwargs.pop('eager')
+    else:
+        eager = False
 
     task = get_task_ref_from_name(task_name).s(**task_kwargs)
     # if the task that we are about to submit is to download something,
@@ -220,8 +224,11 @@ def submit_task(request):
         eo_source = EOSource.objects.get(pk=task_kwargs['eo_source_pk'])
         eo_source.state = EOSourceStateChoices.SCHEDULED_FOR_DOWNLOAD
         eo_source.save()
-
-    job = task.apply_async()
+    if eager:
+        job = task.apply()
+        job.get()
+    else:
+        job = task.apply_async()
     messages.add_message(
         request=request, level=messages.SUCCESS,
         message=f'Task {task.name} with task id: {job} successfully submitted')
@@ -555,10 +562,16 @@ def discover_inputs_for_pipeline(request: HttpRequest, pipeline_pk: int):
             'form': form_klass(),
             'input_groups': input_groups
         }
-        return render(request=request, template_name='utilities/create-inputs-for-pipeline.html', context=context)
+        return render(
+            request=request,
+            template_name='utilities/create-inputs-for-pipeline.html',
+            context=context)
     if request.method == 'POST':
         if 'cancel' in request.POST:
-            return redirect('eo_engine:pipeline-inputs-list', pipeline_pk=pipeline_pk)
+            return redirect(
+                'eo_engine:pipeline-inputs-list',
+                pipeline_pk=pipeline_pk)
+
         from eo_engine.tasks import task_utils_discover_inputs_for_eo_source_group
         form = form_klass(request.POST)
         if form.is_valid():

@@ -54,6 +54,14 @@ class Pipeline(RuleMixin):
     task_name = models.TextField()
     task_kwargs = models.JSONField(default=dict)
 
+    @property
+    def service(self) -> str:
+        return self.package[:3].replace('0', '')
+
+    @property
+    def product(self) -> str:
+        return self.package[3:].replace('0', '')
+
     def output_filename(self, **kwargs) -> str:
         try:
             return self.output_filename_template.format(**kwargs)
@@ -94,16 +102,18 @@ class Pipeline(RuleMixin):
 class Upload(RuleMixin):
     eo_product = models.ForeignKey('EOProduct', unique=False, on_delete=models.CASCADE,
                                    help_text='EO Product uploaded')
-    upload_endpoint = models.TextField(verbose_name='PRAXIS sftp URL', help_text='URL of PRAXIS endpoint', default='sftp://SS Needle')
-    upload_path = models.TextField(help_text='path uploaded')
+    upload_endpoint = models.TextField(verbose_name='PRAXIS sftp URL', help_text='URL of DRAXIS ftp endpoint',
+                                       default='sftp://18.159.85.240:2310/')
+    upload_path = models.TextField(help_text='path uploaded', null=True)
 
     upload_traceback_error = models.TextField(help_text='Traceback if upload failed', null=True)
-    upload_duration_seconds = models.IntegerField(help_text='Time needed to upload the file to praxis', null=True)
+    upload_duration_seconds = models.IntegerField(help_text='Time needed to upload the file to draxis', null=True)
 
-    notification_endpoint = models.URLField(help_text='Praxis notification app endpoint')
-    notification_payload = models.JSONField(null=True, help_text='Notification payload')
-    notification_send_timestamp = models.DateTimeField(null=True,
-                                                       help_text='Timestamp of notification payload was sent')
+    notification_endpoint = models.URLField(help_text='Praxis notification app endpoint',
+                                            default='https://africultures-backend.draxis.gr/notify')
+    notification_payload = models.JSONField(help_text='Notification payload', null=True)
+    notification_send_timestamp = models.DateTimeField(
+        help_text='Timestamp of notification payload was sent', null=True, )
     notification_send_return_code = models.IntegerField(null=True)
     notification_traceback_error = models.TextField(help_text='Traceback if upload failed', null=True)
 

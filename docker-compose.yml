@@ -5,15 +5,16 @@ x-default-env: &default-env
     DATABASE_NAME: "${DATABASE_NAME:-africultures}"  # database name
     DATABASE_USERNAME: "${DATABASE_USERNAME:-postgres}" # default username
     DATABASE_PASSWORD: "${DATABASE_PASSWORD:-postgres}" # default password
-
     DATABASE_HOST: "${DATABASE_HOST:-host.docker.internal}" # 'host.docker.internal'
-    RABBIT_HOST: rabbit
-    RABBIT_PASSWORD: carrot
+
+    RABBIT_HOST: "${RABBIT_HOST:-host.docker.internal}"
+    RABBIT_USERNAME: "${RABBIT_USERNAME:-rabbit}"
+    RABBIT_PASSWORD: "${RABBIT_PASSWORD:-carrot}"
     DEBUG: 'False'
 
 x-default-volumes: &default-volumes
   volumes:
-    - './docker-entrypoint.sh:/docker-entrypoint'
+    - './docker-entrypoint.sh:/docker-entrypoint.sh'
     - "./mproj:/src"
     - "${AFRICULTURE_AUX_FILES:-./local_files/aux_files}:/aux_files"
     - "${AFRICULTURES_LOCAL_FILES_ROOT:-./local_files/local_files_root}:/local_files_root"
@@ -46,13 +47,13 @@ services:
 
   worker:
     <<: *engine
-    entrypoint: '/docker-entrypoint'
+    entrypoint: '/docker-entrypoint.sh'
     command: [ 'worker' ]
 
-  beat:
-    <<: *engine
-    entrypoint: '/docker-entrypoint'
-    command: [ 'beat' ]
+#  beat:
+#    <<: *engine
+#    entrypoint: '/docker-entrypoint.sh'
+#    command: [ 'beat' ]
 
   web:
     <<: *default-env

@@ -35,10 +35,14 @@ class EOProduct(models.Model):
     datetime_creation = models.DateTimeField(null=True)
     reference_date = models.DateField()
     file = models.FileField(upload_to=_upload_to, null=True, max_length=2048)
-
     timestamp = models.DateTimeField(auto_now_add=True)
-    state = models.CharField(max_length=255, choices=EOProductStateChoices.choices,
+    state = models.CharField(max_length=255,
+                             choices=EOProductStateChoices.choices,
                              default=EOProductStateChoices.AVAILABLE)
+
+    @property
+    def reference_date_iso_str(self) -> str:
+        return self.reference_date.isoformat()
 
     class Meta:
         ordering = ["group", "filename"]

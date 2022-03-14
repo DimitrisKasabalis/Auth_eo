@@ -161,7 +161,7 @@ pynacl==1.4.0
     # via paramiko
 pyopenssl==21.0.0
     # via scrapy
-pyproj==3.3.0
+pyproj==3.2.1
     # via -r requirements.in
 pysftp==0.2.9
     # via -r requirements.in

@@ -121,6 +121,7 @@ class EOSourceGroupChoices(models.TextChoices):
 
 class EOGroup(models.Model):
     description = models.TextField(default='No-Description')
+    indicator = models.TextField()
 
     # noinspection PyUnresolvedReferences,PyStatementEffect
     def discover_url(self) -> Optional[dict]:

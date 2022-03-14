@@ -480,7 +480,7 @@
     output_filename_template: '{YYYYMMDD}_SE1_KZN_0010m_0006_WBMA.nc'
     output_folder: 'S6_P01/WB_HR/KZN'
     task_name: 'task_s06p01_wb10m_kzn'
-    task_kwargs: { 'aoi': 'KZN', 'raster': 'HAND_kzn_fs_2.tif' }
+    task_kwargs: { }
 - model: eo_engine.Pipeline
   pk: null
   fields:

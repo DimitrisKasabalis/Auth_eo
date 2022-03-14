@@ -1,8 +1,11 @@
-from collections import defaultdict
-
+import os
 import re
+from collections import defaultdict
 from datetime import datetime, date as dt_date
+from pathlib import Path
 from typing import List
+
+from eo_engine.errors import AfriCultuReSError
 
 
 def get_spider_loader():
@@ -70,3 +73,20 @@ def str_to_date(token: str, regex_string: str, re_flags=re.IGNORECASE) -> dt_dat
         raise AfriCultuReSError(
             f'BUG_REPORT:SHOULD_NOT_END_HERE:No date tokens found in string {token} and regEx string +{regex_string}+.'
             f'\nDid you forget to add YYYY/MM/DD tokens?') from e
+
+
+def write_line_to_file(file_path: Path, token: str, echo=False):
+    """Append  token string to file. if File does not exist it will be made."""
+    if file_path.is_dir():
+        raise AfriCultuReSError('file is a directory. It should be a path')
+    if not file_path.exists():
+        file_path.touch(exist_ok=True)
+
+    # open in append mode
+    with file_path.open(mode='a') as fh:
+        fh.write(token)
+        fh.write(os.linesep)
+    if echo:
+        print(token)
+
+    return

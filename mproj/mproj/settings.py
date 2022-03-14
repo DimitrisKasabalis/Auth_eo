@@ -133,12 +133,14 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # MEDIA
 MEDIA_URL = '/media/'
-MEDIA_ROOT = "/local_files_root"
+MEDIA_ROOT = Path("/local_files_root")
+AUX_FILES_ROOT = Path('/aux_files')
+PRODUCTS_ROOT = Path(MEDIA_ROOT) / 'products'
 
 # celery
 CELERY_RESULT_BACKEND = 'django-db'
 CELERY_RESULT_EXPIRES = 0
-BROKER_URL = f"amqp://rabbit:carrot@{os.getenv('RABBIT_HOST', 'host.docker.internal')}//"
+BROKER_URL = f"amqp://{os.getenv('RABBIT_USERNAME', 'rabbit')}:{os.getenv('RABBIT_PASSWORD', 'carror')}@{os.getenv('RABBIT_HOST', 'host.docker.internal')}//"
 CELERYD_MAX_TASKS_PER_CHILD = 1
 CELERY_ACKS_LATE = True
 CELERYD_PREFETCH_MULTIPLIER = 1
