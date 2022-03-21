@@ -477,7 +477,7 @@
     last_modified: 2021-12-10T19:10:20Z
     input_groups: [ 49 ]
     output_group: 25
-    output_filename_template: '{YYYYMMDD}_SE1_KZN_0010m_0006_WBMA.nc'
+    output_filename_template: '{YYYYMMDD}_SE1_KZN_0010m_0006_WBMA.tif'
     output_folder: 'S6_P01/WB_HR/KZN'
     task_name: 'task_s06p01_wb10m_kzn'
     task_kwargs: { }
@@ -491,7 +491,7 @@
     last_modified: 2021-12-10T19:10:20Z
     input_groups: [ 73 ]
     output_group: 26
-    output_filename_template: '{YYYYMMDD}_SE1_BAG_0010m_0006_WBMA.nc'
+    output_filename_template: '{YYYYMMDD}_SE1_BAG_0010m_0006_WBMA.tif'
     output_folder: 'S6_P01/WB_HR/KZN'
     task_name: 'task_s06p01_wb10m_bag'
     task_kwargs: { 'aoi': 'BAG', 'raster': 'hand_GH.tif'}
