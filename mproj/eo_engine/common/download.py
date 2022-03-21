@@ -1,19 +1,19 @@
-from logging import Logger
-
 import os
-from requests import HTTPError, Response
-from sentinelsat import InvalidChecksumError
-from tempfile import TemporaryDirectory
-from celery.utils.log import get_task_logger
 from copy import copy
+from logging import Logger
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from typing import List, TypedDict
+
+from celery.utils.log import get_task_logger
 from django.core.files import File
 from django.core.files.temp import NamedTemporaryFile
 from django.db import connections
-from pathlib import Path
-from typing import List
+from requests import HTTPError, Response
+from sentinelsat import InvalidChecksumError
 
 from eo_engine.errors import AfriCultuReSRetriableError, AfriCultuReSError
-from eo_engine.models import EOSource, EOSourceStateChoices
+from eo_engine.models import EOSource, EOSourceStateChoices, EOSourceGroupChoices
 
 logger: Logger = get_task_logger(__name__)
 
@@ -23,19 +23,34 @@ def download_http_eosource(pk_eosource: int) -> str:
 
     eo_source = EOSource.objects.get(pk=pk_eosource)
     remote_url = eo_source.url
-    credentials = eo_source.get_credentials
+
+    class Manifest(TypedDict):
+        primary_file: str
+        auxiliary_files: List[str]
+
+    manifest: Manifest = {
+        'primary_file': remote_url,
+        'auxiliary_files': []
+    }
+    if eo_source.group.filter(name=EOSourceGroupChoices.S04P01_LULC_500M_MCD12Q1_v6).exists():
+        xml_file = eo_source.url + '.xml'
+        logger.info(f'INFO: Adding auxiliary file {xml_file}')
+        manifest['auxiliary_files'].append(xml_file)
 
     with requests.Session() as session:
 
-        response = session.request('get', remote_url, stream=True)
+        auth = None
+        response = session.request('get', manifest['primary_file'], stream=True, auth=auth)
         try:
             response.raise_for_status()
         except HTTPError as e:
             err_response: Response = e.response
+
             if err_response.status_code == 401:
+                auth = eo_source.get_credentials
                 logger.info(f'LOG:INFO: HTTPError, retrying with authentication')
-                logger.info(f'LOG:INFO: authentication: {credentials}')
-                response = session.request('get', err_response.url, auth=credentials, stream=True)
+                logger.info(f'LOG:INFO: authentication: {auth}')
+                response = session.request('get', err_response.url, auth=auth, stream=True)
             else:
                 raise e
         response.raise_for_status()
@@ -67,6 +82,20 @@ def download_http_eosource(pk_eosource: int) -> str:
             eo_source.filesize = eo_source.file.size
             eo_source.state = EOSourceStateChoices.AVAILABLE_LOCALLY
             eo_source.save()
+
+        if len(manifest['auxiliary_files']) > 0:
+            aux_file_url: str
+            for aux_file_url in manifest['auxiliary_files']:
+                dest_folder = Path(eo_source.file.path).parent
+                filename = Path(aux_file_url).name
+                destination_path = dest_folder / filename
+                logger.info(f'LOG:INFO: Downloading auxiliary file: {filename}.')
+                logger.info(f'LOG:INFO: downloading to  file: {destination_path.as_posix()}.')
+                response = session.get(aux_file_url, stream=True)
+                with destination_path.open('wb') as file_handle:
+                    for chunk in response.iter_content():
+                        file_handle.write(chunk)
+                        file_handle.flush()
 
         return eo_source.file.name
 
