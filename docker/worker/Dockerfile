@@ -72,4 +72,5 @@ USER root
 RUN pip install pymodis
 
 ##### END
+ENV PROJ_LIB="/srv/conda/envs/env_snap/share/proj"
 USER ${NB_USER}

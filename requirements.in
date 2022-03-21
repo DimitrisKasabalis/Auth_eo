@@ -19,6 +19,4 @@ scipy~=1.7.3
 scrapy~=2.5.0
 sentinelsat
 xarray~=0.18.0
-
-# for testing
-responses
+unicode-slugify

@@ -242,6 +242,7 @@ zope.interface==5.4.0
     # via
     #   scrapy
     #   twisted
+unicode-slugify==0.1.5
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools
