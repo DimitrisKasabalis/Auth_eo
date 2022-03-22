@@ -550,8 +550,11 @@ def pipeline_outputs(request, pipeline_pk: int):
 
 
 def discover_inputs_for_pipeline(request: HttpRequest, pipeline_pk: int):
-    form_klass = forms.SimpleFromDateForm
     pipeline = Pipeline.objects.get(pk=pipeline_pk)
+    form_klass = forms.SimpleFromDateForm
+    form_kw = {}
+    if pipeline.task_name == 'task_s04p01_lulc500m':
+        form_klass = forms.SimpleYearDropDownForm
     input_groups = pipeline.input_groups
     if request.method == 'GET':
         context = {
@@ -559,7 +562,7 @@ def discover_inputs_for_pipeline(request: HttpRequest, pipeline_pk: int):
             'pipeline_pk': pipeline_pk,
             'page_title': f'Create Inputs for Pipeline: {pipeline.pk}',
             'page_header': pipeline.description,
-            'form': form_klass(),
+            'form': form_klass(**form_kw),
             'input_groups': input_groups
         }
         return render(
@@ -575,7 +578,7 @@ def discover_inputs_for_pipeline(request: HttpRequest, pipeline_pk: int):
         from eo_engine.tasks import task_utils_discover_inputs_for_eo_source_group
         form = form_klass(request.POST)
         if form.is_valid():
-            from_date = datetime.strptime(form.data.get('from_date'), '%Y-%m-%d')
+            from_date = form.cleaned_data['from_date']
             for input_group in input_groups.all():
                 task = task_utils_discover_inputs_for_eo_source_group.s(eo_source_group_pk=input_group.pk,
                                                                         from_date=from_date)
