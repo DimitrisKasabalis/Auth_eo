@@ -14,10 +14,14 @@ from eo_engine.errors import AfriCultuReSError
 
 logger = get_task_logger(__name__)
 
-AFRICA_TILES = ["h16v05", "h16v06", "h16v07", "h16v08", "h16v09", "h17v05", "h17v06", "h17v07", "h17v08", "h18v05",
-                "h18v06", "h18v07", "h18v08", "h18v09", "h19v05", "h19v06", "h19v07", "h19v08", "h19v09", "h19v10",
-                "h19v11", "h19v12", "h20v05", "h20v06", "h20v07", "h20v08", "h20v09", "h20v10", "h20v11", "h20v12",
-                "h21v05", "h21v06", "h21v07", "h21v08", "h21v09", "h21v10", "h21v11", "h22v06", "h22v07", "h22v08",
+AFRICA_TILES = ["h16v05", "h16v06", "h16v07", "h16v08", "h16v09",
+                "h17v05", "h17v06", "h17v07", "h17v08", "h18v05",
+                "h18v06", "h18v07", "h18v08", "h18v09", "h19v05",
+                "h19v06", "h19v07", "h19v08", "h19v09", "h19v10",
+                "h19v11", "h19v12", "h20v05", "h20v06", "h20v07",
+                "h20v08", "h20v09", "h20v10", "h20v11", "h20v12",
+                "h21v05", "h21v06", "h21v07", "h21v08", "h21v09",
+                "h21v10", "h21v11", "h22v06", "h22v07", "h22v08",
                 "h22v09", "h22v10", "h22v11", "h23v07", "h23v08"]
 
 
@@ -47,7 +51,23 @@ class ModisMCD12Q1Spider(MODISSpider):
         f"https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.006/"
     ]
     mcd12q1_catalog_page = re.compile(r'(?P<YEAR>\d\d\d\d)\.\d\d\.\d\d/', re.IGNORECASE)
-    mcd12q1_tile_regex = re.compile(r'^MCD12Q1\.A\d{7}\.(?P<TILE>.{6}).*hdf$', re.IGNORECASE)
+
+    @staticmethod
+    def is_valid_tile(filename_token: str) -> bool:
+        """ Checks if the filename contains a tile of interest"""
+        mcd12q1_tile_regex = re.compile(r'MCD12Q1\.A\d{7}\.(?P<TILE>.{6}).*hdf', re.IGNORECASE)
+        logger.info(f'Checking filename: {filename_token}')
+        match = mcd12q1_tile_regex.match(filename_token)
+        if match:
+            groupdict = match.groupdict()
+            tile = groupdict['TILE']
+            logger.info(f'filename: {filename_token} references to a valid tile {tile}. is valid: {tile in AFRICA_TILES}')
+            if tile in AFRICA_TILES:
+                return True
+            return False
+
+        logger.warn(f'{filename_token} was not captured by regex: +{mcd12q1_tile_regex.pattern}+')
+        return False
 
     def parse(self, response, **kwargs):
         all_hrefs = list(response.copy().xpath('//a/@href').getall())
@@ -80,6 +100,8 @@ class ModisMCD12Q1Spider(MODISSpider):
         for selector in response.copy().xpath("//a[re:test(.,'.*hdf$','i')]"):
             loader = ItemLoader(item=RemoteSourceItem(), selector=selector)
             filename = selector.xpath('./@href').get()
+            if not self.is_valid_tile(filename):
+                continue
             loader.add_value('filename', filename)
             loader.add_xpath('size', 'td[position()=4]/text()', pos=4)
             loader.add_value('datetime_seen', datetime.utcnow())
