@@ -1,7 +1,7 @@
 import datetime
 
 import calendar
-from typing import ClassVar, Final
+from typing import ClassVar, Final, List
 
 from django.conf import settings
 from django import forms
@@ -86,20 +86,43 @@ class WaporNdviForm(forms.Form):
             self.add_error('level', "You can only select Level-1 if Africa is selected")
 
 
+class SimpleYearDropDownForm(forms.Form):
+
+    def __init__(self, *args, **kwargs):
+        self.from_year = 2000
+        self.to_year = 2025
+        if 'from_year' in kwargs.keys():
+            self.from_year = kwargs.pop('from_year')
+        if 'to_year' in kwargs.keys():
+            self.from_year = kwargs.pop('to_year')
+        super(SimpleYearDropDownForm, self).__init__(*args, **kwargs)
+        self.choices: List[List[str, str]] = []
+        for year in range(self.from_year, self.to_year + 1):
+            self.choices.append([str(year), str(year)])
+
+        field = forms.DateField(
+            required=True,
+            widget=forms.Select(choices=self.choices),
+            input_formats=['%Y'])
+        self.fields['from_date'] = field
+
+
 class SimpleFromDateForm(forms.Form):
-    from_date = forms.DateField(required=True,
-                                widget=forms.widgets.DateInput(
-                                    attrs={'type': 'date',
-                                           'min': settings.FORMS_MIN_DATE,
-                                           'max': datetime.date.today().strftime('%Y-%m-%d')}))
+    from_date = forms.DateField(
+        required=True,
+        widget=forms.widgets.DateInput(
+            attrs={'type': 'date',
+                   'min': settings.FORMS_MIN_DATE,
+                   'max': datetime.date.today().strftime('%Y-%m-%d')}))
 
 
 class SimpleFromToDateForm(SimpleFromDateForm):
-    to_date = forms.DateField(required=True,
-                              widget=forms.widgets.DateInput(
-                                  attrs={'type': 'date',
-                                         'min': settings.FORMS_MIN_DATE,
-                                         'max': datetime.date.today().strftime('%Y-%m-%d')}))
+    to_date = forms.DateField(
+        required=True,
+        widget=forms.widgets.DateInput(
+            attrs={'type': 'date',
+                   'min': settings.FORMS_MIN_DATE,
+                   'max': datetime.date.today().strftime('%Y-%m-%d')}))
 
 
 class EOSourceMetaForm(forms.ModelForm):
