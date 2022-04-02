@@ -4,8 +4,9 @@ from pathlib import Path
 import snappy
 from snappy import ProductIO, GPF
 
-from eo_engine.errors import AfriCultuReSError
 
+class Sentinel1PreprocessingError(Exception):
+    pass
 
 def sentinel_1_pre_processing_with_snappy(file_in: Path, file_out: Path, opt):
     def write_product(data, file_path, format=None):
@@ -127,50 +128,50 @@ def sentinel_1_pre_processing_with_snappy(file_in: Path, file_out: Path, opt):
         GPF.getDefaultInstance().getOperatorSpiRegistry().loadOperatorSpis()
         print("Snappy operators initialized")
     except:
-        raise AfriCultuReSError('Problem initialyzing snappy')
+        raise Sentinel1PreprocessingError('Problem initialyzing snappy')
 
     if opt == 'orb':
         try:
             apply_orbit_file(file_in, file_out)
         except BaseException as e:
-            raise AfriCultuReSError('Problem applying the orbit file') from e
+            raise Sentinel1PreprocessingError('Problem applying the orbit file') from e
     elif opt == 'brd':
         try:
             border_noise_removal(file_in,  file_out)
         except:
-            raise AfriCultuReSError('Problem with the noise removal')
+            raise Sentinel1PreprocessingError('Problem with the noise removal')
 
     elif opt == 'the':
         try:
             thermal_noise_removal(file_in,  file_out)
         except:
-            raise AfriCultuReSError('Problem with the thermal noise removal')
+            raise Sentinel1PreprocessingError('Problem with the thermal noise removal')
 
     elif opt == 'cal':
         try:
             do_calibration(file_in,  file_out)
         except:
-            raise AfriCultuReSError('Problem with the calibration')
+            raise Sentinel1PreprocessingError('Problem with the calibration')
 
     elif opt == 'tc':
         try:
             range_doppler_terrain_correction(file_in,  file_out)
         except:
-            raise AfriCultuReSError('Problem with the terrain correction')
+            raise Sentinel1PreprocessingError('Problem with the terrain correction')
 
     elif opt == 'spk':
         try:
             speckle_filter(file_in,  file_out)
         except:
-            raise AfriCultuReSError('Problem with speckle filtering')
+            raise Sentinel1PreprocessingError('Problem with speckle filtering')
 
     elif opt == 'db':
         try:
             convert_dB(file_in,  file_out)
         except:
-            raise AfriCultuReSError('Problem with decibel conversion')
+            raise Sentinel1PreprocessingError('Problem with decibel conversion')
     else:
-        raise AfriCultuReSError('not a valid option')
+        raise Sentinel1PreprocessingError('not a valid option')
 
     return 0
 
