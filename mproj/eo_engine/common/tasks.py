@@ -1,8 +1,8 @@
 from typing import List, Union
 import re
-from more_itertools import flatten, collapse
+from more_itertools import collapse
 
-RE_PROCESS_TASK = re.compile(r'eo_engine\.tasks\.task_s[0-9]{1,2}p[0-9]{1,2}.+$')
+RE_PROCESS_TASK = re.compile(r'eo_engine\.tasks.*task_s[0-9]{1,2}p[0-9]{1,2}.+$')
 
 
 def is_process_task(task_name: str) -> bool:

@@ -494,7 +494,7 @@
     output_filename_template: '{YYYYMMDD}_SE1_BAG_0010m_0006_WBMA.tif'
     output_folder: 'S6_P01/WB_HR/KZN'
     task_name: 'task_s06p01_wb10m_bag'
-    task_kwargs: { 'aoi': 'BAG', 'raster': 'hand_GH.tif'}
+    task_kwargs: { }
 - model: eo_engine.Pipeline
   pk: null
   fields:
@@ -513,7 +513,7 @@
   pk: null
   fields:
     name: "Floods HR BAG (GHA)"
-    description: "NOTE YET IMPLEMENTED!! Floods mapping at 10m over BAG (GHA). Input used from \"WB 10m Sentinel BAG\"."
+    description: "Floods mapping at 10m over BAG (GHA). Input used from \"WB 10m Sentinel BAG\" - task_s06p01_wb10m_bag."
     package: 'S04P03'
     timestamp: 2021-12-10T19:10:20Z
     last_modified: 2021-12-10T19:10:20Z
@@ -522,4 +522,4 @@
     output_filename_template: '{YYYYMMDD}_SE1_BAG_0010m_0365_FAMA.nc'
     output_folder: 'S4_P03/Floods_HR/Ghana'
     task_name: 'task_s04p03_floods10m'
-    task_kwargs: { 'aoi': 'BAG' }
+    task_kwargs: { }

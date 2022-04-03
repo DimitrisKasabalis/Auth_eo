@@ -1,8 +1,11 @@
 import os
+
 from django.conf import settings
 from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+
+
 
 
 class EOProductStateChoices(models.TextChoices):
@@ -52,10 +55,21 @@ class EOProduct(models.Model):
         return f"{self.__class__.__name__}/{self.filename}/{self.state}/{self.id}"
 
 
+def should_create(pipeline: 'Pipeline', eo_product: EOProduct) -> bool:
+    from eo_engine.models import Pipeline
+    if pipeline == Pipeline.objects.get(task_name='task_s04p03_floods10m'):
+        reference_date = eo_product.reference_date
+        mid_august = reference_date.replace(day=14, month=8)
+        mid_october = reference_date.replace(day=16, month=10)
+        if mid_august <= eo_product.reference_date <= mid_october:
+            return True
+        return False
+    return True
+
+
 @receiver(post_save, sender=EOProduct, weak=False, dispatch_uid='eoproduct_post_save_handler')
 def eoproduct_post_save_handler(instance: EOProduct, **kwargs):
     from eo_engine.models import Pipeline
-
     eo_product = instance
     if eo_product.state != EOProductStateChoices.READY:
         return
@@ -64,6 +78,11 @@ def eoproduct_post_save_handler(instance: EOProduct, **kwargs):
     yyyy = eo_product.reference_date.strftime('%Y')
     pipelines = Pipeline.objects.filter(input_groups__eoproduct=eo_product)
     for pipeline in pipelines:
+
+        # apply special rules if this should made or not
+        if not should_create(pipeline, eo_product):
+            continue
+
         # output templates could be YYYYMMDD or YYYY
         output_filename = pipeline.output_filename(**{'YYYYMMDD': yyyymmdd, 'YYYY': yyyy})
 

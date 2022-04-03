@@ -45,7 +45,7 @@ class BaseTaskWithRetry(Task):
         if is_process_task(self.name) and 'eo_product_pk' not in kwargs.keys():
             raise AfriCultuReSError('eo_product_pk param is missing from the task. Did you forget it? ')
 
-        if is_process_task(self.name):  # ie eo_engine.tasks.task_s02p02_c_gls_ndvi_300_clip
+        if is_process_task(self.name):  # ie eo_engine.tasks.s02p02.task_s02p02_c_gls_ndvi_300_clip
             # mark generating product as 'GENERATING'
             eo_product_pk = kwargs['eo_product_pk']
             eo_product = EOProduct.objects.get(pk=eo_product_pk)

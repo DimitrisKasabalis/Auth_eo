@@ -1,4 +1,6 @@
 from django.test import TransactionTestCase, SimpleTestCase
+
+import eo_engine.tasks.example
 from eo_engine import tasks
 from mproj.celery import app
 from celery.contrib.testing.worker import start_worker
@@ -21,7 +23,7 @@ class FooTaskTestCase(TransactionTestCase):
 
     def setUp(self):
         super().setUp()
-        self.task = tasks.task_debug_failing.delay(1)
+        self.task = eo_engine._tasks.example.task_debug_failing.delay(1)
         self.results = self.task.get(propagate=False) # dont raise exception
 
     def test_state(self):
