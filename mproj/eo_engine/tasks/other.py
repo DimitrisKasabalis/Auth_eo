@@ -371,5 +371,6 @@ __all__ = [
     'task_utils_discover_eo_sources_for_pipeline',
     'task_utils_download_eo_sources_for_pipeline',
     'task_utils_discover_inputs_for_eo_source_group',
-    'task_utils_generate_eoproducts_for_eo_product_group'
+    'task_utils_generate_eoproducts_for_eo_product_group',
+    'task_download_file'
 ]
