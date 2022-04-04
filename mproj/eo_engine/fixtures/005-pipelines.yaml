@@ -492,7 +492,7 @@
     input_groups: [ 73 ]
     output_group: 26
     output_filename_template: '{YYYYMMDD}_SE1_BAG_0010m_0006_WBMA.tif'
-    output_folder: 'S6_P01/WB_HR/KZN'
+    output_folder: 'S6_P01/WB_HR/BAG'
     task_name: 'task_s06p01_wb10m_bag'
     task_kwargs: { }
 - model: eo_engine.Pipeline
