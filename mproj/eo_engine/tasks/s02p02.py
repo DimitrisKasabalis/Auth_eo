@@ -202,7 +202,7 @@ def task_s02p02_vci1km_v2(eo_product_pk):
         f_lts = lts_dir + '/cgls_NDVI-LTS_' + dekad + '_V3.nc'
 
         f_lts_min = f_lts[:-3] + '_min.nc'
-        f_lts_max = f_lts[:-3] + '_min.nc'
+        f_lts_max = f_lts[:-3] + '_max.nc'
         print('\n== Processing ==')
         print('NDVI file: ', f_ndvi)
         print('with LTS min: ', f_lts_min)
@@ -211,8 +211,8 @@ def task_s02p02_vci1km_v2(eo_product_pk):
         print(Path(f_lts_max).is_file())
 
         data = ProductIO.readProduct(f_ndvi)
-        data1 = ProductIO.readProduct(f_lts[:-3] + '_min.nc')
-        data2 = ProductIO.readProduct(f_lts[:-3] + '_max.nc')
+        data1 = ProductIO.readProduct(f_lts_min)
+        data2 = ProductIO.readProduct(f_lts_max)
         try:
             merged = merge(data, data1, data2)
         except Exception as e:
