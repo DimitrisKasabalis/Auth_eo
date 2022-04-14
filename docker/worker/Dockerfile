@@ -71,6 +71,16 @@ RUN pip install tables  rasterio
 USER root
 RUN pip install pymodis
 
+#### 14/04/2022
+# disable Disable Check for Updates
+# https://senbox.atlassian.net/wiki/spaces/SNAP/pages/447119383/Disable+Check+for+Updates
+
+ENV SNAP_HOME="/srv/conda/envs/env_snap/snap"
+ENV SNAP_PROPERTY_FILE="${SNAP_HOME}/etc/snap.properties"
+ENV SNAP_CONF_FILE="${SNAP_HOME}/etc/snap.conf"
+
+RUN echo snap.versionCheck.interval=NEVER >>  ${SNAP_PROPERTY_FILE}
+
 ##### END
 ENV PROJ_LIB="/srv/conda/envs/env_snap/share/proj"
 USER ${NB_USER}
