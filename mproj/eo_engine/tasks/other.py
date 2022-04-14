@@ -274,7 +274,8 @@ def task_utils_discover_inputs_for_eo_source_group(
         task = task_sftp_parse_remote_dir.s(group_name=group_name)
 
     elif crawler_type == crawler_type_choices.OTHER_SENTINEL:
-        task = task_scan_sentinel_hub(from_date=from_date, to_date=to_date, group_name=group_name)
+        task = task_scan_sentinel_hub.s(from_date=from_date, to_date=to_date, group_name=group_name)
+
     elif crawler_type == crawler_type_choices.OTHER_WAPOR:
         task = task_utils_create_wapor_entry.s(wapor_group_name=group_name, from_date=from_date)
 
