@@ -214,3 +214,6 @@ class EOSourceGroup(EOGroup):
     @cached_property
     def date_regex_cached(self):
         return self.date_regex
+
+    def __str__(self):
+        return f"<EOSourceGroup/{self.name}/{self.id}>"

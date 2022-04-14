@@ -1,11 +1,8 @@
 import os
+from typing import Union, List, Literal
 
 from django.conf import settings
 from django.db import models
-from django.db.models.signals import post_save
-from django.dispatch import receiver
-
-
 
 
 class EOProductStateChoices(models.TextChoices):
@@ -65,37 +62,6 @@ def should_create(pipeline: 'Pipeline', eo_product: EOProduct) -> bool:
             return True
         return False
     return True
-
-
-@receiver(post_save, sender=EOProduct, weak=False, dispatch_uid='eoproduct_post_save_handler')
-def eoproduct_post_save_handler(instance: EOProduct, **kwargs):
-    from eo_engine.models import Pipeline
-    eo_product = instance
-    if eo_product.state != EOProductStateChoices.READY:
-        return
-
-    yyyymmdd = eo_product.reference_date.strftime('%Y%m%d')
-    yyyy = eo_product.reference_date.strftime('%Y')
-    pipelines = Pipeline.objects.filter(input_groups__eoproduct=eo_product)
-    for pipeline in pipelines:
-
-        # apply special rules if this should made or not
-        if not should_create(pipeline, eo_product):
-            continue
-
-        # output templates could be YYYYMMDD or YYYY
-        output_filename = pipeline.output_filename(**{'YYYYMMDD': yyyymmdd, 'YYYY': yyyy})
-
-        output_group = pipeline.output_group.as_eoproduct_group()
-
-        prod, created = EOProduct.objects.get_or_create(
-            filename=output_filename,
-            group=output_group,
-            reference_date=eo_product.reference_date
-        )
-        if created:
-            prod.state = EOProductStateChoices.AVAILABLE
-        prod.save()
 
 
 __all__ = [

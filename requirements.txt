@@ -193,7 +193,7 @@ scipy==1.7.3
     # via -r requirements.in
 scrapy==2.5.1
     # via -r requirements.in
-sentinelsat==1.1.0
+sentinelsat==1.1.1
     # via -r requirements.in
 service-identity==21.1.0
     # via scrapy

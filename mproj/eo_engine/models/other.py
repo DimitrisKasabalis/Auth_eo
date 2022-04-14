@@ -48,7 +48,11 @@ class Pipeline(RuleMixin):
     description = models.TextField(default='No-Description')
     input_groups = models.ManyToManyField('EOGroup', related_name='pipelines_from_input',
                                           related_query_name='pipelines')
-    output_group = models.ForeignKey('EOGroup', on_delete=models.DO_NOTHING, related_name='pipelines_from_output')
+    output_group = models.ForeignKey(
+        'EOGroup',
+        on_delete=models.DO_NOTHING,
+        related_name='pipelines_from_output'
+    )
     output_filename_template = models.TextField()
     output_folder = models.TextField()
     task_name = models.TextField()

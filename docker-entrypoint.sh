@@ -2,8 +2,6 @@
 set -Eeo pipefail
 CONCURRENCY=${WORKERS_PER_INSTANCE:-1}
 
-#. /opt/conda/etc/profile.d/conda.sh
-#conda activate base
 
 if [[ -n "$1" ]]; then
   if [ "$1" = "loaddata" ]; then

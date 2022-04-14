@@ -522,4 +522,4 @@
     output_filename_template: '{YYYYMMDD}_SE1_BAG_0010m_0365_FAMA.nc'
     output_folder: 'S4_P03/Floods_HR/Ghana'
     task_name: 'task_s04p03_floods10m'
-    task_kwargs: { }
+    task_kwargs: { "aoi": 'BAG' }

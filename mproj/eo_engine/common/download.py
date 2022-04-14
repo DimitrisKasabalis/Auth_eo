@@ -5,6 +5,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import List, TypedDict
 
+import sentinelsat
 from celery.utils.log import get_task_logger
 from django.core.files import File
 from django.core.files.temp import NamedTemporaryFile
@@ -233,11 +234,16 @@ def download_sentinel_resource(pk_eosource: int) -> str:
         try:
             uuid = eo_source.url.split(r'//')[1]
             res = api.download(uuid, temp_dir)
+        except HTTPError as e:
+            raise AfriCultuReSError(f'Http error when Downloading. Response code was: {e.response.status_code}')
         except InvalidChecksumError as e:
             logger.error('The download file failed the checksum')
-            raise AfriCultuReSError('Failed to download') from e
+            raise AfriCultuReSError('Checksum Mismatch') from e
+        except sentinelsat.LTATriggered as e:
+            raise AfriCultuReSError(
+                "Download failed due to product being in the Long Term Archive and retrieval from LTA was triggered") from e
         except BaseException as e:
-            raise AfriCultuReSError(f'Unhandled case!!.')
+            raise AfriCultuReSError(f'Uknonwn exception case.') from e
         # close all the connections as they could be stale.
         connections.close_all()
         logger.info('LOG:INFO:File downloaded in a temp file.')
