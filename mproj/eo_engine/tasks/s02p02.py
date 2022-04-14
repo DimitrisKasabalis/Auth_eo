@@ -119,7 +119,8 @@ def task_s02p02_nvdi1km_v3(eo_product_pk):
         cp = subprocess.run(['ncatted',
                              '-a', 'short_name,NDVI,o,c,normalized_difference_vegetation_index',
                              '-a', "long_name,NDVI,o,c,Normalized Difference Vegetation Index Resampled 1 Km",
-
+                             '-a', "add_offset,NDVI,o,d,-0.08",
+                             '-a', "scale_factor,NDVI,o,d,0.004",
                              output_temp_file], check=True)
 
         with open(output_temp_file, 'rb') as fh:
