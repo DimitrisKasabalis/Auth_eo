@@ -201,8 +201,8 @@ def task_s06p04_et250m(eo_product_pk: int, iso: str):
             raise AfriCultuReSError(f"No file was produced because  np.max(et_ql) == -9999 -> {np.max(et_ql) == -9999}")
         else:
             et_meta = et_band.meta.copy()
-            et_meta.update(
-                {'crs': rasterio.crs.CRS({'init': 'epsg:4326'})})
+            #et_meta.update(
+             #   {'crs': rasterio.crs.CRS({'init': 'epsg:4326'})})
 
             logger.info('Writing output file....')
             with rasterio.open(
@@ -336,7 +336,7 @@ def task_s06p04_et100m(eo_product_pk: int, iso: str):
         else:
             et_meta = et_band.meta.copy()
             # noinspection PyUnresolvedReferences
-            et_meta.update({'crs': rasterio.crs.CRS({'init': 'epsg:4326'})})
+            #et_meta.update({'crs': rasterio.crs.CRS({'init': 'epsg:4326'})})
 
             print('Writing output file....')
             with rasterio.open(file_out_path, 'w', compress='lzw', **et_meta) as file:
