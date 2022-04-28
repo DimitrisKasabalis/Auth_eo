@@ -12,7 +12,7 @@ from .models import Credentials
 from .models.other import CrawlerConfiguration
 
 
-class CredentialsUsernamePassowordForm(forms.ModelForm):
+class CredentialsUsernamePasswordForm(forms.ModelForm):
     # def __init__(self, *args, **kwargs):
     #     super().__init__(*args, **kwargs)
     #     self.fields['name'].widget.attrs.update({'class': 'special'})

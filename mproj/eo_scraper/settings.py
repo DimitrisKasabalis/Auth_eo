@@ -9,8 +9,8 @@
 
 from pathlib import Path
 
-BOT_NAME = 'eo_scraper'
-
+BOT_NAME = 'auth/grc/scraper.11'
+USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36'
 SPIDER_MODULES = ['eo_scraper.spiders']
 NEWSPIDER_MODULE = 'eo_scraper.spiders'
 BASE_DIR = Path(__file__).parent
@@ -19,7 +19,7 @@ BASE_DIR = Path(__file__).parent
 # USER_AGENT = 'AUTH (+http://www.yourdomain.com)'
 
 # Obey robots.txt rules
-ROBOTSTXT_OBEY = True
+ROBOTSTXT_OBEY = False
 
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
 # CONCURRENT_REQUESTS = 32

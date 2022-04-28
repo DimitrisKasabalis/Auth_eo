@@ -306,7 +306,7 @@ def utilities_view_post_credentials(request):
         all_credentials = Credentials.objects.all()
         forms_list = []
         for c in all_credentials.filter(type=Credentials.CredentialsTypeChoices.USERNAME_PASSWORD):
-            forms_list.append(forms.CredentialsUsernamePassowordForm(instance=c))
+            forms_list.append(forms.CredentialsUsernamePasswordForm(instance=c))
         context['userpass_forms'] = forms_list
 
         forms_list = []
@@ -555,6 +555,8 @@ def discover_inputs_for_pipeline(request: HttpRequest, pipeline_pk: int):
     form_kw = {}
     if pipeline.task_name == 'task_s04p01_lulc500m':
         form_klass = forms.SimpleYearDropDownForm
+    if pipeline.task_name == 'task_s06p04_etanom5km':
+        form_klass = forms.SimpleYearDropDownForm
     input_groups = pipeline.input_groups
     if request.method == 'GET':
         context = {
@@ -569,6 +571,7 @@ def discover_inputs_for_pipeline(request: HttpRequest, pipeline_pk: int):
             request=request,
             template_name='utilities/create-inputs-for-pipeline.html',
             context=context)
+
     if request.method == 'POST':
         if 'cancel' in request.POST:
             return redirect(
@@ -580,8 +583,10 @@ def discover_inputs_for_pipeline(request: HttpRequest, pipeline_pk: int):
         if form.is_valid():
             from_date = form.cleaned_data['from_date']
             for input_group in input_groups.all():
-                task = task_utils_discover_inputs_for_eo_source_group.s(eo_source_group_pk=input_group.pk,
-                                                                        from_date=from_date)
+                task = task_utils_discover_inputs_for_eo_source_group.s(
+                    eo_source_group_pk=input_group.pk,
+                    from_date=from_date)
+
                 # apply locally
                 job = task.apply()
 
