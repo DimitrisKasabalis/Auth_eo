@@ -9,6 +9,9 @@ from celery import shared_task, group
 from celery.exceptions import MaxRetriesExceededError
 from celery.result import GroupResult
 from celery.utils.log import get_task_logger
+from dateutil.rrule import rrule, DAILY
+from datetime import timedelta
+from datetime import datetime
 from django.utils import timezone
 from more_itertools import collapse
 from scrapy import Spider
@@ -26,6 +29,8 @@ from eo_engine.task_managers import BaseTaskWithRetry
 logger: Logger = get_task_logger(__name__)
 
 now = timezone.now()
+DT_DELTA_1D = timedelta(days=+1)
+PARSE_DT_ISO_FORMAT = datetime.fromisoformat
 
 
 @shared_task
@@ -87,11 +92,12 @@ def task_init_spider(spider_name):
 
 
 @shared_task()
-def task_utils_create_wapor_entry(wapor_group_name: str, from_date: dt_date) -> str:
-    from dateutil.rrule import rrule, DAILY
+def task_utils_create_wapor_entry(
+        wapor_group_name: str,
+        from_date: str
+) -> str:
     from eo_engine.models.factories import create_or_get_wapor_object_from_filename
-    if isinstance(from_date, str):
-        from_date = datetime.datetime.fromisoformat(from_date).date()
+    from_date = PARSE_DT_ISO_FORMAT(from_date).date()
 
     to_date = dt_date.today()
     pat = re.compile(
@@ -131,13 +137,15 @@ def task_utils_create_wapor_entry(wapor_group_name: str, from_date: dt_date) -> 
 
 @shared_task
 def task_scan_sentinel_hub(
-        from_date: dt_date = None,
-        to_date: dt_date = None,
+        from_date: str = None,  # ISO datetime str
+        to_date: str = None,  # ISO datetime str
         group_name: Literal[
             EOSourceGroupChoices.S06P01_S1_10M_BAG,
             EOSourceGroupChoices.S06P01_S1_10M_KZN
         ] = None,
         **kwargs):
+    from_date = PARSE_DT_ISO_FORMAT(from_date)
+    to_date = PARSE_DT_ISO_FORMAT(to_date)
     credentials = Credentials.objects.get(domain='sentinel')
     if group_name == EOSourceGroupChoices.S06P01_S1_10M_KZN:
         geojson_path = Path('/aux_files/Geojson/KZN_extent_forS1.geojson')
@@ -152,13 +160,19 @@ def task_scan_sentinel_hub(
     area = geojson_to_wkt(read_geojson(geojson_path))
     api_kwargs = {
         'platformname': 'Sentinel-1',
-        'date': (from_date, to_date),
+        'date': (
+            from_date.date(),
+            (to_date + DT_DELTA_1D).date())
+        ,
         'swathidentifier': 'IW',
         'producttype': 'GRD',
         'orbitdirection': 'ASCENDING'
     }
     api_kwargs.update(kwargs)
-    api = SentinelAPI(user=credentials.username, password=credentials.password)
+    api = SentinelAPI(
+        user=credentials.username,
+        password=credentials.password
+    )
     for uuid, payload in api.query(
             area=area, **api_kwargs
     ).items():
@@ -248,9 +262,10 @@ def task_utils_download_eo_sources_for_pipeline(
 @shared_task
 def task_utils_discover_inputs_for_eo_source_group(
         eo_source_group_pk: int,
-        from_date: dt_date,
+        from_date: str,  # ISO Datetime format
         eager: bool = False
 ) -> str:
+    from_date = datetime.datetime.fromisoformat(from_date)
     try:
         eo_source_group = EOSourceGroup.objects.get(pk=eo_source_group_pk)
     except EOSourceGroup.DoesNotExist:
@@ -263,8 +278,11 @@ def task_utils_discover_inputs_for_eo_source_group(
 
     task: BaseTaskWithRetry
     if crawler_type == crawler_type_choices.SCRAPY_SPIDER:
-        crawler_config, created = CrawlerConfiguration.objects.get_or_create(group=group_name,
-                                                                             defaults={'from_date': from_date})
+        crawler_config, created = CrawlerConfiguration.objects.get_or_create(
+            group=group_name,
+            defaults={
+                'from_date': from_date
+            })
         if not created:
             crawler_config.from_date = from_date
             crawler_config.save()
@@ -274,7 +292,10 @@ def task_utils_discover_inputs_for_eo_source_group(
         task = task_sftp_parse_remote_dir.s(group_name=group_name)
 
     elif crawler_type == crawler_type_choices.OTHER_SENTINEL:
-        task = task_scan_sentinel_hub.s(from_date=from_date, to_date=to_date, group_name=group_name)
+        task = task_scan_sentinel_hub.s(
+            from_date=from_date.isoformat(),
+            to_date=to_date.isoformat(),
+            group_name=group_name)
 
     elif crawler_type == crawler_type_choices.OTHER_WAPOR:
         task = task_utils_create_wapor_entry.s(wapor_group_name=group_name, from_date=from_date)
