@@ -8,7 +8,10 @@ from django.contrib import messages
 from django.http import QueryDict, HttpRequest
 from django.shortcuts import render, redirect
 from django.urls import reverse
-from django.utils.datetime_safe import date, datetime
+from django.utils.datetime_safe import (
+    date,
+    datetime
+)
 from django.utils.http import urlencode
 from more_itertools import collapse
 
@@ -573,6 +576,12 @@ def discover_inputs_for_pipeline(request: HttpRequest, pipeline_pk: int):
             context=context)
 
     if request.method == 'POST':
+        eager_flag = request.GET.get('eager', '')
+        if eager_flag == '':
+            eager = False
+        else:
+            eager = True
+
         if 'cancel' in request.POST:
             return redirect(
                 'eo_engine:pipeline-inputs-list',
@@ -581,13 +590,15 @@ def discover_inputs_for_pipeline(request: HttpRequest, pipeline_pk: int):
         from eo_engine.tasks import task_utils_discover_inputs_for_eo_source_group
         form = form_klass(request.POST)
         if form.is_valid():
-            from_date = form.cleaned_data['from_date']
+            from_date: date = form.cleaned_data['from_date']
             for input_group in input_groups.all():
                 task = task_utils_discover_inputs_for_eo_source_group.s(
                     eo_source_group_pk=input_group.pk,
-                    from_date=from_date)
+                    from_date=from_date.isoformat(),
+                    eager=eager
+                )
 
-                # apply locally
+                # apply locally, use the async variant for hands off automation
                 job = task.apply()
 
         return redirect('eo_engine:pipeline-inputs-list', pipeline_pk=pipeline_pk)

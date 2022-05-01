@@ -233,11 +233,15 @@ def task_utils_download_eo_sources_for_eo_source_group(eo_source_group_id: int) 
 @shared_task
 def task_utils_discover_eo_sources_for_pipeline(
         pipeline_pk: int,
+        from_date: str,
         eager=False):
     pipeline = Pipeline.objects.get(pk=pipeline_pk)
     input_groups = pipeline.input_groups.all()
     for input_group in input_groups:
-        task = task_utils_discover_inputs_for_eo_source_group.s(eo_source_group_id=input_group.pk)
+        task = task_utils_discover_inputs_for_eo_source_group.s(
+            eo_source_group_id=input_group.pk,
+            from_date=from_date
+        )
         if eager:
             task.apply()
         else:
