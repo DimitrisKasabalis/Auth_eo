@@ -265,7 +265,7 @@ def task_utils_discover_inputs_for_eo_source_group(
         from_date: str,  # ISO Datetime format
         eager: bool = False
 ) -> str:
-    from_date = datetime.datetime.fromisoformat(from_date)
+    from_date = PARSE_DT_ISO_FORMAT(from_date)
     try:
         eo_source_group = EOSourceGroup.objects.get(pk=eo_source_group_pk)
     except EOSourceGroup.DoesNotExist:
