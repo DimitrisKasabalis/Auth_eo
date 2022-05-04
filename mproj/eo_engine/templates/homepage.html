@@ -23,6 +23,10 @@
                                         <h6 class="card-subtitle mb-2 text-muted">
                                             pipeline_id: {{ section_element.id }}</h6>
                                     {% endif %}
+                                    {% if section_element.task_name %}
+                                    <h6 class="card-subtitle mb-2 text-muted">
+                                            task_name: {{ section_element.task_name }}</h6>
+                                    {% endif %}
                                     <p class="card-text">{{ section_element.description }}</p>
                                     {% for id,url in section_element.urls.items %}
                                         {% if url %}
