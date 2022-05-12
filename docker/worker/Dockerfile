@@ -64,7 +64,7 @@ RUN apt-get -qq update && \
 
 #### 28/09/2021 add s06p06 libs
 USER root
-RUN pip install tables  rasterio
+RUN pip install tables rasterio==1.1.8
 
 
 #### 29/01/2022 add pymodis

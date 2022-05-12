@@ -97,7 +97,6 @@ def task_s06p04_etanom5km(eo_product_pk: int):
 
     """
 
-
     eo_product = EOProduct.objects.get(pk=eo_product_pk)
     produced_file = EOProduct.objects.get(id=eo_product_pk)
     input_eo_source_group = produced_file.group.eoproductgroup.pipelines_from_output.get().input_groups.get().eosourcegroup
@@ -201,8 +200,8 @@ def task_s06p04_et250m(eo_product_pk: int, iso: str):
             raise AfriCultuReSError(f"No file was produced because  np.max(et_ql) == -9999 -> {np.max(et_ql) == -9999}")
         else:
             et_meta = et_band.meta.copy()
-            #et_meta.update(
-             #   {'crs': rasterio.crs.CRS({'init': 'epsg:4326'})})
+            et_meta.update(
+                crs=rasterio.crs.CRS({'init': 'epsg:4326'}))
 
             logger.info('Writing output file....')
             with rasterio.open(
@@ -228,15 +227,17 @@ def task_s06p04_et250m(eo_product_pk: int, iso: str):
         file3_nc = temp_dir_path / 'out3.nc'
         file3_final_nc = temp_dir_path / 'final.nc'
 
-        get_aeti_qual(file_in_path_et=file_in_path_et, file_in_path_lst=file_in_path_lst,
-                      file_in_path_ndvi=file_in_path_ndvi, file_out_path=file1_tif)
+        get_aeti_qual(
+            file_in_path_et=file_in_path_et, file_in_path_lst=file_in_path_lst,
+            file_in_path_ndvi=file_in_path_ndvi, file_out_path=file1_tif)
 
         logger.info('cutting/warping')
-        subprocess.run(['gdalwarp',
-                        '-cutline', africa_borders_buff10km.as_posix(),
-                        '-co', 'COMPRESS=LZW',
-                        file1_tif.as_posix(),
-                        file2_tif.as_posix()], check=True)
+        subprocess.run(
+            ['gdalwarp',
+             '-cutline', africa_borders_buff10km.as_posix(),
+             '-co', 'COMPRESS=LZW',
+             file1_tif.as_posix(),
+             file2_tif.as_posix()], check=True)
 
         logger.info('translating')
         subprocess.run([
@@ -275,7 +276,6 @@ def task_s06p04_et250m(eo_product_pk: int, iso: str):
 
 @shared_task
 def task_s06p04_et100m(eo_product_pk: int, iso: str):
-
     if iso == 'ETH':
         border_shp = Path("/aux_files/Border_shp_with_buff/ETH_adm0_buff10km.shp")
     elif iso == "GHA":
@@ -336,7 +336,9 @@ def task_s06p04_et100m(eo_product_pk: int, iso: str):
         else:
             et_meta = et_band.meta.copy()
             # noinspection PyUnresolvedReferences
-            #et_meta.update({'crs': rasterio.crs.CRS({'init': 'epsg:4326'})})
+            et_meta.update(
+                crs=rasterio.crs.CRS({'init': 'epsg:4326'})
+            )
 
             print('Writing output file....')
             with rasterio.open(file_out_path, 'w', compress='lzw', **et_meta) as file:
