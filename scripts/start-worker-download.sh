@@ -9,4 +9,4 @@ fi
 export DATABASE_HOST=${DOCKER_HOST_IP}
 export RABBIT_HOST=${DOCKER_HOST_IP}
 echo "starting download workers"
-$DOCKER_COMPOSE_CMD -f $DOCKER_COMPOSE_FILE up --scale worker-download=${REPLICAS} worker-download
+$DOCKER_COMPOSE_CMD -f $DOCKER_COMPOSE_FILE up --scale worker-download=${REPLICAS} -d  worker-download
