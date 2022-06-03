@@ -269,6 +269,17 @@ def task_utils_discover_inputs_for_eo_source_group(
         from_date: str,  # ISO Datetime format
         eager: bool = False
 ) -> str:
+    """A task that fire's another task.
+    Depending on the crawler type declared of the group it will fire the appropriate task
+    @param eo_source_group_pk: The eosource pk in the database.
+    @type eo_source_group_pk: int
+    @param from_date: An ISO Date String representing the start date.
+    @type from_date: str
+    @param eager: if true the task will run eagerly (not in a worker). For debugging purposes
+    @type eager bool
+
+    """
+
     from_date = PARSE_DT_ISO_FORMAT(from_date)
     try:
         eo_source_group = EOSourceGroup.objects.get(pk=eo_source_group_pk)
@@ -339,7 +350,6 @@ def task_utils_generate_eoproducts_for_eo_product_group(eo_product_id: int) -> s
 def task_download_file(self, eo_source_pk: int):
     """
     Download a remote asset. Identified by it's ID number.
-    if it's already available locally, set force_dl=True to download again.
     """
     from urllib.parse import urlparse
     from eo_engine.common.download import (download_http_eosource,

@@ -61,32 +61,43 @@ class EOSource(models.Model):
     """ A ledger for known files """
 
     # status of file.
-    state = models.CharField(max_length=255,
-                             choices=EOSourceStateChoices.choices,
-                             default=EOSourceStateChoices.AVAILABLE_REMOTELY)
+    state = models.CharField(
+        max_length=255,
+        choices=EOSourceStateChoices.choices,
+        default=EOSourceStateChoices.AVAILABLE_REMOTELY)
 
     # Reason of M2M is that ndvi-anomaly tiles are used for multiple groups.
     group = models.ManyToManyField('EOSourceGroup')
     # physical file. Read about DJANGO media files
-    file = models.FileField(upload_to=_file_storage_path,
-                            editable=False,
-                            null=True,
-                            max_length=2_048)
+    file = models.FileField(
+        upload_to=_file_storage_path,
+        editable=False,
+        null=True,
+        max_length=2_048)
     # filename, including extension. Must be unique
-    filename = models.CharField(max_length=255, unique=True)
+    filename = models.CharField(
+        max_length=255,
+        unique=True)
     # net location of resource
     domain = models.CharField(max_length=200)
     # reported filesize, bytes?
-    filesize_reported = models.BigIntegerField(validators=(MinValueValidator(0),))
+    filesize_reported = models.BigIntegerField(
+        validators=(MinValueValidator(0),)
+    )
     # product reference datetime, cannot be null
     reference_date = models.DateField(help_text="product reference date")
     # when did we see it?, change to date
-    datetime_seen = models.DateTimeField(auto_created=True, help_text="datetime of when it was seen")
+    datetime_seen = models.DateTimeField(
+        auto_created=True,
+        help_text="datetime of when it was seen")
     # full url to resource.
     #  eg ftp://ftp.globalland.cls.fr/path/filename.nc
     url = models.URLField(help_text="Resource URL")
     # username/password of resource
-    credentials = models.ForeignKey("Credentials", on_delete=models.SET_NULL, null=True)
+    credentials = models.ForeignKey(
+        "Credentials",
+        on_delete=models.SET_NULL,
+        null=True)
 
     class Meta:
         ordering = ["filename", "-reference_date", "group__name"]

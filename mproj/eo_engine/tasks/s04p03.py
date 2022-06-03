@@ -26,6 +26,7 @@ now = timezone.now()
 AUGUST = 8
 FLOOD_PRE_EVENT_MIN_DATE_INCLUSIVE = 14
 FLOOD_PRE_EVENT_MAX_DATE_INCLUSIVE = 16
+DateFilename = NamedTuple('DateFilename', [('date', datetime.date), ('filepath', Path)])
 
 
 def get_prevent_dir() -> Path:
@@ -167,9 +168,6 @@ def coreg_file(
         print('Error warping event file')
         raise e
     return
-
-
-DateFilename = NamedTuple('DateFilename', [('date', datetime.date), ('filepath', Path)])
 
 
 def filter_pre_event_files(x: Set[DateFilename],

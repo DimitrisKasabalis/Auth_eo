@@ -50,6 +50,21 @@ services:
     entrypoint: '/docker-entrypoint.sh'
     command: [ 'worker' ]
 
+  worker-download:
+    <<: *engine
+    entrypoint: '/docker-entrypoint.sh'
+    command: [ 'worker-download' ]
+
+  worker-crawler:
+    <<: *engine
+    entrypoint: '/docker-entrypoint.sh'
+    command: [ 'worker-crawler' ]
+
+  worker-process:
+    <<: *engine
+    entrypoint: '/docker-entrypoint.sh'
+    command: [ 'worker-process' ]
+
 #  beat:
 #    <<: *engine
 #    entrypoint: '/docker-entrypoint.sh'

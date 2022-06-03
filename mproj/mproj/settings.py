@@ -144,6 +144,29 @@ BROKER_URL = f"amqp://{os.getenv('RABBIT_USERNAME', 'rabbit')}:{os.getenv('RABBI
 CELERYD_MAX_TASKS_PER_CHILD = 1
 CELERY_ACKS_LATE = True
 CELERYD_PREFETCH_MULTIPLIER = 1
+CELERY_ROUTES = {
+    '*.task_s02p02_ndvianom250m': 'process',
+    '*.task_s02p02_ndvi300m_v2': 'process',
+    '*.task_s02p02_nvdi1km_v3': 'process',
+    '*.task_s02p02_vci1km_v2': 'process',
+    '*.task_s02p02_lai300m_v1': 'process',
+    '*.task_s06p01_wb300m_v2': 'process',
+    '*.task_s04p01_lulc500m': 'process',
+    '*.task_s04p03_convert_to_tiff': 'process',
+    '*.task_s04p03_floods375m': 'process',
+    '*.task_s04p03_floods10m': 'process',
+    '*.task_s06p01_wb10m_kzn': 'process',
+    '*.task_s06p01_wb10m_bag': 'process',
+    '*.task_s06p01_wb100m': 'process',
+    '*.task_s06p04_et3km': 'process',
+    '*.task_s06p04_etanom5km': 'process',
+    '*.task_s06p04_et250m': 'process',
+    '*.task_s06p04_et100m': 'process',
+    '*.task_init_spider': 'crawl',
+    '*.task_scan_sentinel_hub': 'crawl',
+    '*.task_sftp_parse_remote_dir': 'crawl',
+    '*.task_download_file': 'download'
+}
 
 # Application specific
 GDAL_TRANSLATE = os.getenv("GDAl_TRANSLATE_PATH", "/srv/conda/envs/env_snap/bin/gdal_translate")

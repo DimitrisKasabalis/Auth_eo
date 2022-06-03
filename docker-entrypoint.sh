@@ -28,6 +28,33 @@ if [[ -n "$1" ]]; then
     cd /src
     celery -A mproj.celery:app worker -l INFO --concurrency="${CONCURRENCY}"
     exit
+  elif [ "$1" = 'worker-download' ]; then
+    echo "!!!Starting Worker-download!!!"
+    cd /src
+    celery --app mproj.celery:app \
+            worker \
+            -l INFO \
+            --concurrency="${CONCURRENCY}" \
+            --queues download
+    exit
+  elif [ "$1" = 'worker-crawler' ]; then
+    echo "!!!Starting worker-crawler!!!"
+    cd /src
+    celery --app mproj.celery:app \
+            worker \
+            -l INFO \
+            --concurrency="${CONCURRENCY}" \
+            --queues crawl
+    exit
+  elif [ "$1" = 'worker-process' ]; then
+    echo "!!!Starting Worker-process!!!"
+    cd /src
+    celery --app mproj.celery:app \
+            worker \
+            -l INFO \
+            --concurrency="${CONCURRENCY}" \
+            --queues process
+    exit
   elif [ "$1" = "beat" ]; then
     echo "Starting Beat"
     cd /src

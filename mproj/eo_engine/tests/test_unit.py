@@ -2,70 +2,117 @@ from pathlib import Path
 
 import responses
 from dateutil.relativedelta import relativedelta
-from django.test import override_settings
-from django.utils.timezone import now
+from django.test import override_settings, TransactionTestCase, TestCase
+from django.utils.timezone import (
+    now,
+    utc as utc_tz
+)
 
-from eo_engine.models import (EOSource, Credentials, EOSourceGroupChoices,
-                              EOSourceStateChoices, EOProduct)
+from datetime import datetime
+
+from eo_engine.models import (
+    EOSource,
+    Credentials,
+    EOSourceGroupChoices,
+    EOSourceStateChoices,
+    EOProductGroupChoices,
+    EOProduct,
+    EOProductGroup,
+    EOSourceGroup,
+    Pipeline,
+)
+
 from . import BaseTest
 
-TEST_MEDIA_ROOT = Path(r'D:\src\geoAuthPipe\test_MEDIA_ROOT')
+
+# A TransactionTestCase resets the
+#   database after the test runs by truncating all tables.
+#   A TransactionTestCase may call commit and rollback and
+#   observe the effects of these calls on the database.
+#
+# A TestCase, on the other hand,
+#   does not truncate tables after a test.
+#   Instead, it encloses the test code in a
+#   database transaction that is rolled back
+#   at the end of the test. This guarantees that
+#   the rollback at the end of the test
+#   restores the database to its initial state.
+
+def create_test_pipeline():
+    pass
+
+
+def create_test_group():
+    pass
+
+
+def create_test_eo_source():
+    pass
+
+
+def create_test_eo_product():
+    pass
 
 
 # noinspection DuplicatedCode
-@override_settings(MEDIA_ROOT=TEST_MEDIA_ROOT)
-class TestUnit(BaseTest):
+# @override_settings(MEDIA_ROOT=TEST_MEDIA_ROOT)
+class JustTests(TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        pass
 
     def setUp(self) -> None:
-        self.NOW = now()
-        self.responses = responses.RequestsMock()
-        self.responses.start()
+        pass
 
-        self.target_url = "https://land.copernicus.vgt.vito.be/" \
-                          "PDF/datapool/Vegetation/Indicators/" \
-                          "NDVI_300m_V2/" \
-                          "2021/03/21/NDVI300_202103210000_GLOBE_OLCI_V2.0.1/" \
-                          "c_gls_NDVI300_202103210000_GLOBE_OLCI_V2.0.1.nc"
+    @classmethod
+    def setUpTestData(cls):
+        cls.input_group_1 = input_group_1 = EOSourceGroup.objects.create(
+            name=EOSourceGroupChoices.S02P02_LAI_300M_V1_AFR,
+            date_regex=r'.+-(?P<YYYYMMDD>\d+)\..+',
+            crawler_type=EOSourceGroup.CrawlerTypeChoices.NONE
+        )
+        cls.input_group_2 = input_group_2 = EOSourceGroup.objects.create(
+            name=EOSourceGroupChoices.S02P02_NDVI_1KM_V3_AFR,
+            date_regex=r'.+-(?P<YYYYMMDD>\d+)\..+',
+            crawler_type=EOSourceGroup.CrawlerTypeChoices.NONE
+        )
+        cls.eo_source_1 = eo_source_1 = EOSource.objects.create(
+            state=EOSourceStateChoices.AVAILABLE_LOCALLY,
+            filename='file-type-A-20210101.xxyy',
+            domain='https://example-A.com/',
+            filesize_reported=0,
+            reference_date=datetime(year=2021, month=1, day=1, tzinfo=utc_tz),
+            datetime_seen=now(),
+            url='https://www.example-A.com/file-typeA-20210101.xxyy',
+            credentials=None
+        )
+        eo_source_1.group.add(input_group_1)
 
-        self.responses.add(responses.GET,
-                           self.target_url,
-                           body=Path(
-                               r"D:\src\geoAuthPipe\test_RESPONSES\land.copernicus.vgt.vito.be\PDF\datapool\Vegetation\Indicators\NDVI_300m_V2\2021\03\21\NDVI300_202103210000_GLOBE_OLCI_V2.0.1\c_gls_NDVI300_202103210000_GLOBE_OLCI_V2.0.1.nc").read_bytes()
-                           )
+        cls.eo_source_2 = eo_source_2 = EOSource.objects.create(
+            state=EOSourceStateChoices.AVAILABLE_LOCALLY,
+            filename='file-type-B-20210101.xxyy',
+            domain='https://example-B.com/',
+            filesize_reported=0,
+            reference_date=datetime(year=2021, month=1, day=1, tzinfo=utc_tz),
+            datetime_seen=now(),
+            url='https://www.example-B.com/file-typeA-20210101.xxyy',
+            credentials=None
+        )
+        eo_source_2.group.add(input_group_2)
 
-        self.eo_sourse = EOSource.objects.create(
-            domain='land.copernicus.vgt.vito.be',
-            filename='c_gls_NDVI300_202103210000_GLOBE_OLCI_V2.0.1.nc',
-            status=EOSourceStateChoices.AVAILABLE_REMOTELY,
-            url=self.target_url,
-            credentials=Credentials.objects.first(),
-            product=EOSourceGroupChoices.ndvi_300m_v2,
-            datetime_uploaded=self.NOW - relativedelta(days=2),
-            datetime_seen=self.NOW,
+        cls.output_group_1 = output_group_1 = EOProductGroup.objects.create(
+            name=EOProductGroupChoices.S02P02_NDVI_300M_V3_AFR,
         )
 
-    def tearDown(self) -> None:
-        import shutil
-        shutil.rmtree(TEST_MEDIA_ROOT / 'land.copernicus.vgt.vito.be')
+        cls.outpout_file_1 = output_file_1 = EOProduct.objects.create(
 
-    def test_download_file_stand_alone(self):
-        from eo_engine.common import download_asset
-        self.assertEqual(self.eo_sourse.state, EOSourceStateChoices.AVAILABLE_REMOTELY)
-        r = download_asset(self.eo_sourse)
-        self.assertEqual(self.eo_sourse.state, EOSourceStateChoices.AVAILABLE_LOCALLY)
+        )
 
-    def test_download_file_fro_object(self):
-        self.assertEqual(self.eo_sourse.state, EOSourceStateChoices.AVAILABLE_REMOTELY)
-        self.eo_sourse.download()
-        self.assertEqual(self.eo_sourse.state, EOSourceStateChoices.AVAILABLE_LOCALLY)
-        self.assertEqual(EOProduct.objects.all().count(), 1)
-        p = EOProduct.objects.first()
-        self.assertEqual(p.inputs.count(), 1)
-        self.assertGreater(self.eo_sourse.file.size, 0)
+        cls.pipeline = pipeline = Pipeline.objects.create(
+            name='test_pipeline',
 
-    def test_bake_product(self):
-        self.eo_sourse.download()
-        assert self.eo_sourse.file.size > 0
-        p: EOProduct = EOProduct.objects.first()
-        p.make_product(as_task=False)
-        print('hello')
+        )
+
+    def test_delete_eo_source(self):
+        pass
