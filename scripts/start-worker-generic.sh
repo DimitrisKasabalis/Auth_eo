@@ -9,4 +9,4 @@ fi
 export DATABASE_HOST=${DOCKER_HOST_IP}
 export RABBIT_HOST=${DOCKER_HOST_IP}
 echo "starting generic workers"
-$DOCKER_COMPOSE_CMD -f $DOCKER_COMPOSE_FILE up --scale worker=${REPLICAS} worker
+$DOCKER_COMPOSE_CMD -f $DOCKER_COMPOSE_FILE up --scale worker=${REPLICAS} -d worker
