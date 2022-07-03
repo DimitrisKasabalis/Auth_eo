@@ -23,6 +23,7 @@ from eo_engine.common.misc import write_line_to_file
 from eo_engine.common.verify import check_file_exists
 from eo_engine.errors import AfriCultuReSError
 from eo_engine.models import EOProduct, EOSource, EOProductStateChoices
+from eo_engine.tasks.s02p02 import now
 
 logger: Logger = get_task_logger(__name__)
 
@@ -597,8 +598,43 @@ def task_s06p01_wb10m_bag(eo_product_pk: int):
     return s06p01_wb10m(eo_product_pk, version='bag')
 
 
+@shared_task
+def task_s06p01_wb300m_v2(eo_product_pk: int):
+    eo_product = EOProduct.objects.get(id=eo_product_pk)
+    input_eo_source_group = eo_product.group.eoproductgroup.pipelines_from_output.get().input_groups.get().eosourcegroup
+    input_files_qs = EOSource.objects.filter(group=input_eo_source_group, reference_date=eo_product.reference_date)
+    input_file = input_files_qs.get()
+
+    # fixed parameters
+    geom = [16904, 46189, 64166, 93689]
+    date = input_file.filename.split('_')[3][:8]
+    f_out = date + '_SE2_AFR_0300m_0030_WBMA.nc'
+
+    def clip(file_in, file_out, geom) -> Path:
+        lat_str = "lat," + str(geom[0]) + "," + str(geom[1])
+        lon_str = "lon," + str(geom[2]) + "," + str(geom[3])
+        subprocess.run(['ncks',
+                        '-d', lat_str,
+                        '-d', lon_str,
+                        file_in,
+                        file_out], check=True)
+        return Path(file_out)
+
+    with TemporaryDirectory(prefix='task_s06p01_clip_to_africa_') as temp_dir:
+        clipped = clip(input_file.file.path, Path(temp_dir).joinpath(f_out), geom)
+
+        content = File(clipped.open('rb'))
+        eo_product.file.save(name=eo_product.filename, content=content, save=False)
+        eo_product.state = EOProductStateChoices.READY
+        eo_product.datetime_creation = now
+        eo_product.save()
+
+    return 0
+
+
 __all__ = [
-    'task_s06p01_wb10m_kzn',
     'task_s06p01_wb10m_bag',
-    'task_s06p01_wb100m'
+    'task_s06p01_wb10m_kzn',
+    'task_s06p01_wb100m',
+    'task_s06p01_wb300m_v2'
 ]
