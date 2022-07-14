@@ -606,7 +606,7 @@ def task_s06p01_wb300m_v2(eo_product_pk: int):
     input_file = input_files_qs.get()
 
     # fixed parameters
-    geom = [16904, 46189, 64166, 93689]
+    geom = [8000, 40000, 60000, 95999] #geom = [16904, 46189, 64166, 93689]
     date = input_file.filename.split('_')[3][:8]
     f_out = date + '_SE2_AFR_0300m_0030_WBMA.nc'
 
