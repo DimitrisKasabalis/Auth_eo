@@ -54,8 +54,8 @@ def task_s02p02_ndvi300m_v2(eo_product_pk: int):
         try:
             cp: subprocess.CompletedProcess = subprocess.run(
                 ['ncatted',
-                 '-a', f'short_name,NDVI,o,c,Normalized_difference_vegetation_index',
-                 '-a', f'long_name,NDVI,o,c,Normalized Difference Vegetation Index Resampled 1 Km',
+                 '-a', f'short_name,NDVI,o,c,NDVI',
+                 '-a', f'long_name,NDVI,o,c,Normalized Difference Vegetation Index Resampled 300m',
                  '-a', f'grid_mapping,NDVI,o,c,crs',
                  '-a', f'flag_meanings,NDVI,o,c,Missing cloud snow sea background',
                  '-a', f'flag_values,NDVI,o,c,[251 252 253 254 255]',
@@ -117,7 +117,7 @@ def task_s02p02_nvdi1km_v3(eo_product_pk):
         # ncatted is for nc attribute editor
         print('Editing metadata')
         cp = subprocess.run(['ncatted',
-                             '-a', 'short_name,NDVI,o,c,normalized_difference_vegetation_index',
+                             '-a', 'short_name,NDVI,o,c,NDVI',
                              '-a', "long_name,NDVI,o,c,Normalized Difference Vegetation Index Resampled 1 Km",
                              '-a', "add_offset,NDVI,o,d,-0.08",
                              '-a', "scale_factor,NDVI,o,d,0.004",
