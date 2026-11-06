@@ -1,3 +1,11 @@
+# Auth_eo: EO ingestion and product engine
+
+Built for Horizon 2020 work at the Aristotle University of Thessaloniki (AfriCultuReS). Scrapers and downloaders for EO data sources, product pipelines (WaPOR, netCDF/HDF5 georeferencing, SFTP delivery), and a Django + Celery + RabbitMQ + Postgres stack in Docker.
+
+Author: Dimitrios Kasampalis ([LinkedIn](https://www.linkedin.com/in/dimitris-kasabalis/))
+
+---
+
 ### Setting up
 #### Copy Auxilary Files from GoogleDrive to project folder
 1. Download (as zip ) the folder https://drive.google.com/drive/folders/1OsCWe63xhzlwZaStDM21xW3ePr2W9Dwy
